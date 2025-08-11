@@ -1,8 +1,12 @@
+
+import { DocumentReference } from "firebase/firestore";
+
 export interface User {
   id: string;
   name: string;
   avatarUrl: string;
   bio?: string;
+  uid?: string;
 }
 
 export interface Comment {
@@ -17,11 +21,13 @@ export type PostCategory = "General" | "Event" | "For Sale";
 export interface Post {
   id: string;
   user: User;
+  userRef?: DocumentReference;
   category: PostCategory;
   text: string;
   imageUrl?: string;
   location?: string;
   likes: number;
+  likedBy?: string[];
   comments: Comment[];
   timestamp: string;
 }

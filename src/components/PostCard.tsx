@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Post } from "@/types";
@@ -9,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Heart, MessageCircle, Share2, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 
@@ -23,17 +24,20 @@ export function PostCard({ post }: PostCardProps) {
   const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
-    if (user && post.id) {
-        const postRef = doc(db, "posts", post.id);
-        getDoc(postRef).then(docSnap => {
-            if(docSnap.exists()) {
-                const postData = docSnap.data();
-                setLikes(postData.likedBy?.length || 0);
-                setIsLiked(postData.likedBy?.includes(user.uid));
+    if (!post.id) return;
+    const postRef = doc(db, "posts", post.id);
+    const unsubscribe = onSnapshot(postRef, (docSnap) => {
+        if(docSnap.exists()) {
+            const postData = docSnap.data();
+            setLikes(postData.likedBy?.length || 0);
+            if (user) {
+              setIsLiked(postData.likedBy?.includes(user.uid));
             }
-        })
-    }
-  }, [user, post.id]);
+        }
+    });
+
+    return () => unsubscribe();
+  }, [post.id, user]);
 
   const handleLike = async () => {
     if (!user || !post.id) return;
@@ -43,14 +47,11 @@ export function PostCard({ post }: PostCardProps) {
       await updateDoc(postRef, {
         likedBy: arrayRemove(user.uid)
       });
-      setLikes(prev => prev - 1);
     } else {
       await updateDoc(postRef, {
         likedBy: arrayUnion(user.uid)
       });
-      setLikes(prev => prev + 1);
     }
-    setIsLiked(!isLiked);
   };
 
   const getCategoryColor = (category: string) => {
