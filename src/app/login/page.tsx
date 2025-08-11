@@ -8,6 +8,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -74,10 +75,13 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <Image src="/yrdly-logo.png" alt="Yrdly Logo" width={80} height={80} />
+          </div>
             <div className="flex justify-center items-center gap-2 mb-2">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8 text-primary"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-4-3-5.5s-3.5-2.5-5.5-3.5a7 7 0 0 0-7 7c0 2 1 4 3 5.5s3.5 2.5 5.5 3.5z"/><path d="M12 22v-1.5"/></svg>
                 <CardTitle className="text-3xl font-bold font-headline">Yrdly</CardTitle>
             </div>
+
           <CardDescription>Welcome back! Please enter your details.</CardDescription>
         </CardHeader>
         <CardContent>
