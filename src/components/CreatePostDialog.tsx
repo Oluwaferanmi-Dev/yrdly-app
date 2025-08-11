@@ -44,7 +44,6 @@ const formSchema = z.object({
   text: z.string().min(1, "Post can't be empty.").max(500),
   category: z.enum(["General", "Event", "For Sale"]),
   location: z.string().optional(),
-  image: z.instanceof(File).optional(),
 });
 
 export function CreatePostDialog() {
@@ -52,6 +51,7 @@ export function CreatePostDialog() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -71,9 +71,9 @@ export function CreatePostDialog() {
 
     try {
         let imageUrl = "";
-        if (values.image) {
-            const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${values.image.name}`);
-            const snapshot = await uploadBytes(storageRef, values.image);
+        if (imageFile) {
+            const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${imageFile.name}`);
+            const snapshot = await uploadBytes(storageRef, imageFile);
             imageUrl = await getDownloadURL(snapshot.ref);
         }
 
@@ -95,6 +95,7 @@ export function CreatePostDialog() {
 
         toast({ title: 'Post created!', description: 'Your post is now live.' });
         form.reset();
+        setImageFile(null);
         setOpen(false);
 
     } catch(error) {
@@ -102,6 +103,12 @@ export function CreatePostDialog() {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to create post.' });
     } finally {
         setLoading(false);
+    }
+  }
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+        setImageFile(e.target.files[0]);
     }
   }
 
@@ -181,23 +188,16 @@ export function CreatePostDialog() {
                 />
             </div>
             
-             <FormField
-                control={form.control}
-                name="image"
-                render={({ field: { onChange, value, ...rest } }) => (
-                    <FormItem>
-                        <FormLabel>Add an image</FormLabel>
-                        <FormControl>
-                            <Input 
-                                type="file" 
-                                accept="image/*" 
-                                onChange={(e) => onChange(e.target.files?.[0])}
-                                {...rest}
-                            />
-                        </FormControl>
-                    </FormItem>
-                )}
-             />
+            <FormItem>
+                <FormLabel>Add an image</FormLabel>
+                <FormControl>
+                    <Input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleImageChange}
+                    />
+                </FormControl>
+            </FormItem>
 
             <DialogFooter>
               <Button type="submit" className="w-full" variant="default" disabled={loading}>
