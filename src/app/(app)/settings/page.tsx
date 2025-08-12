@@ -36,12 +36,16 @@ export default function SettingsPage() {
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
             setBio(userData.bio || '');
-            if (!name) { // Only set name from doc if not already set from auth
+            // Only set name from doc if not already set from auth user object
+            if (!user.displayName) {
                 setName(userData.name || '');
             }
           }
         };
         fetchUserData();
+        if (user.displayName) {
+            setName(user.displayName);
+        }
       }
     }, [user]);
 
