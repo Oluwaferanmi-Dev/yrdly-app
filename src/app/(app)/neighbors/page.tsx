@@ -2,19 +2,18 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { collection, query, where, onSnapshot, getDocs, addDoc, serverTimestamp, limit } from "firebase/firestore";
+import { collection, query, where, onSnapshot, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-import type { User } from "@/types";
+import type { User, Location } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageSquare, UserPlus, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
 
 const NeighborSkeleton = () => (
     <Card>
@@ -36,12 +35,11 @@ export default function NeighborsPage() {
     const { toast } = useToast();
     const [allNeighbors, setAllNeighbors] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
-    const [locationFilter, setLocationFilter] = useState("all");
+    const [filters, setFilters] = useState({ state: "all", lga: "all" });
 
     useEffect(() => {
         if (!currentUser) return;
         
-        // Fetch all users except the current user
         const q = query(collection(db, "users"), where("uid", "!=", currentUser.uid));
         
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -57,17 +55,43 @@ export default function NeighborsPage() {
     }, [currentUser]);
 
     const locations = useMemo(() => {
-        const uniqueLocations = new Set(allNeighbors.map(n => n.location).filter(Boolean));
-        return ["all", ...Array.from(uniqueLocations)];
+        const uniqueStates = new Set<string>();
+        const uniqueLgas = new Map<string, Set<string>>();
+
+        allNeighbors.forEach(neighbor => {
+            if (neighbor.location?.state) {
+                uniqueStates.add(neighbor.location.state);
+                if (neighbor.location.lga) {
+                    if (!uniqueLgas.has(neighbor.location.state)) {
+                        uniqueLgas.set(neighbor.location.state, new Set());
+                    }
+                    uniqueLgas.get(neighbor.location.state)!.add(neighbor.location.lga);
+                }
+            }
+        });
+        return {
+            states: ["all", ...Array.from(uniqueStates).sort()],
+            lgas: uniqueLgas
+        };
     }, [allNeighbors]);
 
     const filteredNeighbors = useMemo(() => {
-        if (locationFilter === 'all') {
-            return allNeighbors;
-        }
-        return allNeighbors.filter(neighbor => neighbor.location === locationFilter);
-    }, [allNeighbors, locationFilter]);
-
+        return allNeighbors.filter(neighbor => {
+            const stateMatch = filters.state === 'all' || neighbor.location?.state === filters.state;
+            const lgaMatch = filters.lga === 'all' || neighbor.location?.lga === filters.lga;
+            return stateMatch && lgaMatch;
+        });
+    }, [allNeighbors, filters]);
+    
+    const handleFilterChange = (type: 'state' | 'lga', value: string) => {
+        setFilters(prev => {
+            const newFilters = {...prev, [type]: value};
+            if (type === 'state') {
+                newFilters.lga = 'all'; // Reset LGA filter when state changes
+            }
+            return newFilters;
+        });
+    }
 
     const handleStartConversation = async (neighbor: User) => {
         if (!currentUser) {
@@ -76,8 +100,6 @@ export default function NeighborsPage() {
         }
 
         const conversationsRef = collection(db, "conversations");
-
-        // Check if a conversation between these two users already exists
         const existingConvQuery = query(
             conversationsRef,
             where('participantIds', 'array-contains', currentUser.uid)
@@ -94,10 +116,8 @@ export default function NeighborsPage() {
         });
 
         if (existingConvId) {
-            // If conversation exists, navigate to it
             router.push(`/messages?convId=${existingConvId}`);
         } else {
-            // If not, create a new conversation
             try {
                 const newConvDoc = await addDoc(conversationsRef, {
                     participantIds: [currentUser.uid, neighbor.uid],
@@ -112,6 +132,11 @@ export default function NeighborsPage() {
         }
     };
 
+    const displayLocation = (location?: Location) => {
+        if (!location) return null;
+        return [location.city, location.lga, location.state].filter(Boolean).join(', ');
+    }
+
     return (
         <div className="max-w-4xl mx-auto space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -119,18 +144,31 @@ export default function NeighborsPage() {
                     <h1 className="text-2xl md:text-3xl font-bold font-headline">Find Neighbors</h1>
                     <p className="text-muted-foreground">Connect with other members of your community.</p>
                 </div>
-                <Select onValueChange={setLocationFilter} defaultValue="all">
-                    <SelectTrigger className="w-full md:w-[240px]">
-                        <SelectValue placeholder="Filter by location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {locations.map(loc => (
-                             <SelectItem key={loc} value={loc}>
-                                {loc === 'all' ? 'All Locations' : loc}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                <div className="flex w-full md:w-auto md:flex-row gap-2">
+                    <Select onValueChange={(val) => handleFilterChange('state', val)} value={filters.state}>
+                        <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectValue placeholder="Filter by State" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {locations.states.map(loc => (
+                                <SelectItem key={loc} value={loc}>
+                                    {loc === 'all' ? 'All States' : loc}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                     <Select onValueChange={(val) => handleFilterChange('lga', val)} value={filters.lga} disabled={filters.state === 'all'}>
+                        <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectValue placeholder="Filter by LGA" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All LGAs</SelectItem>
+                            {filters.state !== 'all' && locations.lgas.get(filters.state)?.forEach(lga => (
+                               <SelectItem key={lga} value={lga}>{lga}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
             {loading ? (
@@ -153,7 +191,7 @@ export default function NeighborsPage() {
                                     {neighbor.location && (
                                         <div className="flex items-center text-sm text-muted-foreground">
                                             <MapPin className="h-4 w-4 mr-1"/>
-                                            <span>{neighbor.location}</span>
+                                            <span>{displayLocation(neighbor.location)}</span>
                                         </div>
                                     )}
                                     <p className="text-sm text-muted-foreground pt-1">{neighbor.bio || "No bio yet."}</p>
@@ -172,10 +210,7 @@ export default function NeighborsPage() {
                     </div>
                     <h2 className="text-2xl font-bold mb-2">No neighbors found</h2>
                     <p className="text-muted-foreground">
-                        {locationFilter === 'all' 
-                            ? "You're the first one here! Check back soon to see other neighbors as they join."
-                            : "No neighbors found for this location. Try another filter."
-                        }
+                       No neighbors match the current filters. Try selecting a different location.
                     </p>
                 </Card>
             )}

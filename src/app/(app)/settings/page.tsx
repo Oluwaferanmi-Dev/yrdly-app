@@ -17,7 +17,15 @@ import { updateProfile } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { Location } from "@/types";
 
+type GeoData = {
+    id: number;
+    name: string;
+    state_id?: number;
+    local_government_id?: number;
+}
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -25,10 +33,17 @@ export default function SettingsPage() {
     const { toast } = useToast();
     const [name, setName] = useState(user?.displayName || '');
     const [bio, setBio] = useState('');
-    const [location, setLocation] = useState('');
     const [profilePic, setProfilePic] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
 
+    // Location state
+    const [states, setStates] = useState<GeoData[]>([]);
+    const [lgas, setLgas] = useState<GeoData[]>([]);
+    const [cities, setCities] = useState<GeoData[]>([]);
+    const [location, setLocation] = useState<Partial<Location>>({});
+    const [loadingLocation, setLoadingLocation] = useState({ states: false, lgas: false, cities: false });
+
+    // Fetch user data
     useEffect(() => {
       if (user) {
         const fetchUserData = async () => {
@@ -37,8 +52,9 @@ export default function SettingsPage() {
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
             setBio(userData.bio || '');
-            setLocation(userData.location || '');
-            // Only set name from doc if not already set from auth user object
+            if (userData.location) {
+                setLocation(userData.location);
+            }
             if (!user.displayName) {
                 setName(userData.name || '');
             }
@@ -50,6 +66,90 @@ export default function SettingsPage() {
         }
       }
     }, [user]);
+
+    // Fetch states
+    useEffect(() => {
+        const fetchStates = async () => {
+            setLoadingLocation(prev => ({ ...prev, states: true }));
+            try {
+                const response = await fetch('/api/geo/states');
+                const data = await response.json();
+                if (data.success) {
+                    setStates(data.data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch states", error);
+            } finally {
+                setLoadingLocation(prev => ({ ...prev, states: false }));
+            }
+        }
+        fetchStates();
+    }, []);
+
+    // Fetch LGAs when state changes
+    useEffect(() => {
+        if (location.stateId) {
+            const fetchLgas = async () => {
+                setLoadingLocation(prev => ({ ...prev, lgas: true }));
+                setLgas([]);
+                setCities([]);
+                try {
+                    const response = await fetch(`/api/geo/lgas/${location.stateId}`);
+                    const data = await response.json();
+                    if (data.success) {
+                        setLgas(data.data);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch LGAs", error);
+                } finally {
+                    setLoadingLocation(prev => ({ ...prev, lgas: false }));
+                }
+            }
+            fetchLgas();
+        }
+    }, [location.stateId]);
+
+    // Fetch cities when LGA changes
+     useEffect(() => {
+        if (location.lgaId) {
+            const fetchCities = async () => {
+                setLoadingLocation(prev => ({ ...prev, cities: true }));
+                setCities([]);
+                try {
+                    const response = await fetch(`/api/geo/cities/${location.lgaId}`);
+                    const data = await response.json();
+                    if (data.success) {
+                        setCities(data.data);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch cities", error);
+                } finally {
+                    setLoadingLocation(prev => ({ ...prev, cities: false }));
+                }
+            }
+            fetchCities();
+        }
+    }, [location.lgaId]);
+
+
+    const handleLocationChange = (type: 'state' | 'lga' | 'city', value: string) => {
+        const selectedId = parseInt(value);
+        let selectedName = '';
+        let newState = { ...location };
+
+        if (type === 'state') {
+            selectedName = states.find(s => s.id === selectedId)?.name || '';
+            newState = { state: selectedName, stateId: selectedId, lga: undefined, lgaId: undefined, city: undefined, cityId: undefined };
+        } else if (type === 'lga') {
+            selectedName = lgas.find(l => l.id === selectedId)?.name || '';
+            newState = { ...newState, lga: selectedName, lgaId: selectedId, city: undefined, cityId: undefined };
+        } else if (type === 'city') {
+            selectedName = cities.find(c => c.id === selectedId)?.name || '';
+            newState = { ...newState, city: selectedName, cityId: selectedId };
+        }
+        
+        setLocation(newState);
+    };
 
     const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -74,13 +174,12 @@ export default function SettingsPage() {
                 photoURL: photoURL,
             });
 
-            // Use setDoc with merge to create or update the document
             await setDoc(doc(db, "users", user.uid), {
                 name: name,
                 bio: bio,
                 location: location,
                 avatarUrl: photoURL,
-                email: user.email // Also save email here
+                email: user.email
             }, { merge: true });
 
             toast({ title: "Profile Updated", description: "Your profile has been successfully updated." });
@@ -133,10 +232,31 @@ export default function SettingsPage() {
                 <Label htmlFor="name">Name</Label>
                 <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
               </div>
+
                <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input id="location" placeholder="e.g., Maple Street, Oakwood Estates" value={location} onChange={(e) => setLocation(e.target.value)} />
+                <Label>Location</Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                     <Select onValueChange={(val) => handleLocationChange('state', val)} value={String(location.stateId || '')} disabled={loadingLocation.states}>
+                        <SelectTrigger><SelectValue placeholder={loadingLocation.states ? "Loading..." : "Select State"} /></SelectTrigger>
+                        <SelectContent>
+                            {states.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                     </Select>
+                     <Select onValueChange={(val) => handleLocationChange('lga', val)} value={String(location.lgaId || '')} disabled={!location.stateId || loadingLocation.lgas}>
+                        <SelectTrigger><SelectValue placeholder={loadingLocation.lgas ? "Loading..." : "Select LGA"} /></SelectTrigger>
+                        <SelectContent>
+                            {lgas.map(l => <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>)}
+                        </SelectContent>
+                     </Select>
+                     <Select onValueChange={(val) => handleLocationChange('city', val)} value={String(location.cityId || '')} disabled={!location.lgaId || loadingLocation.cities}>
+                        <SelectTrigger><SelectValue placeholder={loadingLocation.cities ? "Loading..." : "Select City/Town"} /></SelectTrigger>
+                        <SelectContent>
+                             {cities.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                     </Select>
+                </div>
               </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="bio">Bio</Label>
                 <Textarea id="bio" placeholder="Tell us about yourself" className="min-h-[100px] resize-none" value={bio} onChange={(e) => setBio(e.target.value)} />

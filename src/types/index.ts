@@ -1,5 +1,13 @@
 
 
+export interface Location {
+  state?: string;
+  stateId?: number;
+  lga?: string;
+  lgaId?: number;
+  city?: string;
+  cityId?: number;
+}
 export interface User {
   id: string;
   uid: string;
@@ -7,7 +15,7 @@ export interface User {
   email?: string;
   avatarUrl: string;
   bio?: string;
-  location?: string;
+  location?: Location;
 }
 
 export interface Comment {
@@ -23,9 +31,9 @@ export type PostCategory = "General" | "Event" | "For Sale" | "Business";
 
 export interface Post {
   id: string;
-  userId?: string; 
-  authorName?: string;
-  authorImage?: string;
+  userId: string; 
+  authorName: string;
+  authorImage: string;
   category: PostCategory;
   text: string;
   imageUrl?: string;
