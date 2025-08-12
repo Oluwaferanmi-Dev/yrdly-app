@@ -19,9 +19,8 @@ interface PostCardProps {
   post: Post;
 }
 
-export function PostCard({ post: initialPost }: PostCardProps) {
+export function PostCard({ post }: PostCardProps) {
   const { user: currentUser } = useAuth();
-  const [post, setPost] = useState(initialPost);
   const [author, setAuthor] = useState<User | null>(null);
   const [loadingAuthor, setLoadingAuthor] = useState(true);
   const [likes, setLikes] = useState(post.likes || 0);
@@ -35,15 +34,21 @@ export function PostCard({ post: initialPost }: PostCardProps) {
 
     const fetchAuthor = async () => {
         setLoadingAuthor(true);
-        const userDocRef = doc(db, "users", post.userId);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-            setAuthor(userDocSnap.data() as User);
-        } else {
-            // Handle case where user might have been deleted
+        try {
+            const userDocRef = doc(db, "users", post.userId);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+                setAuthor(userDocSnap.data() as User);
+            } else {
+                // Handle case where user might have been deleted
+                setAuthor(null);
+            }
+        } catch (error) {
+            console.error("Error fetching author:", error);
             setAuthor(null);
+        } finally {
+            setLoadingAuthor(false);
         }
-        setLoadingAuthor(false);
     }
     fetchAuthor();
   }, [post.userId]);
@@ -116,7 +121,15 @@ export function PostCard({ post: initialPost }: PostCardProps) {
                 </div>
                 {getCategoryBadge(post.category)}
             </>
-        ) : null}
+        ) : (
+             <div className="flex items-center gap-4 w-full">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div className="space-y-2">
+                    <p className="font-semibold text-sm">Deleted User</p>
+                    <p className="text-xs text-muted-foreground">{post.timestamp}</p>
+                </div>
+            </div>
+        )}
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <p className="whitespace-pre-wrap">{post.text}</p>
