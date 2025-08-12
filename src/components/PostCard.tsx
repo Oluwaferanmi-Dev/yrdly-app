@@ -32,25 +32,17 @@ export function PostCard({ post }: PostCardProps) {
         return;
     };
 
-    const fetchAuthor = async () => {
-        setLoadingAuthor(true);
-        try {
-            const userDocRef = doc(db, "users", post.userId);
-            const userDocSnap = await getDoc(userDocRef);
-            if (userDocSnap.exists()) {
-                setAuthor(userDocSnap.data() as User);
-            } else {
-                // Handle case where user might have been deleted
-                setAuthor(null);
-            }
-        } catch (error) {
-            console.error("Error fetching author:", error);
+    const userDocRef = doc(db, "users", post.userId);
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            setAuthor({ id: docSnap.id, ...docSnap.data() } as User);
+        } else {
             setAuthor(null);
-        } finally {
-            setLoadingAuthor(false);
         }
-    }
-    fetchAuthor();
+        setLoadingAuthor(false);
+    });
+
+    return () => unsubscribe();
   }, [post.userId]);
 
   useEffect(() => {
