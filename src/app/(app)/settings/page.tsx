@@ -72,6 +72,13 @@ export default function SettingsPage() {
       newLocation.ward = "";
       newLocation.city = "";
     }
+
+    // Update wards when LGA changes
+    if (type === "lga") {
+      const wards = wardsByLga[value] || [];
+      setWardsForSelectedLga(wards);
+    }
+
     setLocation(newLocation);
   };
 
@@ -125,7 +132,8 @@ export default function SettingsPage() {
   };
 
   const lgasForSelectedState = location.state ? lgasByState[location.state] : [];
-  const wardsForSelectedLga = location.lga ? wardsByLga[location.lga] : [];
+  const [wardsForSelectedLga, setWardsForSelectedLga] = useState<string[]>([]);
+
 
   return (
     <div className="max-w-3xl mx-auto">

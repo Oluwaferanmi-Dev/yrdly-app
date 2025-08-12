@@ -1,6 +1,15 @@
 
 import allStates from '@/data/states.json';
 import lgasByState from '@/data/lgas.json';
-import wardsByLga from '@/data/wards.json';
+import allWards from '@/data/wards.json';
 
-export { allStates, lgasByState, wardsByLga };
+const wardsByLga: { [key: string]: string[] } = {};
+
+allWards.forEach((wardData) => {
+  if (!wardsByLga[wardData.LGA]) {
+    wardsByLga[wardData.LGA] = [];
+  }
+  wardsByLga[wardData.LGA].push(wardData.Ward);
+});
+
+export { allStates, lgasByState, wardsByLga, allWards };
