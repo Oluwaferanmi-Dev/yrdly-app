@@ -28,30 +28,37 @@ export function PostCard({ post }: PostCardProps) {
 
   useEffect(() => {
     const fetchAuthor = async () => {
-      if (!post.userId) {
-        setLoadingAuthor(false);
-        return;
-      }
-      try {
-        const userDocRef = doc(db, "users", post.userId);
-        const userDocSnap = await getDoc(userDocRef);
+      // Handle new post format with userId
+      if (post.userId) {
+        try {
+          const userDocRef = doc(db, "users", post.userId);
+          const userDocSnap = await getDoc(userDocRef);
 
-        if (userDocSnap.exists()) {
-            setAuthor({ id: userDocSnap.id, ...userDocSnap.data() } as User);
-        } else {
-            // Fallback to stored author info if user doc not found,
-            // or show as Anonymous if not even that is present.
-            setAuthor({ 
-                id: post.userId, 
-                uid: post.userId,
-                name: post.authorName || 'Anonymous User', 
-                avatarUrl: post.authorImage || 'https://placehold.co/100x100.png'
-            });
+          if (userDocSnap.exists()) {
+              setAuthor({ id: userDocSnap.id, ...userDocSnap.data() } as User);
+          } else {
+              // Fallback to stored author info if user doc not found,
+              setAuthor({ 
+                  id: post.userId, 
+                  uid: post.userId,
+                  name: post.authorName || 'Anonymous User', 
+                  avatarUrl: post.authorImage || 'https://placehold.co/100x100.png'
+              });
+          }
+        } catch (error) {
+          console.error("Error fetching author:", error);
+          setAuthor(null);
+        } finally {
+          setLoadingAuthor(false);
         }
-      } catch (error) {
-        console.error("Error fetching author:", error);
-        setAuthor(null);
-      } finally {
+      } else {
+        // Handle old post format (if userId is not present)
+         setAuthor({ 
+            id: 'unknown',
+            uid: 'unknown',
+            name: post.authorName || 'Anonymous User', 
+            avatarUrl: post.authorImage || 'https://placehold.co/100x100.png'
+        });
         setLoadingAuthor(false);
       }
     };

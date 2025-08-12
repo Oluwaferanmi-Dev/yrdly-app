@@ -20,7 +20,7 @@ export type PostCategory = "General" | "Event" | "For Sale" | "Business";
 
 export interface Post {
   id: string;
-  userId: string;
+  userId?: string; // Made optional for backward compatibility
   authorName?: string;
   authorImage?: string;
   category: PostCategory;
