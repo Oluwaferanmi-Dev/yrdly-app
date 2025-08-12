@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Search, Bell, LogOut, Home, ShoppingCart, Calendar, Briefcase, MessageSquare } from 'lucide-react';
@@ -64,7 +65,7 @@ export function AppHeader() {
       
       <div className="flex w-full items-center gap-4 md:w-auto md:ml-auto md:gap-2 lg:gap-4">
         <form className="ml-auto flex-1 sm:flex-initial md:ml-0">
-          <div className="relative">
+          <div className="relative hidden sm:block">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
