@@ -21,6 +21,8 @@ export type PostCategory = "General" | "Event" | "For Sale" | "Business";
 export interface Post {
   id: string;
   userId: string;
+  authorName?: string;
+  authorImage?: string;
   category: PostCategory;
   text: string;
   imageUrl?: string;

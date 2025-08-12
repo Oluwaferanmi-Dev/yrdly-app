@@ -92,6 +92,8 @@ export function CreatePostDialog({ children, preselectedCategory }: CreatePostDi
 
         await addDoc(collection(db, "posts"), {
             userId: user.uid,
+            authorName: user.displayName || "Anonymous User",
+            authorImage: user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.charAt(0) || 'A'}`,
             text: values.text,
             category: values.category,
             location: values.location,

@@ -27,23 +27,37 @@ export function PostCard({ post }: PostCardProps) {
   const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
-    if (!post.userId) {
+    const fetchAuthor = async () => {
+      if (!post.userId) {
         setLoadingAuthor(false);
         return;
+      }
+      try {
+        const userDocRef = doc(db, "users", post.userId);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+            setAuthor({ id: userDocSnap.id, ...userDocSnap.data() } as User);
+        } else {
+            // Fallback to stored author info if user doc not found,
+            // or show as Anonymous if not even that is present.
+            setAuthor({ 
+                id: post.userId, 
+                uid: post.userId,
+                name: post.authorName || 'Anonymous User', 
+                avatarUrl: post.authorImage || 'https://placehold.co/100x100.png'
+            });
+        }
+      } catch (error) {
+        console.error("Error fetching author:", error);
+        setAuthor(null);
+      } finally {
+        setLoadingAuthor(false);
+      }
     };
 
-    const userDocRef = doc(db, "users", post.userId);
-    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            setAuthor({ id: docSnap.id, ...docSnap.data() } as User);
-        } else {
-            setAuthor(null);
-        }
-        setLoadingAuthor(false);
-    });
-
-    return () => unsubscribe();
-  }, [post.userId]);
+    fetchAuthor();
+  }, [post.userId, post.authorName, post.authorImage]);
 
   useEffect(() => {
     if (!post.id) return;
@@ -115,8 +129,11 @@ export function PostCard({ post }: PostCardProps) {
             </>
         ) : (
              <div className="flex items-center gap-4 w-full">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="space-y-2">
+                <Avatar>
+                    <AvatarImage src="https://placehold.co/100x100.png" alt="Deleted User" />
+                    <AvatarFallback>?</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
                     <p className="font-semibold text-sm">Deleted User</p>
                     <p className="text-xs text-muted-foreground">{post.timestamp}</p>
                 </div>
