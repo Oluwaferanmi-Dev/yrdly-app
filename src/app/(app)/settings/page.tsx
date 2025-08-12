@@ -12,9 +12,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { auth, db, storage } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { updateProfile } from "firebase/auth";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,9 +24,26 @@ export default function SettingsPage() {
     const router = useRouter();
     const { toast } = useToast();
     const [name, setName] = useState(user?.displayName || '');
-    const [bio, setBio] = useState(''); // Fetch this from firestore if available
+    const [bio, setBio] = useState('');
     const [profilePic, setProfilePic] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
+
+    useEffect(() => {
+      if (user) {
+        const fetchUserData = async () => {
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            setBio(userData.bio || '');
+            if (!name) { // Only set name from doc if not already set from auth
+                setName(userData.name || '');
+            }
+          }
+        };
+        fetchUserData();
+      }
+    }, [user]);
 
     const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -51,11 +68,13 @@ export default function SettingsPage() {
                 photoURL: photoURL,
             });
 
-            await updateDoc(doc(db, "users", user.uid), {
+            // Use setDoc with merge to create or update the document
+            await setDoc(doc(db, "users", user.uid), {
                 name: name,
                 bio: bio,
                 avatarUrl: photoURL,
-            });
+                email: user.email // Also save email here
+            }, { merge: true });
 
             toast({ title: "Profile Updated", description: "Your profile has been successfully updated." });
         } catch (error) {
