@@ -18,6 +18,8 @@ import { doc, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
 import type { Location } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { allStates, lgasByState } from "@/lib/geo-data";
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -29,7 +31,11 @@ export default function SettingsPage() {
     const [uploading, setUploading] = useState(false);
 
     // Location state
-    const [location, setLocation] = useState<Partial<Location>>({});
+    const [location, setLocation] = useState<Partial<Location>>({
+        state: '',
+        lga: '',
+        city: ''
+    });
 
     // Fetch user data
     useEffect(() => {
@@ -56,7 +62,15 @@ export default function SettingsPage() {
     }, [user]);
 
     const handleLocationChange = (type: keyof Location, value: string) => {
-        setLocation(prev => ({ ...prev, [type]: value }));
+        const newLocation = { ...location, [type]: value };
+        if (type === 'state') {
+            newLocation.lga = ''; // Reset LGA when state changes
+            newLocation.city = ''; // Reset city as well
+        }
+        if (type === 'lga') {
+            newLocation.city = ''; // Reset city when LGA changes
+        }
+        setLocation(newLocation);
     };
 
     const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,6 +118,8 @@ export default function SettingsPage() {
       await auth.signOut();
       router.push('/login');
     }
+    
+    const lgasForSelectedState = location.state ? lgasByState[location.state] : [];
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -143,20 +159,38 @@ export default function SettingsPage() {
 
                <div className="space-y-2">
                 <Label>Location</Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                     <div className="space-y-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
                         <Label htmlFor="state" className="text-xs">State</Label>
-                        <Input id="state" placeholder="e.g. Lagos" value={location.state || ''} onChange={(e) => handleLocationChange('state', e.target.value)} />
-                     </div>
+                        <Select value={location.state || ''} onValueChange={(value) => handleLocationChange('state', value)}>
+                            <SelectTrigger id="state">
+                                <SelectValue placeholder="Select your state" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {allStates.map(state => (
+                                    <SelectItem key={state} value={state}>{state}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                      <div className="space-y-1">
                         <Label htmlFor="lga" className="text-xs">LGA</Label>
-                        <Input id="lga" placeholder="e.g. Ikeja" value={location.lga || ''} onChange={(e) => handleLocationChange('lga', e.target.value)} />
-                     </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="city" className="text-xs">City / Town</Label>
-                        <Input id="city" placeholder="e.g. Opebi" value={location.city || ''} onChange={(e) => handleLocationChange('city', e.target.value)} />
+                        <Select value={location.lga || ''} onValueChange={(value) => handleLocationChange('lga', value)} disabled={!location.state}>
+                            <SelectTrigger id="lga">
+                                <SelectValue placeholder="Select your LGA" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {lgasForSelectedState && lgasForSelectedState.map(lga => (
+                                    <SelectItem key={lga} value={lga}>{lga}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                      </div>
                 </div>
+                 <div className="space-y-1">
+                    <Label htmlFor="city" className="text-xs">City / Town / Street</Label>
+                    <Input id="city" placeholder="e.g. Opebi Street" value={location.city || ''} onChange={(e) => handleLocationChange('city', e.target.value)} />
+                 </div>
               </div>
               
               <div className="space-y-2">

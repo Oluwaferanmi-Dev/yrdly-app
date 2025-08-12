@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MessageSquare, UserPlus, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { allStates, lgasByState } from "@/lib/geo-data";
 
 const NeighborSkeleton = () => (
     <Card>
@@ -53,27 +54,6 @@ export default function NeighborsPage() {
 
         return () => unsubscribe();
     }, [currentUser]);
-
-    const locations = useMemo(() => {
-        const uniqueStates = new Set<string>();
-        const uniqueLgasByState = new Map<string, Set<string>>();
-
-        allNeighbors.forEach(neighbor => {
-            if (neighbor.location?.state) {
-                uniqueStates.add(neighbor.location.state);
-                if (neighbor.location.lga) {
-                    if (!uniqueLgasByState.has(neighbor.location.state)) {
-                        uniqueLgasByState.set(neighbor.location.state, new Set());
-                    }
-                    uniqueLgasByState.get(neighbor.location.state)!.add(neighbor.location.lga);
-                }
-            }
-        });
-        return {
-            states: ["all", ...Array.from(uniqueStates).sort()],
-            lgasByState: uniqueLgasByState,
-        };
-    }, [allNeighbors]);
 
     const handleFilterChange = (type: 'state' | 'lga', value: string) => {
         setFilters(prev => {
@@ -138,11 +118,11 @@ export default function NeighborsPage() {
     }
     
     const currentLgas = useMemo(() => {
-        if (filters.state === 'all' || !locations.lgasByState.has(filters.state)) {
+        if (filters.state === 'all' || !lgasByState[filters.state]) {
             return [];
         }
-        return Array.from(locations.lgasByState.get(filters.state)!).sort();
-    }, [filters.state, locations.lgasByState]);
+        return lgasByState[filters.state] || [];
+    }, [filters.state]);
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
@@ -157,9 +137,10 @@ export default function NeighborsPage() {
                             <SelectValue placeholder="Filter by State" />
                         </SelectTrigger>
                         <SelectContent>
-                            {locations.states.map(state => (
+                           <SelectItem value="all">All States</SelectItem>
+                            {allStates.map(state => (
                                 <SelectItem key={state} value={state}>
-                                    {state === 'all' ? 'All States' : state}
+                                    {state}
                                 </SelectItem>
                             ))}
                         </SelectContent>
