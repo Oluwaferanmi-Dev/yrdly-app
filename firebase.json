@@ -1,4 +1,10 @@
 {
+  "hosting": {
+    "source": ".",
+    "frameworksBackend": {
+      "id": "yrdly-backend"
+    }
+  },
   "apphosting": {
     "backendId": "yrdly-backend",
     "rootDir": "/",
