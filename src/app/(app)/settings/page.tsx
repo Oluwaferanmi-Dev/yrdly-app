@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -9,13 +10,62 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { auth } from "@/lib/firebase";
+import { auth, db, storage } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { updateProfile } from "firebase/auth";
+import { doc, updateDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function SettingsPage() {
     const { user } = useAuth();
     const router = useRouter();
+    const { toast } = useToast();
+    const [name, setName] = useState(user?.displayName || '');
+    const [bio, setBio] = useState(''); // Fetch this from firestore if available
+    const [profilePic, setProfilePic] = useState<File | null>(null);
+    const [uploading, setUploading] = useState(false);
+
+    const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setProfilePic(e.target.files[0]);
+        }
+    };
+
+    const handleProfileUpdate = async () => {
+        if (!user) return;
+        setUploading(true);
+        try {
+            let photoURL = user.photoURL;
+
+            if (profilePic) {
+                const storageRef = ref(storage, `avatars/${user.uid}/${profilePic.name}`);
+                const snapshot = await uploadBytes(storageRef, profilePic);
+                photoURL = await getDownloadURL(snapshot.ref);
+            }
+
+            await updateProfile(user, {
+                displayName: name,
+                photoURL: photoURL,
+            });
+
+            await updateDoc(doc(db, "users", user.uid), {
+                name: name,
+                bio: bio,
+                avatarUrl: photoURL,
+            });
+
+            toast({ title: "Profile Updated", description: "Your profile has been successfully updated." });
+        } catch (error) {
+            console.error("Error updating profile: ", error);
+            toast({ variant: "destructive", title: "Error", description: "Failed to update profile." });
+        } finally {
+            setUploading(false);
+        }
+    };
+
 
     const handleLogout = async () => {
       await auth.signOut();
@@ -50,20 +100,20 @@ export default function SettingsPage() {
                     </Avatar>
                     <div className="space-y-1">
                         <Label htmlFor="picture">Profile Picture</Label>
-                        <Input id="picture" type="file" />
+                        <Input id="picture" type="file" onChange={handleProfilePicChange} accept="image/*" />
                     </div>
                 </div>
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" defaultValue={user?.displayName || ''} />
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bio">Bio</Label>
-                <Textarea id="bio" placeholder="Tell us about yourself" className="min-h-[100px] resize-none"/>
+                <Textarea id="bio" placeholder="Tell us about yourself" className="min-h-[100px] resize-none" value={bio} onChange={(e) => setBio(e.target.value)} />
               </div>
             </CardContent>
             <CardFooter>
-              <Button>Save Changes</Button>
+              <Button onClick={handleProfileUpdate} disabled={uploading}>{uploading ? 'Saving...' : 'Save Changes'}</Button>
             </CardFooter>
           </Card>
         </TabsContent>
