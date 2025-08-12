@@ -2,7 +2,7 @@
 "use client";
 
 import type { Conversation, User, Message } from "@/types";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { SendHorizonal, Search, ArrowLeft, Users } from "lucide-react";
 import { Textarea } from "../ui/textarea";
-import { collection, onSnapshot, query, orderBy, doc, getDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, doc, getDoc, addDoc, serverTimestamp, runTransaction } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export function NoFriendsEmptyState() {
@@ -37,6 +37,7 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setConversations(initialConversations);
@@ -61,6 +62,7 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
             
             msgs.push({
                 id: docSnap.id,
+                senderId: msgData.senderId,
                 text: msgData.text,
                 sender: sender,
                 timestamp: msgData.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...',
@@ -74,14 +76,47 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
 
   }, [selectedConversation, currentUser]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Scroll to the bottom when messages change
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTo({
+        top: scrollAreaRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [messages]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim() === "" || !selectedConversation) return;
 
-    // TODO: Add logic to save the message to Firestore
-    console.log("Sending message:", newMessage);
-    
-    setNewMessage("");
+    const conversationRef = doc(db, "conversations", selectedConversation.id);
+    const messagesRef = collection(conversationRef, "messages");
+
+    try {
+        await runTransaction(db, async (transaction) => {
+            await addDoc(messagesRef, {
+                senderId: currentUser.id,
+                text: newMessage,
+                timestamp: serverTimestamp(),
+                read: false,
+            });
+
+            transaction.update(conversationRef, {
+                lastMessage: {
+                    text: newMessage,
+                    senderId: currentUser.id,
+                    timestamp: serverTimestamp(),
+                    read: false,
+                }
+            });
+        });
+        setNewMessage("");
+
+    } catch (error) {
+        console.error("Error sending message: ", error);
+        // Optionally, show a toast notification for the error
+    }
   };
   
   const handleSelectConversation = (conv: Conversation) => {
@@ -147,7 +182,7 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
               </Avatar>
               <p className="font-semibold">{selectedConversation.participant.name}</p>
             </div>
-            <ScrollArea className="flex-1 p-4 bg-gray-50 dark:bg-gray-900">
+            <ScrollArea className="flex-1 p-4 bg-gray-50 dark:bg-gray-900" ref={scrollAreaRef}>
               <div className="space-y-4">
                 {messages.map((msg) => (
                   <div

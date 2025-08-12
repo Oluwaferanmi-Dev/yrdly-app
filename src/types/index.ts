@@ -37,6 +37,7 @@ export interface Post {
 
 export interface Message {
   id: string;
+  senderId: string;
   sender: User;
   text: string;
   timestamp: string;

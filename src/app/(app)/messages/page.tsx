@@ -68,17 +68,14 @@ export default function MessagesPage() {
                 if (!userDoc.exists()) return null;
                 const participant = { id: userDoc.id, ...userDoc.data() } as User;
                 
-                // Fetch messages subcollection
-                const messagesQuery = query(collection(db, 'conversations', docSnap.id, 'messages'));
-                let messages: MessageType[] = [];
-                // For now, we just get the latest message for the preview, but we can fetch them all inside the chat view
-                 const lastMessage = convData.lastMessage;
+                const lastMessage = convData.lastMessage;
 
                 return {
                     id: docSnap.id,
                     participant,
                     messages: lastMessage ? [{
                         id: 'last',
+                        senderId: lastMessage.senderId,
                         sender: lastMessage.senderId === currentUser?.id ? currentUser : participant,
                         text: lastMessage.text,
                         timestamp: (lastMessage.timestamp as Timestamp)?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...',
