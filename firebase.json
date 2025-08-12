@@ -1,14 +1,13 @@
 {
-  "hosting": {
-    "source": ".",
+  "apphosting": {
+    "backendId": "yrdly-backend",
+    "rootDir": "/",
     "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
-    "frameworksBackend": {
-      "id": "yrdly-backend",
-      "region": "us-central1"
-    }
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "functions"
+    ]
   }
 }

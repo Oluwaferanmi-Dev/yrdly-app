@@ -1,45 +1,23 @@
-# Settings to manage and configure a Firebase App Hosting backend.
-# https://firebase.google.com/docs/app-hosting/configure
-
+# Settings for Backend (on Cloud Run).
+# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
-  maxInstances: 1
-# Required for Next.js frameworks
-headers:
-  - headers:
-      - key: 'Cache-Control'
-        value: 'private'
-    source: '@next-optimizations' # Framework-level optimization
-# Required for Next.js frameworks
-rewrites:
-  - source: '**'
-    destination: '/index.html'
-    framework: 'next-optimizations' # Framework-level optimization
-# Required for Next.js frameworks
-redirects:
-  - regex: '.*'
-    destination: 'https://www.google.com'
-    framework: 'next-optimizations' # Framework-level optimization
-# Required for Next.js frameworks
-cleanUrls: true
-# Required for Next.js frameworks
-trailingSlash: false
-# Required for Next.js frameworks
-i18n:
-  # Required for Next.js frameworks
-  root: 'all-sites'
-# Required for Next.js frameworks
-frameworks:
-  # Required for Next.js frameworks
-  next:
-    # Required for Next.js frameworks
-    version: '18'
-# Required for Next.js frameworks
-discovery:
-  # Required for Next.js frameworks
-  next:
-    # Required for Next.js frameworks
-    require: []
-# Required for Next.js frameworks
-serveStaticAssets: true
+  minInstances: 0
+  # maxInstances: 100
+  # concurrency: 80
+  # cpu: 1
+  # memoryMiB: 512
+
+# Environment variables and secrets.
+# env:
+  # Configure environment variables.
+  # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
+  # - variable: MESSAGE
+  #   value: Hello world!
+  #   availability:
+  #     - BUILD
+  #     - RUNTIME
+
+  # Grant access to secrets in Cloud Secret Manager.
+  # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
+  # - variable: MY_SECRET
+  #   secret: mySecretRef
