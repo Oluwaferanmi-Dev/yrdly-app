@@ -1,6 +1,7 @@
+
 "use client";
 
-import type { Post as PostType } from "../types/post";
+import type { Post as PostType } from "@/types";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, Calendar, LinkIcon } from "lucide-react";
@@ -10,6 +11,8 @@ import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "firebase/fi
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { timeAgo } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 interface EventCardProps {
   event: PostType;
@@ -20,25 +23,24 @@ export function EventCard({ event }: EventCardProps) {
   const [attendeeCount, setAttendeeCount] = useState(event.attendees?.length || 0);
   const [isAttending, setIsAttending] = useState(event.attendees?.includes(user?.uid || '') || false);
   const [loadingAttending, setLoadingAttending] = useState(false);
+  const router = useRouter();
 
-  // Listen for real-time updates to the attendees list
   useEffect(() => {
     const eventRef = doc(db, "posts", event.id);
     const unsubscribe = onSnapshot(eventRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        const currentAttendees = (data.attendees as string[]) || [];
+        const currentAttendees = data.attendees || [];
         setAttendeeCount(currentAttendees.length);
         setIsAttending(currentAttendees.includes(user?.uid || ''));
       }
     });
-    return () => unsubscribe(); // Cleanup the listener
+    return () => unsubscribe();
   }, [event.id, user?.uid]);
 
   const handleAttendingToggle = async () => {
     if (!user) {
-      // TODO: Show login prompt or toast
-      console.log("User not logged in");
+      router.push('/login');
       return;
     }
 
@@ -47,19 +49,12 @@ export function EventCard({ event }: EventCardProps) {
 
     try {
       if (isAttending) {
-        // User is currently attending, so unmark them
-        await updateDoc(eventRef, {
-          attendees: arrayRemove(user.uid)
-        });
+        await updateDoc(eventRef, { attendees: arrayRemove(user.uid) });
       } else {
-        // User is not attending, so mark them
-        await updateDoc(eventRef, {
-          attendees: arrayUnion(user.uid)
-        });
+        await updateDoc(eventRef, { attendees: arrayUnion(user.uid) });
       }
     } catch (error) {
       console.error("Error updating attendance:", error);
-      // TODO: Show error toast
     } finally {
       setLoadingAttending(false);
     }
@@ -71,7 +66,7 @@ export function EventCard({ event }: EventCardProps) {
         <div className="relative w-full h-48 rounded-t-lg overflow-hidden">
           <Image
             src={event.imageUrl}
-            alt={event.text}
+            alt={event.title || event.text}
             fill
             style={{ objectFit: "cover" }}
             data-ai-hint="event image"
@@ -86,15 +81,16 @@ export function EventCard({ event }: EventCardProps) {
              </Avatar>
              <div>
                 <p className="text-sm font-semibold">{event.authorName}</p>
-                <p className="text-xs text-muted-foreground">{event.timestamp}</p>
+                <p className="text-xs text-muted-foreground">{timeAgo(event.timestamp?.toDate())}</p>
              </div>
          </div>
-        <h3 className="text-xl font-semibold">{event.text}</h3>
+        <h3 className="text-xl font-semibold">{event.title}</h3>
+        <p className="text-sm text-muted-foreground pt-1">{event.text}</p>
       </CardHeader>
       <CardContent className="space-y-3">
-        {event.location && (
+        {event.eventLocation && (
           <div className="flex items-center text-muted-foreground text-sm">
-            <MapPin className="mr-2 h-4 w-4" /> {event.location}
+            <MapPin className="mr-2 h-4 w-4" /> {event.eventLocation.address}
           </div>
         )}
         {(event.eventDate || event.eventTime) && (
@@ -116,18 +112,11 @@ export function EventCard({ event }: EventCardProps) {
         <Button
           variant={isAttending ? "secondary" : "default"}
           onClick={handleAttendingToggle}
-          disabled={loadingAttending || !user} // Disable if not logged in
+          disabled={loadingAttending || !user}
         >
           {isAttending ? "Attending" : "Attend"}
         </Button>
-        {/* Display attendee count */}
         <span className="text-sm text-muted-foreground">{attendeeCount} {attendeeCount === 1 ? 'attending' : 'attendees'}</span>
-
-        {event.eventLink && !isAttending && ( // Only show More Info if not attending (optional, depends on desired UI)
-             <Button variant="outline" asChild>
-                <a href={event.eventLink} target="_blank" rel="noopener noreferrer">More Info</a>
-             </Button>
-        )}
       </CardFooter>
     </Card>
   );

@@ -1,10 +1,10 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Business } from '@/types';
-import type { Post } from '../../../types/post';
+import type { Business, Post } from '@/types';
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,7 @@ export default function MapPage() {
                         id: doc.id,
                         type: 'event',
                         position: { lat: post.eventLocation.latitude, lng: post.eventLocation.longitude },
-                        title: post.text,
+                        title: post.title || post.text,
                         address: post.eventLocation.address,
                     });
                 }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -46,7 +47,7 @@ import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/fi
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import type { Post, PostCategory } from "../types";
+import type { Post, PostCategory } from "@/types";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const formSchema = z.object({
@@ -113,7 +114,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
 
         const postData = {
             ...values,
-            imageUrl: imageUrl,
+            imageUrl: imageUrl || "",
         };
 
         if (isEditMode) {
@@ -127,7 +128,6 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
                 authorImage: user.photoURL || `https://placehold.co/100x100.png`,
                 ...postData,
                 timestamp: serverTimestamp(),
-                likes: 0,
                 likedBy: [],
                 commentCount: 0,
             });
@@ -161,7 +161,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
 
   const FormContent = () => (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 px-1">
         <FormField
           control={form.control}
           name="text"
@@ -170,7 +170,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
               <FormControl>
                 <Textarea
                   placeholder="What&apos;s happening in the neighborhood?"
-                  className="resize-none min-h-[120px] border-none shadow-none focus-visible:ring-0"
+                  className="resize-none min-h-[120px] border-none shadow-none focus-visible:ring-0 p-4"
                   {...field}
                 />
               </FormControl>
@@ -178,43 +178,45 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             </FormItem>
           )}
         />
-        <div className="grid grid-cols-2 gap-4">
-           <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="General">General</SelectItem>
-                      <SelectItem value="Event">Event</SelectItem>
-                      <SelectItem value="For Sale">For Sale</SelectItem>
-                      <SelectItem value="Business">Business</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
-            />
-        </div>
-        
-        <FormItem>
-            <FormLabel>Add an image</FormLabel>
-            <FormControl>
-                <Input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleImageChange}
+        <div className="px-4 pb-4 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+               <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="General">General</SelectItem>
+                          <SelectItem value="Event">Event</SelectItem>
+                          <SelectItem value="For Sale">For Sale</SelectItem>
+                          <SelectItem value="Business">Business</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
                 />
-            </FormControl>
-        </FormItem>
-        {postToEdit?.imageUrl && !imageFile && (
-            <div className="text-sm text-muted-foreground">Current image: <a href={postToEdit.imageUrl} target="_blank" rel="noopener noreferrer" className="underline">view image</a></div>
-        )}
+            </div>
+            
+            <FormItem>
+                <FormLabel>Add an image</FormLabel>
+                <FormControl>
+                    <Input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleImageChange}
+                    />
+                </FormControl>
+            </FormItem>
+            {postToEdit?.imageUrl && !imageFile && (
+                <div className="text-sm text-muted-foreground">Current image: <a href={postToEdit.imageUrl} target="_blank" rel="noopener noreferrer" className="underline">view image</a></div>
+            )}
+        </div>
       </form>
     </Form>
   );
@@ -238,14 +240,14 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             <SheetTrigger asChild>
                 { children ? children : <Trigger /> }
             </SheetTrigger>
-            <SheetContent side="bottom">
-                <SheetHeader>
+            <SheetContent side="bottom" className="p-0">
+                <SheetHeader className="p-4 border-b">
                     <SheetTitle>{isEditMode ? 'Edit Post' : 'Create Post'}</SheetTitle>
                 </SheetHeader>
                 <div className="py-4">
                     <FormContent />
                 </div>
-                <SheetFooter>
+                <SheetFooter className="p-4 border-t">
                   <Button onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
                     {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
                   </Button>
@@ -260,15 +262,15 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
       <DialogTrigger asChild>
         { children ? children : <Trigger /> }
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[525px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[525px] p-0">
+        <DialogHeader className="p-6 pb-0">
           <DialogTitle>{isEditMode ? 'Edit Post' : 'Create Post'}</DialogTitle>
           <DialogDescription>
              {isEditMode ? 'Make changes to your post here.' : 'Share an update with your neighborhood.'}
           </DialogDescription>
         </DialogHeader>
         <FormContent />
-        <DialogFooter>
+        <DialogFooter className="p-6 pt-0">
           <Button onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
             {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
           </Button>

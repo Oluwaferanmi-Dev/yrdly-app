@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -15,11 +16,10 @@ import { updateProfile } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
-import type { Location } from "../../../types";
+import type { User } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { allStates, lgasByState, wardsByLga } from "@/lib/geo-data";
 
-// Assuming you have a way to handle push notification subscriptions and sending on the backend
 export default function SettingsPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -28,16 +28,9 @@ export default function SettingsPage() {
   const [bio, setBio] = useState("");
   const [profilePic, setProfilePic] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [location, setLocation] = useState<User['location']>({});
+  const [wardsForSelectedLga, setWardsForSelectedLga] = useState<string[]>([]);
 
-  // Location state
-  const [location, setLocation] = useState<Partial<Location>>({
-    state: "",
-    lga: "",
-    city: "",
-    ward: ""
-  });
-  // Push notification state
- 
 
   // Fetch user data
   useEffect(() => {
@@ -46,15 +39,17 @@ export default function SettingsPage() {
         const userDocRef = doc(db, "users", user.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
+          const userData = userDocSnap.data() as User;
           setBio(userData.bio || "");
           if (userData.location) {
             setLocation(userData.location);
+            if (userData.location.lga) {
+                setWardsForSelectedLga(wardsByLga[userData.location.lga] || []);
+            }
           }
           if (!user.displayName) {
             setName(userData.name || "");
           }
- 
         }
       };
       fetchUserData();
@@ -64,25 +59,19 @@ export default function SettingsPage() {
     }
   }, [user]);
 
-  const handleLocationChange = (type: keyof Location, value: string) => {
-    const newLocation = { ...location, [type]: value };
-    if (type === "state") {
-      newLocation.lga = "";
-      newLocation.city = "";
-      newLocation.ward = "";
-    }
-    if (type === "lga") {
-      newLocation.ward = "";
-      newLocation.city = "";
-    }
-
-    // Update wards when LGA changes
-    if (type === "lga") {
-      const wards = wardsByLga[value] || [];
-      setWardsForSelectedLga(wards);
-    }
-
-    setLocation(newLocation);
+  const handleLocationChange = (type: keyof User['location'], value: string) => {
+    setLocation(prev => {
+        const newLocation = { ...prev, [type]: value };
+        if (type === "state") {
+          newLocation.lga = "";
+          newLocation.ward = "";
+        }
+        if (type === "lga") {
+          newLocation.ward = "";
+          setWardsForSelectedLga(wardsByLga[value] || []);
+        }
+        return newLocation;
+    });
   };
 
   const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,18 +97,15 @@ export default function SettingsPage() {
         photoURL: photoURL
       });
 
-      await setDoc(
-        doc(db, "users", user.uid),
-        {
-          name: name,
-          bio: bio,
-          location: location,
-          avatarUrl: photoURL,
- email: user.email,
- 
-        },
-        { merge: true }
-      );
+      const userData: Partial<User> = {
+        name: name,
+        bio: bio,
+        location: location,
+        avatarUrl: photoURL || user.photoURL,
+        email: user.email,
+      };
+
+      await setDoc(doc(db, "users", user.uid), userData, { merge: true } );
 
       toast({ title: "Profile Updated", description: "Your profile has been successfully updated." });
     } catch (error) {
@@ -135,9 +121,7 @@ export default function SettingsPage() {
     router.push("/login");
   };
 
-  const lgasForSelectedState = location.state ? lgasByState[location.state] : [];
-  const [wardsForSelectedLga, setWardsForSelectedLga] = useState<string[]>([]);
-
+  const lgasForSelectedState = location?.state ? lgasByState[location.state] : [];
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -152,7 +136,6 @@ export default function SettingsPage() {
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
 
-        {/* Profile Tab */}
         <TabsContent value="profile">
           <Card>
             <CardHeader>
@@ -179,55 +162,34 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>Location</Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* State */}
                   <div className="space-y-1">
                     <Label htmlFor="state" className="text-xs">State</Label>
-                    <Select value={location.state || ""} onValueChange={(value) => handleLocationChange("state", value)}>
-                      <SelectTrigger id="state">
-                        <SelectValue placeholder="Select your state" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allStates.map((state) => (
-                          <SelectItem key={state} value={state}>{state}</SelectItem>
-                        ))}
-                      </SelectContent>
+                    <Select value={location?.state || ""} onValueChange={(value) => handleLocationChange("state", value)}>
+                      <SelectTrigger id="state"><SelectValue placeholder="Select your state" /></SelectTrigger>
+                      <SelectContent>{allStates.map((state) => (<SelectItem key={state} value={state}>{state}</SelectItem>))}</SelectContent>
                     </Select>
                   </div>
 
-                  {/* LGA */}
                   <div className="space-y-1">
                     <Label htmlFor="lga" className="text-xs">LGA</Label>
-                    <Select value={location.lga || ""} onValueChange={(value) => handleLocationChange("lga", value)} disabled={!location.state}>
-                      <SelectTrigger id="lga">
-                        <SelectValue placeholder="Select your LGA" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {lgasForSelectedState.map((lga) => (
-                          <SelectItem key={lga} value={lga}>{lga}</SelectItem>
-                        ))}
-                      </SelectContent>
+                    <Select value={location?.lga || ""} onValueChange={(value) => handleLocationChange("lga", value)} disabled={!location?.state}>
+                      <SelectTrigger id="lga"><SelectValue placeholder="Select your LGA" /></SelectTrigger>
+                      <SelectContent>{lgasForSelectedState.map((lga) => (<SelectItem key={lga} value={lga}>{lga}</SelectItem>))}</SelectContent>
                     </Select>
                   </div>
 
-                  {/* Ward */}
                   <div className="space-y-1">
                     <Label htmlFor="ward" className="text-xs">Ward</Label>
-                    <Select value={location.ward || ""} onValueChange={(value) => handleLocationChange("ward", value)} disabled={!location.lga}>
-                      <SelectTrigger id="ward">
-                        <SelectValue placeholder="Select your Ward" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {wardsForSelectedLga.map((ward) => (
-                          <SelectItem key={ward} value={ward}>{ward}</SelectItem>
-                        ))}
-                      </SelectContent>
+                    <Select value={location?.ward || ""} onValueChange={(value) => handleLocationChange("ward", value)} disabled={!location?.lga}>
+                      <SelectTrigger id="ward"><SelectValue placeholder="Select your Ward" /></SelectTrigger>
+                      <SelectContent>{wardsForSelectedLga.map((ward) => (<SelectItem key={ward} value={ward}>{ward}</SelectItem>))}</SelectContent>
                     </Select>
                   </div>
-                </div>
-
-                <div className="space-y-1">
-                  <Label htmlFor="city" className="text-xs">City / Town / Street</Label>
-                  <Input id="city" placeholder="e.g. Opebi Street" value={location.city || ""} onChange={(e) => handleLocationChange("city", e.target.value)} />
+                  
+                  <div className="space-y-1">
+                    <Label htmlFor="city" className="text-xs">City / Town / Street</Label>
+                    <Input id="city" placeholder="e.g. Opebi Street" value={location?.city || ""} onChange={(e) => handleLocationChange("city", e.target.value)} />
+                  </div>
                 </div>
               </div>
 
@@ -244,7 +206,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Security Tab */}
         <TabsContent value="security">
           <Card>
             <CardHeader>
@@ -271,7 +232,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Notifications Tab */}
         <TabsContent value="notifications">
           <Card>
             <CardHeader>
@@ -287,7 +247,6 @@ export default function SettingsPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Logout Section */}
       <Card className="mt-6 border-destructive">
         <CardHeader>
           <CardTitle className="text-destructive">Logout</CardTitle>

@@ -1,16 +1,18 @@
+
 "use client";
 
 import { PostCard } from "@/components/PostCard";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { Post as PostType } from "../../../types/post";
+import type { Post as PostType } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyFeed } from "@/components/EmptyFeed"; // Assuming you extract EmptyFeed to its own component
-import { WelcomeBanner } from "@/components/WelcomeBanner"; // Assuming you extract WelcomeBanner
+import { EmptyFeed } from "@/components/EmptyFeed";
+import { WelcomeBanner } from "@/components/WelcomeBanner";
 import { SuggestedNeighbors } from "@/components/SuggestedNeighbors";
+import { timeAgo } from "@/lib/utils";
 
 export default function Home() {
   const [posts, setPosts] = useState<PostType[]>([]);
@@ -25,7 +27,6 @@ export default function Home() {
         return {
           id: doc.id,
           ...data,
-          timestamp: data.timestamp?.toDate().toLocaleString() ?? new Date().toLocaleString(),
         } as PostType;
       });
       setPosts(postsData);

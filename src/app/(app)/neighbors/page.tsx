@@ -13,12 +13,13 @@ import {
     updateDoc,
     runTransaction,
     arrayRemove,
+    getDocs,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-import type { User, Location, FriendRequest } from "../../../types";
+import type { User, FriendRequest } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -87,23 +88,20 @@ export default function NeighborsPage() {
             setLoading(false);
         });
 
-        const incomingRequestsQuery = query(collection(db, "friend_requests"), where("toUserId", "==", currentUser.uid));
-        const outgoingRequestsQuery = query(collection(db, "friend_requests"), where("fromUserId", "==", currentUser.uid));
+        const requestsQuery = query(
+            collection(db, "friend_requests"),
+            where("participantIds", "array-contains", currentUser.uid)
+        );
 
-        const unsubscribeIncoming = onSnapshot(incomingRequestsQuery, (snapshot) => {
-            const incoming = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest));
-            setFriendRequests(prev => [...prev.filter(req => req.fromUserId === currentUser.uid), ...incoming]);
+        const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
+            const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest));
+            setFriendRequests(requests);
         });
 
-        const unsubscribeOutgoing = onSnapshot(outgoingRequestsQuery, (snapshot) => {
-            const outgoing = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest));
-            setFriendRequests(prev => [...prev.filter(req => req.toUserId === currentUser.uid), ...outgoing]);
-        });
 
         return () => {
             unsubscribeUsers();
-            unsubscribeIncoming();
-            unsubscribeOutgoing();
+            unsubscribeRequests();
         };
     }, [currentUser]);
 
@@ -118,9 +116,7 @@ export default function NeighborsPage() {
     const filteredNeighbors = useMemo(() => {
         const blockedByMe = userDetails?.blockedUsers || [];
         return allNeighbors.filter((neighbor) => {
-            // Filter out users I have blocked
             if (blockedByMe.includes(neighbor.uid)) return false;
-            // Filter out users who have blocked me
             if (neighbor.blockedUsers?.includes(currentUser?.uid || '')) return false;
 
             const stateMatch = filters.state === "all" || neighbor.location?.state === filters.state;
@@ -136,6 +132,7 @@ export default function NeighborsPage() {
             await addDoc(collection(db, "friend_requests"), {
                 fromUserId: currentUser.uid,
                 toUserId: neighbor.uid,
+                participantIds: [currentUser.uid, neighbor.uid],
                 status: "pending",
                 timestamp: serverTimestamp(),
             });
@@ -166,14 +163,14 @@ export default function NeighborsPage() {
         toast({ title: "Friend request declined." });
     };
 
-    const handleUnfriend = async (e: React.MouseEvent, friend: User) => {
+    const handleUnfriend = async (e: React.MouseEvent, friendId: string) => {
         e.stopPropagation();
         if (!currentUser) return;
         try {
             await runTransaction(db, async (transaction) => {
                 const currentUserRef = doc(db, "users", currentUser.uid);
-                const friendUserRef = doc(db, "users", friend.uid);
-                transaction.update(currentUserRef, { friends: arrayRemove(friend.uid) });
+                const friendUserRef = doc(db, "users", friendId);
+                transaction.update(currentUserRef, { friends: arrayRemove(friendId) });
                 transaction.update(friendUserRef, { friends: arrayRemove(currentUser.uid) });
             });
             toast({ title: "Friend removed." });
@@ -182,15 +179,48 @@ export default function NeighborsPage() {
             toast({ variant: "destructive", title: "Error", description: "Could not remove friend." });
         }
     };
+    
+    const handleMessage = async (e: React.MouseEvent, neighbor: User) => {
+        e.stopPropagation();
+        if (!currentUser) return;
 
-    const getFriendshipStatus = (neighbor: User) => {
-        if (userDetails?.friends?.some(friend => friend.uid === neighbor.uid)) return "friends";
-        const pendingRequest = friendRequests.find(req => req.status === 'pending' && ((req.fromUserId === currentUser?.uid && req.toUserId === neighbor.uid) || (req.fromUserId === neighbor.uid && req.toUserId === currentUser?.uid)));
-        if (pendingRequest) return "pending";
+        const conversationQuery = query(
+            collection(db, "conversations"),
+            where("participantIds", "==", [currentUser.uid, neighbor.uid].sort())
+        );
+
+        const querySnapshot = await getDocs(conversationQuery);
+
+        if (!querySnapshot.empty) {
+            // Conversation exists
+            router.push(`/messages?convId=${neighbor.uid}`);
+        } else {
+            // Create new conversation
+            const newConvRef = await addDoc(collection(db, "conversations"), {
+                participantIds: [currentUser.uid, neighbor.uid].sort(),
+                lastMessage: null,
+            });
+            router.push(`/messages?convId=${neighbor.uid}`);
+        }
+    };
+
+
+    const getFriendshipStatus = (neighborId: string) => {
+        if (userDetails?.friends?.includes(neighborId)) return "friends";
+        
+        const request = friendRequests.find(req => 
+            ((req.fromUserId === currentUser?.uid && req.toUserId === neighborId) ||
+             (req.fromUserId === neighborId && req.toUserId === currentUser?.uid))
+        );
+
+        if (request && request.status === 'pending') {
+            return request.fromUserId === currentUser?.uid ? 'request_sent' : 'request_received';
+        }
+
         return "none";
     };
 
-    const displayLocation = (location?: Location) => {
+    const displayLocation = (location?: User['location']) => {
         if (!location) return null;
         return [location.city, location.lga, location.state].filter(Boolean).join(", ");
     };
@@ -212,7 +242,7 @@ export default function NeighborsPage() {
     const friends = useMemo(() => {
         const blockedByMe = userDetails?.blockedUsers || [];
         return allNeighbors.filter(n => 
-            userDetails?.friends?.some(f => f.uid === n.uid) &&
+            userDetails?.friends?.includes(n.uid) &&
             !blockedByMe.includes(n.uid)
         );
     }, [allNeighbors, userDetails]);
@@ -233,11 +263,18 @@ export default function NeighborsPage() {
                         <div className="space-y-4">
                             {incomingRequests.map(request => {
                                 const fromUser = allNeighbors.find(n => n.uid === request.fromUserId);
+                                if (!fromUser) return null;
                                 return (
                                     <div key={request.id} className="flex items-center justify-between">
-                                        <span className="cursor-pointer" onClick={() => router.push(`/users/${request.fromUserId}`)}><b>{fromUser?.name || "Someone"}</b> wants to be your friend.</span>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-10 w-10">
+                                                <AvatarImage src={fromUser?.avatarUrl} alt={fromUser.name}/>
+                                                <AvatarFallback>{fromUser.name.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="cursor-pointer" onClick={() => router.push(`/users/${request.fromUserId}`)}><b>{fromUser?.name || "Someone"}</b> wants to be your friend.</span>
+                                        </div>
                                         <div className="flex gap-2">
-                                            <Button size="sm" variant="outline" onClick={(e) => handleAcceptRequest(e, request)}><Check className="h-4 w-4" /></Button>
+                                            <Button size="sm" variant="default" onClick={(e) => handleAcceptRequest(e, request)}><Check className="h-4 w-4" /></Button>
                                             <Button size="sm" variant="outline" onClick={(e) => handleDeclineRequest(e, request)}><X className="h-4 w-4" /></Button>
                                         </div>
                                     </div>
@@ -275,23 +312,22 @@ export default function NeighborsPage() {
                     ) : filteredNeighbors.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {filteredNeighbors.map((neighbor) => {
-                                const status = getFriendshipStatus(neighbor);
+                                const status = getFriendshipStatus(neighbor.uid);
                                 return (
                                     <Card key={neighbor.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/users/${neighbor.uid}`)}>
-                                        <CardContent className="p-4 flex items-start gap-4">
-                                            <Avatar className="h-16 w-16 border"><AvatarImage src={neighbor.avatarUrl} alt={neighbor.name} /><AvatarFallback>{neighbor.name.charAt(0)}</AvatarFallback></Avatar>
-                                            <div className="flex-1 space-y-1">
-                                                <h3 className="font-semibold text-lg">{neighbor.name}</h3>
-                                                {neighbor.location && (<div className="flex items-center text-sm text-muted-foreground"><MapPin className="h-4 w-4 mr-1" /><span>{displayLocation(neighbor.location)}</span></div>)}
-                                                <p className="text-sm text-muted-foreground pt-1">{neighbor.bio || "No bio yet."}</p>
+                                        <CardContent className="p-4 flex flex-col items-center text-center">
+                                            <Avatar className="h-20 w-20 border mb-4"><AvatarImage src={neighbor.avatarUrl} alt={neighbor.name} /><AvatarFallback>{neighbor.name.charAt(0)}</AvatarFallback></Avatar>
+                                            <h3 className="font-semibold text-lg">{neighbor.name}</h3>
+                                            {neighbor.location && (<div className="flex items-center text-xs text-muted-foreground"><MapPin className="h-3 w-3 mr-1" /><span>{displayLocation(neighbor.location)}</span></div>)}
+                                            <div className="mt-4">
+                                                {status === "friends" ? (
+                                                    <Button size="sm" onClick={(e) => handleMessage(e, neighbor)}><MessageSquare className="mr-2 h-4 w-4" /> Message</Button>
+                                                ) : status === "request_sent" ? (
+                                                    <Button size="sm" disabled onClick={(e) => e.stopPropagation()}>Request Sent</Button>
+                                                ) : (
+                                                    <Button size="sm" onClick={(e) => handleAddFriend(e, neighbor)}><UserPlus className="mr-2 h-4 w-4" /> Add Friend</Button>
+                                                )}
                                             </div>
-                                            {status === "friends" ? (
-                                                <Button size="sm" onClick={(e) => { e.stopPropagation(); router.push(`/messages?convId=${neighbor.uid}`)}}><MessageSquare className="mr-2 h-4 w-4" /> Message</Button>
-                                            ) : status === "pending" ? (
-                                                <Button size="sm" disabled onClick={(e) => e.stopPropagation()}>Request Sent</Button>
-                                            ) : (
-                                                <Button size="sm" onClick={(e) => handleAddFriend(e, neighbor)}><UserPlus className="mr-2 h-4 w-4" /> Add Friend</Button>
-                                            )}
                                         </CardContent>
                                     </Card>
                                 );
@@ -308,21 +344,21 @@ export default function NeighborsPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                             {friends.map((friend) => (
                                 <Card key={friend.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/users/${friend.uid}`)}>
-                                    <CardContent className="p-4 flex items-start gap-4">
-                                        <Avatar className="h-16 w-16 border"><AvatarImage src={friend.avatarUrl} alt={friend.name} /><AvatarFallback>{friend.name.charAt(0)}</AvatarFallback></Avatar>
+                                    <CardContent className="p-4 flex items-center gap-4">
+                                        <Avatar className="h-12 w-12 border"><AvatarImage src={friend.avatarUrl} alt={friend.name} /><AvatarFallback>{friend.name.charAt(0)}</AvatarFallback></Avatar>
                                         <div className="flex-1 space-y-1">
-                                            <h3 className="font-semibold text-lg">{friend.name}</h3>
-                                            {friend.location && (<div className="flex items-center text-sm text-muted-foreground"><MapPin className="h-4 w-4 mr-1" /><span>{displayLocation(friend.location)}</span></div>)}
+                                            <h3 className="font-semibold text-base">{friend.name}</h3>
+                                            {friend.location && (<div className="flex items-center text-xs text-muted-foreground"><MapPin className="h-3 w-3 mr-1" /><span>{displayLocation(friend.location)}</span></div>)}
                                         </div>
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
-                                                <Button size="sm" variant="outline" onClick={(e) => e.stopPropagation()}><UserMinus className="mr-2 h-4 w-4" /> Unfriend</Button>
+                                                <Button size="icon" variant="ghost" onClick={(e) => e.stopPropagation()}><UserMinus className="h-4 w-4 text-destructive" /></Button>
                                             </AlertDialogTrigger>
                                             <AlertDialogContent>
                                                 <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will remove {friend.name} from your friends list. This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                     <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={(e) => handleUnfriend(e, friend)}>Unfriend</AlertDialogAction>
+                                                    <AlertDialogAction onClick={(e) => handleUnfriend(e, friend.uid)}>Unfriend</AlertDialogAction>
                                                 </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>

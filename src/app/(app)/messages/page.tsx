@@ -4,11 +4,10 @@
 import { ChatLayout, NoFriendsEmptyState } from '@/components/messages/ChatLayout';
 import { useAuth } from '@/hooks/use-auth';
 import { useState, useEffect, useMemo } from 'react';
-import type { Conversation, User } from '@/types';
-import { collection, query, where, onSnapshot, getDoc, doc, Timestamp } from 'firebase/firestore';
+import type { Conversation, User, Message } from '@/types';
+import { collection, query, where, onSnapshot, getDoc, doc, Timestamp, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-
-import { Skeleton } from '../../../components/ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const MessagesLoading = () => (
     <div className="p-4 space-y-4">
@@ -26,15 +25,8 @@ const MessagesLoading = () => (
                 <Skeleton className="h-4 w-1/2" />
             </div>
         </div>
-        <div className="flex items-center gap-4">
-            <Skeleton className="h-12 w-12 rounded-full" />
-            <div className="space-y-2 flex-1">
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-            </div>
-        </div>
     </div>
-)
+);
 
 
 export default function MessagesPage() {
@@ -47,7 +39,7 @@ export default function MessagesPage() {
         uid: user.uid,
         name: user.displayName || 'Anonymous',
         avatarUrl: user.photoURL || `https://placehold.co/100x100.png`,
-    } : null, [user]);
+    } as User : null, [user]);
 
     useEffect(() => {
         if (!user || !userDetails) {
@@ -55,27 +47,19 @@ export default function MessagesPage() {
             return;
         }
 
-        // Ensure friends array exists and is not empty
-        if (!userDetails.friends || userDetails.friends.length === 0) {
-            setConversations([]);
-            setLoading(false);
-            return;
-        }
-
-        const friendUids = userDetails.friends.map(f => f.uid);
-
         const q = query(
             collection(db, 'conversations'),
             where('participantIds', 'array-contains', user.uid)
         );
 
         const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+            const friendUids = userDetails?.friends || [];
+
             const convsPromises = querySnapshot.docs
                 .map(async (docSnap) => {
                     const convData = docSnap.data();
                     const otherParticipantId = convData.participantIds.find((id: string) => id !== user.uid);
-
-                    // If the other participant is not in the friends list, skip
+                    
                     if (!otherParticipantId || !friendUids.includes(otherParticipantId)) {
                         return null;
                     }
@@ -88,15 +72,16 @@ export default function MessagesPage() {
 
                     return {
                         id: docSnap.id,
+                        participantIds: convData.participantIds,
                         participant,
-                        messages: lastMessage ? [{
+                        lastMessage: lastMessage ? {
                             id: 'last',
                             senderId: lastMessage.senderId,
                             sender: lastMessage.senderId === currentUser?.id ? currentUser : participant,
                             text: lastMessage.text,
                             timestamp: (lastMessage.timestamp as Timestamp)?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...',
                             read: lastMessage.read,
-                        }] : [],
+                        } : undefined,
                     } as Conversation;
                 });
 

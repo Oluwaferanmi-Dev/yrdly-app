@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, CalendarDays } from "lucide-react";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { useState, useEffect } from "react";
-import type { Post as PostType } from "../../../types/post";
+import type { Post as PostType } from "@/types";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { EventCard } from "@/components/EventCard";
@@ -19,7 +19,7 @@ function EmptyEvents() {
             </div>
             <h2 className="text-2xl font-bold">No upcoming events</h2>
             <p className="text-muted-foreground mt-2 mb-6">Be the first to organize something in your neighborhood!</p>
- <CreateEventDialog>
+            <CreateEventDialog>
                 <Button>
                     <Plus className="mr-2 h-4 w-4" /> Create Event
                 </Button>
@@ -40,7 +40,6 @@ export default function EventsPage() {
                 return {
                     id: doc.id,
                     ...data,
-                    timestamp: data.timestamp?.toDate().toLocaleString() ?? new Date().toLocaleString(),
                 } as PostType;
             });
             setPosts(eventsData);
@@ -57,7 +56,7 @@ export default function EventsPage() {
             <h1 className="text-2xl md:text-3xl font-bold font-headline">Events</h1>
             <p className="text-muted-foreground">Discover and create community events.</p>
         </div>
- <CreateEventDialog>
+        <CreateEventDialog>
             <Button>
                 <Plus className="mr-2 h-4 w-4" /> Create Event
             </Button>
@@ -69,9 +68,9 @@ export default function EventsPage() {
                 <Skeleton className="h-48 w-full" />
                 <Skeleton className="h-48 w-full" />
              </div>
-        ) : posts.filter(post => post.category === 'Event').length > 0 ? (
+        ) : posts.length > 0 ? (
             <div className="space-y-4 max-w-2xl mx-auto">
-                {posts.filter(post => post.category === 'Event').map(event => (
+                {posts.map(event => (
                     <EventCard key={event.id} event={event} />
                 ))}
             </div>

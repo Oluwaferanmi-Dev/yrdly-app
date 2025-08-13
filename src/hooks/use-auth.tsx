@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useEffect, useState, createContext, useContext } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
-import { User } from '@/types';
+import type { User } from '@/types';
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -30,7 +31,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setUser(user);
       if (user) {
-        // User details listener
         const userDocRef = doc(db, 'users', user.uid);
         const unsubscribeSnapshot = onSnapshot(userDocRef, (doc) => {
           if (doc.exists()) {
@@ -41,7 +41,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setLoading(false);
         });
 
-        // Friend requests listener
         const requestsQuery = query(
           collection(db, "friend_requests"),
           where("toUserId", "==", user.uid),

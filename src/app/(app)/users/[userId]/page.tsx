@@ -7,7 +7,7 @@ import { doc, onSnapshot, collection, query, where, addDoc, serverTimestamp, upd
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
-import type { User, FriendRequest, Location } from '../../../../types';
+import type { User, FriendRequest } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
@@ -62,77 +62,64 @@ export default function UserProfilePage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!userId || !currentUser) return;
+        const profileUid = Array.isArray(userId) ? userId[0] : userId;
+        if (!profileUid || !currentUser) return;
 
-        // Check if the user is trying to view their own profile
-        if (userId === currentUser.uid) {
-            // Optionally, redirect to a dedicated "my profile" page
-            // For now, just load their data without friendship logic
-            const userDocRef = doc(db, 'users', currentUser.uid);
-            const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
-                if (doc.exists()) {
-                    setProfileUser({ id: doc.id, ...doc.data() } as User);
-                }
-                setLoading(false);
-            });
-            return () => unsubscribeUser();
+        if (profileUid === currentUser.uid) {
+            router.push('/settings');
+            return;
         }
 
-
-        // Check if the profile user is blocked by the current user
-        if (userDetails?.blockedUsers?.includes(userId as string)) {
-            setIsBlocked(true);
-        }
+        setIsBlocked(userDetails?.blockedUsers?.includes(profileUid) ?? false);
         
-        // Fetch profile user's data
-        const userDocRef = doc(db, 'users', userId as string);
+        const userDocRef = doc(db, 'users', profileUid);
         const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
             if (doc.exists()) {
                 setProfileUser({ id: doc.id, ...doc.data() } as User);
+            } else {
+                setProfileUser(null);
             }
             setLoading(false);
         });
 
-        // Determine friendship status
-        if (userDetails?.friends?.some(f => f.uid === userId)) {
-            setFriendshipStatus('friends');
-        } else {
-            const requestsQuery = query(
-                collection(db, 'friend_requests'),
-                where('fromUserId', 'in', [currentUser.uid, userId]),
-                where('toUserId', 'in', [currentUser.uid, userId])
-            );
+        const requestsQuery = query(
+            collection(db, 'friend_requests'),
+            where('participantIds', 'in', [[currentUser.uid, profileUid], [profileUid, currentUser.uid]])
+        );
 
-            const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
-                const requestDoc = snapshot.docs.find(doc => {
-                    const data = doc.data();
-                    return (data.fromUserId === currentUser.uid && data.toUserId === userId) || (data.fromUserId === userId && data.toUserId === currentUser.uid)
-                });
-
-                if (requestDoc) {
-                    const requestData = { id: requestDoc.id, ...requestDoc.data() } as FriendRequest;
-                    setFriendRequest(requestData);
-                    if (requestData.status === 'pending') {
-                        setFriendshipStatus(requestData.fromUserId === currentUser.uid ? 'request_sent' : 'request_received');
-                    } else {
-                        setFriendshipStatus('none');
-                    }
+        const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
+            if (!snapshot.empty) {
+                const requestDoc = snapshot.docs[0];
+                const requestData = { id: requestDoc.id, ...requestDoc.data() } as FriendRequest;
+                setFriendRequest(requestData);
+                if (requestData.status === 'pending') {
+                    setFriendshipStatus(requestData.fromUserId === currentUser.uid ? 'request_sent' : 'request_received');
+                } else if (userDetails?.friends?.includes(profileUid)) {
+                    setFriendshipStatus('friends');
                 } else {
                     setFriendshipStatus('none');
-                    setFriendRequest(null);
                 }
-            });
-            return () => unsubscribeRequests();
-        }
+            } else {
+                 if (userDetails?.friends?.includes(profileUid)) {
+                    setFriendshipStatus('friends');
+                } else {
+                    setFriendshipStatus('none');
+                }
+                setFriendRequest(null);
+            }
+        });
 
-        return () => unsubscribeUser();
+        return () => {
+            unsubscribeUser();
+            unsubscribeRequests();
+        };
 
-    }, [userId, currentUser, userDetails]);
+    }, [userId, currentUser, userDetails, router]);
 
     const handleAddFriend = async () => {
         if (!currentUser || !profileUser || isBlocked) return;
         try {
-            await addDoc(collection(db, "friend_requests"), { fromUserId: currentUser.uid, toUserId: profileUser.uid, status: "pending", timestamp: serverTimestamp() });
+            await addDoc(collection(db, "friend_requests"), { fromUserId: currentUser.uid, toUserId: profileUser.uid, participantIds: [currentUser.uid, profileUser.uid], status: "pending", timestamp: serverTimestamp() });
             toast({ title: "Friend request sent!" });
         } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not send friend request." });
@@ -166,6 +153,7 @@ export default function UserProfilePage() {
                 transaction.update(currentUserRef, { friends: arrayRemove(profileUser.uid) });
                 transaction.update(friendUserRef, { friends: arrayRemove(currentUser.uid) });
             });
+            setFriendshipStatus('none');
             toast({ title: "Friend removed." });
         } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not remove friend." });
@@ -177,7 +165,6 @@ export default function UserProfilePage() {
         const currentUserRef = doc(db, "users", currentUser.uid);
         try {
             await updateDoc(currentUserRef, { blockedUsers: arrayUnion(profileUser.uid) });
-            // Also remove friend if they are friends
             if (friendshipStatus === 'friends') {
                 await handleUnfriend();
             }
@@ -200,7 +187,7 @@ export default function UserProfilePage() {
         }
     };
 
-    const displayLocation = (location?: Location) => {
+    const displayLocation = (location?: User['location']) => {
         if (!location) return "Location not set";
         return [location.city, location.lga, location.state].filter(Boolean).join(", ");
     };
