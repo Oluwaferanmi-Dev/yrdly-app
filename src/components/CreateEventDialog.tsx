@@ -140,7 +140,7 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
             <div className="flex items-center gap-4 w-full">
                 <Avatar>
                     <AvatarImage src={user?.photoURL || 'https://placehold.co/100x100.png'} data-ai-hint="person portrait"/>
-                    <AvatarFallback>{user?.displayName?.charAt(0) || \'U\'}</AvatarFallback>
+                    <AvatarFallback>{user?.displayName?.charAt(0) || "U"}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md border border-dashed">
                     Organize an event in your neighborhood?
