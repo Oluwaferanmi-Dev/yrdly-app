@@ -3,12 +3,12 @@
 
 import { Button } from "@/components/ui/button";
 import { Plus, CalendarDays } from "lucide-react";
-import { CreatePostDialog } from "@/components/CreatePostDialog";
+import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { useState, useEffect } from "react";
 import type { Post as PostType } from "@/types";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { PostCard } from "@/components/PostCard";
+import { EventCard } from "@/components/EventCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function EmptyEvents() {
@@ -19,17 +19,17 @@ function EmptyEvents() {
             </div>
             <h2 className="text-2xl font-bold">No upcoming events</h2>
             <p className="text-muted-foreground mt-2 mb-6">Be the first to organize something in your neighborhood!</p>
-             <CreatePostDialog preselectedCategory="Event">
+ <CreateEventDialog>
                 <Button>
                     <Plus className="mr-2 h-4 w-4" /> Create Event
                 </Button>
-            </CreatePostDialog>
+            </CreateEventDialog>
         </div>
     )
 }
 
 export default function EventsPage() {
-    const [events, setEvents] = useState<PostType[]>([]);
+    const [posts, setPosts] = useState<PostType[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -43,7 +43,7 @@ export default function EventsPage() {
                     timestamp: data.timestamp?.toDate().toLocaleString() ?? new Date().toLocaleString(),
                 } as PostType;
             });
-            setEvents(eventsData);
+            setPosts(eventsData);
             setLoading(false);
         });
 
@@ -57,11 +57,11 @@ export default function EventsPage() {
             <h1 className="text-2xl md:text-3xl font-bold font-headline">Events</h1>
             <p className="text-muted-foreground">Discover and create community events.</p>
         </div>
-         <CreatePostDialog preselectedCategory="Event">
+ <CreateEventDialog>
             <Button>
                 <Plus className="mr-2 h-4 w-4" /> Create Event
             </Button>
-        </CreatePostDialog>
+        </CreateEventDialog>
        </div>
         
         {loading ? (
@@ -69,10 +69,10 @@ export default function EventsPage() {
                 <Skeleton className="h-48 w-full" />
                 <Skeleton className="h-48 w-full" />
              </div>
-        ) : events.length > 0 ? (
+        ) : posts.filter(post => post.category === 'Event').length > 0 ? (
             <div className="space-y-4 max-w-2xl mx-auto">
-                {events.map(event => (
-                    <PostCard key={event.id} post={event} />
+                {posts.filter(post => post.category === 'Event').map(event => (
+                    <EventCard key={event.id} event={event} />
                 ))}
             </div>
         ) : (

@@ -45,6 +45,9 @@ const formSchema = z.object({
   text: z.string().min(1, "Post can't be empty.").max(500),
   category: z.enum(["General", "Event", "For Sale", "Business"]),
   location: z.string().optional(),
+  eventDate: z.string().optional(),
+  eventTime: z.string().optional(),
+  eventLink: z.string().optional(),
 });
 
 type CreatePostDialogProps = {
@@ -69,6 +72,9 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
       text: "",
       category: preselectedCategory || "General",
       location: "",
+      eventDate: "",
+      eventTime: "",
+      eventLink: "",
     },
   });
 
@@ -79,6 +85,9 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
         text: postToEdit.text,
         category: postToEdit.category,
         location: postToEdit.location || "",
+        eventDate: postToEdit.eventDate || "",
+        eventTime: postToEdit.eventTime || "",
+        eventLink: postToEdit.eventLink || "",
       });
     } else {
         // Otherwise, use the preselected category or default
@@ -86,6 +95,9 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             text: "",
             category: preselectedCategory || "General",
             location: "",
+            eventDate: "",
+            eventTime: "",
+            eventLink: "",
         });
     }
   }, [postToEdit, preselectedCategory, form, isEditMode, open]);
@@ -129,7 +141,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             toast({ title: 'Post created!', description: 'Your post is now live.' });
         }
 
-        form.reset({ text: "", category: preselectedCategory || "General", location: "" });
+        form.reset({ text: "", category: preselectedCategory || "General", location: "", eventDate: "", eventTime: "", eventLink: "" });
         setImageFile(null);
         setOpen(false);
 
