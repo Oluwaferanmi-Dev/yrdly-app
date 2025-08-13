@@ -3,7 +3,7 @@
 
 import { ChatLayout, NoFriendsEmptyState } from '@/components/messages/ChatLayout';
 import { useAuth } from '@/hooks/use-auth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Conversation, User, Message as MessageType, UserWithFriends } from '@/types';
 import { collection, query, where, onSnapshot, getDoc, doc, DocumentData, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -42,27 +42,27 @@ export default function MessagesPage() {
     const [conversations, setConversations] = useState<Conversation[]>([]); // Conversations with accepted friends
     const [loading, setLoading] = useState(true);
 
-    const currentUser: User | null = user ? {
+    const currentUser = useMemo(() => user ? {
         id: user.uid,
         uid: user.uid,
         name: user.displayName || 'Anonymous',
         avatarUrl: user.photoURL || `https://placehold.co/100x100.png`,
-    } : null;
+    } : null, [user]);
 
     useEffect(() => {
-        if (!user) {
- setConversations([]);
- setLoading(false);
+        if (!user || !userDetails?.friends || userDetails.friends.length === 0) {
+            setConversations([]);
+            setLoading(false);
             return;
         }
 
-        if (!userDetails || !userDetails.friends || userDetails.friends.length === 0) {
- setConversations([]);
- setLoading(false);
- return;
-        }
-        const q = query(collection(db, 'conversations'), where('participantIds', 'array-contains', user.uid), where('participantIds', 'array-contains-any', userDetails.friends.map(f => f.id)));
-        
+        const friendIds = userDetails.friends.map(f => f.id);
+        const q = query(
+            collection(db, 'conversations'),
+            where('participantIds', 'array-contains', user.uid),
+            where('participantIds', 'array-contains-any', friendIds)
+        );
+
         const unsubscribe = onSnapshot(q, async (querySnapshot) => {
             const convsPromises = querySnapshot.docs.map(async (docSnap) => {
                 const convData = docSnap.data();
@@ -73,7 +73,7 @@ export default function MessagesPage() {
                 const userDoc = await getDoc(doc(db, 'users', otherParticipantId));
                 if (!userDoc.exists()) return null;
                 const participant = { id: userDoc.id, ...userDoc.data() } as User;
-                
+
                 const lastMessage = convData.lastMessage;
 
                 return {
@@ -86,11 +86,10 @@ export default function MessagesPage() {
                         text: lastMessage.text,
                         timestamp: (lastMessage.timestamp as Timestamp)?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...',
                         read: lastMessage.read,
-
                     }] : [],
                 } as Conversation;
             });
-            
+
             const resolvedConvs = (await Promise.all(convsPromises)).filter(Boolean) as Conversation[];
             setConversations(resolvedConvs);
             setLoading(false);
@@ -102,8 +101,8 @@ export default function MessagesPage() {
     if (loading) {
         return <MessagesLoading />;
     }
-    
-    if (!currentUser || !userDetails || !userDetails.friends || userDetails.friends.length === 0) {
+
+    if (!currentUser || !userDetails?.friends || userDetails.friends.length === 0) {
         return <NoFriendsEmptyState />;
     }
 
