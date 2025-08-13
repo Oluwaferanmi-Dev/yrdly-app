@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps';
+import { useState, useRef, useEffect } from 'react';
+import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 import { Input } from './ui/input';
 import { Loader2 } from 'lucide-react';
 
@@ -11,7 +11,6 @@ interface LocationPickerProps {
 }
 
 export function LocationPicker({ onLocationSelect, initialLocation }: LocationPickerProps) {
-    const [selectedPlace, setSelectedPlace] = useState<google.maps.places.PlaceResult | null>(null);
     const [markerPosition, setMarkerPosition] = useState(initialLocation || { lat: 6.5244, lng: 3.3792 }); // Default to Lagos
     const [address, setAddress] = useState('');
     const [loading, setLoading] = useState(false);

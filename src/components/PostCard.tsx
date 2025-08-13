@@ -52,7 +52,6 @@ export function PostCard({ post }: PostCardProps) {
   const [likes, setLikes] = useState(post.likes || 0);
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
   const [isLiked, setIsLiked] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
 
   useEffect(() => {
@@ -228,7 +227,7 @@ export function PostCard({ post }: PostCardProps) {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                         <CreatePostDialog postToEdit={post} onOpenChange={setIsEditing}>
+                         <CreatePostDialog postToEdit={post}>
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 <span>Edit</span>

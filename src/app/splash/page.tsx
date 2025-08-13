@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 
 export default function Splash() {
-    const [fade, setFade] = useState(false);
     const { user, loading } = useAuth();
     const router = useRouter();
 
@@ -33,7 +32,11 @@ export default function Splash() {
 
   return (
     <div className="flex items-center justify-center h-screen">
-        <img src="/yrdly-logo.png" alt="Yrdly Logo" className="h-32 w-32 animate-pulse" />
+        import Image from 'next/image';
+
+// ...
+
+<Image src="/yrdly-logo.png" alt="Yrdly Logo" width={128} height={128} className="animate-pulse" />
     </div>
   );
 }

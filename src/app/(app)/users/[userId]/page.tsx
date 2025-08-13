@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MapPin, MessageSquare, UserPlus, UserMinus, Check, X, Clock, MoreHorizontal, ShieldBan } from 'lucide-react';
+import { MapPin, MessageSquare, UserPlus, Check, X, Clock, MoreHorizontal, ShieldBan } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
     AlertDialog,
@@ -134,7 +134,7 @@ export default function UserProfilePage() {
         try {
             await addDoc(collection(db, "friend_requests"), { fromUserId: currentUser.uid, toUserId: profileUser.uid, status: "pending", timestamp: serverTimestamp() });
             toast({ title: "Friend request sent!" });
-        } catch (error) {
+        } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not send friend request." });
         }
     };
@@ -145,7 +145,7 @@ export default function UserProfilePage() {
             const acceptFriendRequest = httpsCallable(functions, 'acceptfriendrequest');
             await acceptFriendRequest({ friendRequestId: friendRequest.id });
             toast({ title: "Friend request accepted!" });
-        } catch (error) {
+        } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not accept friend request." });
         }
     };
@@ -167,7 +167,7 @@ export default function UserProfilePage() {
                 transaction.update(friendUserRef, { friends: arrayRemove(currentUser.uid) });
             });
             toast({ title: "Friend removed." });
-        } catch (error) {
+        } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not remove friend." });
         }
     };
@@ -183,7 +183,7 @@ export default function UserProfilePage() {
             }
             setIsBlocked(true);
             toast({ title: "User blocked." });
-        } catch (error) {
+        } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not block user." });
         }
     };
@@ -195,7 +195,7 @@ export default function UserProfilePage() {
             await updateDoc(currentUserRef, { blockedUsers: arrayRemove(profileUser.uid) });
             setIsBlocked(false);
             toast({ title: "User unblocked." });
-        } catch (error) {
+        } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not unblock user." });
         }
     };

@@ -226,7 +226,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
         </Avatar>
         <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md border border-dashed">
-            What's happening in your neighborhood?
+            What&apos;s happening in your neighborhood?
         </div>
         <Button variant="ghost" size="icon"><PlusCircle className="h-6 w-6 text-primary" /></Button>
     </div>

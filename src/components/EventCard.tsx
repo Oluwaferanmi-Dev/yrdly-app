@@ -3,15 +3,13 @@
 import type { Post as PostType } from "@/types";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Clock, LinkIcon } from "lucide-react";
+import { MapPin, Calendar, LinkIcon } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
-import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import Link from "next/link";
 
 interface EventCardProps {
   event: PostType;

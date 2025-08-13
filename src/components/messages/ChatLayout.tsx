@@ -1,6 +1,6 @@
 "use client";
 
-import type { Conversation, User, Message } from "@/types";
+import type { Conversation, User, Message } from "../../types";
 import { useState, useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -120,7 +120,7 @@ export function ChatLayout({
     });
 
     return () => unsubscribe();
-  }, [selectedConversation?.id, currentUser?.id]);
+  }, [selectedConversation, currentUser]);
 
   // Scroll to bottom when messages change
   useEffect(() => {

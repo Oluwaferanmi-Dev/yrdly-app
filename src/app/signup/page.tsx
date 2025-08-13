@@ -122,7 +122,11 @@ export default function SignupPage() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="text-center flex flex-col items-center">
-          <img src="/yrdly-logo.png" alt="Yrdly Logo" className="h-24 w-24 mb-4" />
+          import Image from 'next/image';
+
+// ...
+
+<Image src="/yrdly-logo.png" alt="Yrdly Logo" width={96} height={96} className="mb-4" />
           <CardTitle className="text-3xl font-bold font-headline">Create an account</CardTitle>
           <CardDescription>Enter your information to create an account</CardDescription>
         </CardHeader>

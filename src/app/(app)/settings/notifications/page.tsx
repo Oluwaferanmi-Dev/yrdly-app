@@ -54,7 +54,7 @@ export default function NotificationSettingsPage() {
                 notificationSettings: newSettings
             });
             toast({ title: 'Settings updated successfully.' });
-        } catch (error) {
+        } catch {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to update settings.' });
         }
     };

@@ -11,7 +11,6 @@ import {
     serverTimestamp,
     doc,
     updateDoc,
-    arrayUnion,
     runTransaction,
     arrayRemove,
 } from "firebase/firestore";
