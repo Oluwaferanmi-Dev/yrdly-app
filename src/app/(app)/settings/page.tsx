@@ -38,7 +38,7 @@ export default function SettingsPage() {
     ward: ""
   });
   // Push notification state
- const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
+ 
 
   // Fetch user data
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function SettingsPage() {
           if (!user.displayName) {
             setName(userData.name || "");
           }
- setPushNotificationsEnabled(userData.pushNotificationsEnabled || false);
+ 
         }
       };
       fetchUserData();
@@ -117,7 +117,7 @@ export default function SettingsPage() {
           location: location,
           avatarUrl: photoURL,
  email: user.email,
- pushNotificationsEnabled: pushNotificationsEnabled,
+ 
         },
         { merge: true }
       );
@@ -277,36 +277,13 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Notifications</CardTitle>
-              <CardDescription>Manage how you receive notifications.</CardDescription>
+              <CardDescription>Choose what you want to be notified about and where you receive them.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label className="text-base">Push Notifications</Label>
-                  <p className="text-sm text-muted-foreground">Receive notifications on your device.</p>
-                </div>
- <Switch checked={pushNotificationsEnabled} onCheckedChange={setPushNotificationsEnabled} />
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label className="text-base">Email Newsletter</Label>
-                  <p className="text-sm text-muted-foreground">Get weekly updates on neighborhood activity.</p>
-                </div>
-                <Switch />
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label className="text-base">New Message Alerts</Label>
-                  <p className="text-sm text-muted-foreground">Be notified when you receive a new message.</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
+            <CardContent>
+                <Button onClick={() => router.push('/settings/notifications')}>
+                    Manage Notification Settings
+                </Button>
             </CardContent>
-            <CardFooter>
- <Button onClick={handleProfileUpdate} disabled={uploading}>Save Preferences</Button>
-            </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>

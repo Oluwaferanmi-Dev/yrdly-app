@@ -1,4 +1,11 @@
 {
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "hosting": {
     "source": ".",
     "frameworksBackend": {
@@ -12,8 +19,7 @@
       "node_modules",
       ".git",
       "firebase-debug.log",
-      "firebase-debug.*.log",
-      "functions"
+      "firebase-debug.*.log"
     ]
   }
 }

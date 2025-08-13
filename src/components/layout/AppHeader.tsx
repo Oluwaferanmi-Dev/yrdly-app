@@ -19,6 +19,8 @@ import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
+import { NotificationsPanel } from './NotificationsPanel';
+
 export function AppHeader() {
   const { user } = useAuth();
   const router = useRouter();
@@ -42,10 +44,7 @@ export function AppHeader() {
             <Search className="h-5 w-5" />
             <span className="sr-only">Search</span>
         </Button>
-         <Button variant="ghost" size="icon" className="rounded-full">
-            <Bell className="h-5 w-5" />
-            <span className="sr-only">Toggle notifications</span>
-          </Button>
+        <NotificationsPanel />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full">

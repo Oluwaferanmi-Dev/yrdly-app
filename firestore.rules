@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users: Can read/write their own data. Can read basic data of other users.
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth.uid == userId;
+    }
+
+    // Friend Requests: Can create, and can read/update if they are part of the request.
+    match /friend_requests/{requestId} {
+      allow read, update: if request.auth != null && (request.auth.uid == resource.data.fromUserId || request.auth.uid == resource.data.toUserId);
+      allow create: if request.auth != null;
+    }
+
+    // Posts: Logged-in users can read/create. Can only edit/delete their own.
+    match /posts/{postId} {
+      allow read, create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+      
+      // Comments
+      match /comments/{commentId} {
+        allow read, create: if request.auth != null;
+        allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+      }
+    }
+    
+    // Events
+    match /events/{eventId} {
+      allow read, create: if request.auth != null;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+    }
+
+    // Chats & Messages
+    match /chats/{chatId} {
+      allow read, create: if request.auth != null && request.auth.uid in resource.data.userIds;
+      
+      match /messages/{messageId} {
+        allow read, create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.userIds;
+      }
+    }
+
+    // Notifications: Can only read their own. Cannot be written by clients.
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow write: if false; // Prevent client-side writes
+    }
+  }
+}

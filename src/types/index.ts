@@ -9,6 +9,15 @@ export interface Location {
   cityId?: number;
   ward?: string;
 }
+export interface NotificationSettings {
+  friendRequests?: boolean;
+  messages?: boolean;
+  postUpdates?: boolean;
+  comments?: boolean;
+  postLikes?: boolean;
+  eventInvites?: boolean;
+}
+
 export interface User {
   id: string;
   uid: string;
@@ -19,6 +28,8 @@ export interface User {
   location?: Location;
   friends?: User[];
   blockedUsers?: string[];
+  notificationSettings?: NotificationSettings;
+  fcmToken?: string;
 }
 
 export type UserWithFriends = User & {
