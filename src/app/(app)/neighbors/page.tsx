@@ -62,69 +62,6 @@ const NeighborSkeleton = () => (
 );
 
 export default function NeighborsPage() {
-    "use client";
-
-import { useState, useEffect, useMemo } from "react";
-import {
-    collection,
-    query,
-    where,
-    onSnapshot,
-    addDoc,
-    serverTimestamp,
-    doc,
-    updateDoc,
-    arrayUnion,
-    runTransaction,
-    arrayRemove,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useAuth } from "@/hooks/use-auth";
-import { useRouter } from "next/navigation";
-import type { User, Location, FriendRequest } from "@/types";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare, UserPlus, MapPin, Check, X, UserMinus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { allStates, lgasByState } from "@/lib/geo-data";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-
-
-const NeighborSkeleton = () => (
-    <Card>
-        <CardContent className="p-4 flex items-center gap-4">
-            <Skeleton className="h-16 w-16 rounded-full" />
-            <div className="space-y-2 flex-1">
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="h-4 w-40" />
-            </div>
-            <Skeleton className="h-10 w-28" />
-        </CardContent>
-    </Card>
-);
-
-export default function NeighborsPage() {
     const { user: currentUser, userDetails } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
