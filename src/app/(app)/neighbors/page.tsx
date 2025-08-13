@@ -15,7 +15,8 @@ import {
     runTransaction,
     arrayRemove,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { db, functions } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import type { User, Location, FriendRequest } from "@/types";
@@ -150,14 +151,8 @@ export default function NeighborsPage() {
         e.stopPropagation();
         if (!currentUser) return;
         try {
-            await runTransaction(db, async (transaction) => {
-                const requestRef = doc(db, "friend_requests", request.id);
-                const currentUserRef = doc(db, "users", currentUser.uid);
-                const fromUserRef = doc(db, "users", request.fromUserId);
-                transaction.update(requestRef, { status: "accepted" });
-                transaction.update(currentUserRef, { friends: arrayUnion(request.fromUserId) });
-                transaction.update(fromUserRef, { friends: arrayUnion(currentUser.uid) });
-            });
+            const acceptFriendRequest = httpsCallable(functions, 'acceptfriendrequest');
+            await acceptFriendRequest({ friendRequestId: request.id });
             toast({ title: "Friend request accepted!" });
         } catch (error) {
             console.error("Error accepting friend request: ", error);

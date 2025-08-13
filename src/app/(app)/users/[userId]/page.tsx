@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, where, addDoc, serverTimestamp, updateDoc, arrayUnion, runTransaction, arrayRemove } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import type { User, FriendRequest, Location } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -139,16 +140,10 @@ export default function UserProfilePage() {
     };
 
     const handleAcceptRequest = async () => {
-        if (!currentUser || !friendRequest || isBlocked) return;
+        if (!currentUser || !friendRequest) return;
         try {
-            await runTransaction(db, async (transaction) => {
-                const requestRef = doc(db, "friend_requests", friendRequest.id);
-                const currentUserRef = doc(db, "users", currentUser.uid);
-                const fromUserRef = doc(db, "users", friendRequest.fromUserId);
-                transaction.update(requestRef, { status: "accepted" });
-                transaction.update(currentUserRef, { friends: arrayUnion(friendRequest.fromUserId) });
-                transaction.update(fromUserRef, { friends: arrayUnion(currentUser.uid) });
-            });
+            const acceptFriendRequest = httpsCallable(functions, 'acceptfriendrequest');
+            await acceptFriendRequest({ friendRequestId: friendRequest.id });
             toast({ title: "Friend request accepted!" });
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "Could not accept friend request." });

@@ -1,0 +1,18 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/page": "/",
+  "/signup/page": "/signup",
+  "/login/page": "/login",
+  "/splash/page": "/splash",
+  "/(app)/home/page": "/home",
+  "/(app)/businesses/page": "/businesses",
+  "/(app)/events/page": "/events",
+  "/(app)/messages/page": "/messages",
+  "/(app)/marketplace/page": "/marketplace",
+  "/(app)/map/page": "/map",
+  "/(app)/settings/notifications/page": "/settings/notifications",
+  "/(app)/neighbors/page": "/neighbors",
+  "/(app)/settings/page": "/settings",
+  "/(app)/users/[userId]/page": "/users/[userId]"
+}

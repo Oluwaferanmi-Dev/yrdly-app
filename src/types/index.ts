@@ -43,7 +43,9 @@ export interface Comment {
   authorName: string;
   authorImage: string;
   text: string;
-  timestamp: string;
+  timestamp: any;
+  parentId?: string | null;
+  reactions?: { [key: string]: string[] }; // e.g. { '👍': ['userId1', 'userId2'] }
 }
 
 export type PostCategory = "General" | "Event" | "For Sale" | "Business";

@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShoppingCart, Users, Briefcase, MessageSquare } from "lucide-react";
+import { Home, ShoppingCart, Users, Briefcase, Map } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function AppBottomNav() {
@@ -12,9 +12,9 @@ export function AppBottomNav() {
   const menuItems = [
     { href: '/home', label: 'Home', icon: Home },
     { href: '/marketplace', label: 'Market', icon: ShoppingCart },
-    { href: '/neighbors', label: 'Neighbors', icon: Users },
+    { href: '/map', label: 'Maps', icon: Map },
     { href: '/businesses', label: 'Business', icon: Briefcase },
-    { href: '/messages', label: 'Messages', icon: MessageSquare },
+    { href: '/neighbors', label: 'Neighbors', icon: Users },
   ];
 
   return (
