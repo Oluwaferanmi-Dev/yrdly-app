@@ -31,78 +31,132 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Image as ImageIcon, MapPin } from "lucide-react";
+import { Image as ImageIcon, MapPin, PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { useState } from "react";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useState, useEffect } from "react";
+import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import type { Post, PostCategory } from "@/types";
 
 const formSchema = z.object({
   text: z.string().min(1, "Post can't be empty.").max(500),
-  category: z.enum(["General", "Event", "For Sale"]),
+  category: z.enum(["General", "Event", "For Sale", "Business"]),
   location: z.string().optional(),
+  eventDate: z.string().optional(),
+  eventTime: z.string().optional(),
+  eventLink: z.string().optional(),
 });
 
-export function CreatePostDialog() {
+type CreatePostDialogProps = {
+    children?: React.ReactNode;
+    preselectedCategory?: PostCategory;
+    postToEdit?: Post;
+    onOpenChange?: (open: boolean) => void;
+}
+
+export function CreatePostDialog({ children, preselectedCategory, postToEdit, onOpenChange }: CreatePostDialogProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   
+  const isEditMode = !!postToEdit;
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       text: "",
-      category: "General",
+      category: preselectedCategory || "General",
       location: "",
+      eventDate: "",
+      eventTime: "",
+      eventLink: "",
     },
   });
 
+   useEffect(() => {
+    // If there's a post to edit, populate the form
+    if (isEditMode) {
+      form.reset({
+        text: postToEdit.text,
+        category: postToEdit.category,
+        location: postToEdit.location || "",
+        eventDate: postToEdit.eventDate || "",
+        eventTime: postToEdit.eventTime || "",
+        eventLink: postToEdit.eventLink || "",
+      });
+    } else {
+        // Otherwise, use the preselected category or default
+        form.reset({
+            text: "",
+            category: preselectedCategory || "General",
+            location: "",
+            eventDate: "",
+            eventTime: "",
+            eventLink: "",
+        });
+    }
+  }, [postToEdit, preselectedCategory, form, isEditMode, open]);
+
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) {
-        toast({ variant: 'destructive', title: 'Not authenticated', description: 'You must be logged in to create a post.' });
+        toast({ variant: 'destructive', title: 'Not authenticated', description: 'You must be logged in to create or edit a post.' });
         return;
     }
     setLoading(true);
 
     try {
-        let imageUrl = "";
+        let imageUrl = postToEdit?.imageUrl || "";
         if (imageFile) {
             const storageRef = ref(storage, `posts/${user.uid}/${Date.now()}_${imageFile.name}`);
             const snapshot = await uploadBytes(storageRef, imageFile);
             imageUrl = await getDownloadURL(snapshot.ref);
         }
 
-        await addDoc(collection(db, "posts"), {
-            text: values.text,
-            category: values.category,
-            location: values.location,
+        const postData = {
+            ...values,
             imageUrl: imageUrl,
-            timestamp: serverTimestamp(),
-            likes: 0,
-            likedBy: [],
-            comments: [],
-            user: {
-                id: user.uid,
-                name: user.displayName || 'Anonymous',
-                avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.charAt(0) || 'A'}`,
-            },
-        });
+        };
 
-        toast({ title: 'Post created!', description: 'Your post is now live.' });
-        form.reset();
+        if (isEditMode) {
+            const postRef = doc(db, "posts", postToEdit.id);
+            await updateDoc(postRef, postData);
+            toast({ title: 'Post updated!', description: 'Your post has been successfully updated.' });
+        } else {
+             await addDoc(collection(db, "posts"), {
+                userId: user.uid,
+                authorName: user.displayName || "Anonymous User",
+                authorImage: user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.charAt(0) || 'A'}`,
+                ...postData,
+                timestamp: serverTimestamp(),
+                likes: 0,
+                likedBy: [],
+                commentCount: 0,
+            });
+            toast({ title: 'Post created!', description: 'Your post is now live.' });
+        }
+
+        form.reset({ text: "", category: preselectedCategory || "General", location: "", eventDate: "", eventTime: "", eventLink: "" });
         setImageFile(null);
         setOpen(false);
 
     } catch(error) {
-        console.error("Error creating post:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to create post.' });
+        console.error("Error submitting post:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to submit post.' });
     } finally {
         setLoading(false);
+    }
+  }
+  
+  const handleOpenChange = (newOpenState: boolean) => {
+    setOpen(newOpenState);
+    if(onOpenChange) {
+        onOpenChange(newOpenState);
     }
   }
 
@@ -113,24 +167,26 @@ export function CreatePostDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <div className="flex items-center gap-4 w-full">
-            <Avatar>
-                <AvatarImage src={user?.photoURL || 'https://placehold.co/100x100.png'} data-ai-hint="person portrait"/>
-                <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md">
-                What's on your mind?
+        { children ? children : (
+            <div className="flex items-center gap-4 w-full">
+                <Avatar>
+                    <AvatarImage src={user?.photoURL || 'https://placehold.co/100x100.png'} data-ai-hint="person portrait"/>
+                    <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md border border-dashed">
+                    What's happening in your neighborhood?
+                </div>
+                <Button variant="ghost" size="icon"><PlusCircle className="h-6 w-6 text-primary" /></Button>
             </div>
-            <Button variant="ghost" size="icon"><ImageIcon className="h-5 w-5 text-primary" /></Button>
-        </div>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle>Create Post</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Post' : 'Create Post'}</DialogTitle>
           <DialogDescription>
-            Share an update with your neighborhood.
+             {isEditMode ? 'Make changes to your post here.' : 'Share an update with your neighborhood.'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -167,6 +223,7 @@ export function CreatePostDialog() {
                           <SelectItem value="General">General</SelectItem>
                           <SelectItem value="Event">Event</SelectItem>
                           <SelectItem value="For Sale">For Sale</SelectItem>
+                          <SelectItem value="Business">Business</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormItem>
@@ -198,10 +255,14 @@ export function CreatePostDialog() {
                     />
                 </FormControl>
             </FormItem>
+            {postToEdit?.imageUrl && !imageFile && (
+                <div className="text-sm text-muted-foreground">Current image: <a href={postToEdit.imageUrl} target="_blank" rel="noopener noreferrer" className="underline">view image</a></div>
+            )}
+
 
             <DialogFooter>
               <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                {loading ? 'Posting...' : 'Post'}
+                {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
               </Button>
             </DialogFooter>
           </form>

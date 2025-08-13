@@ -1,41 +1,52 @@
 
 
+export interface Location {
+  state?: string;
+  stateId?: number;
+  lga?: string;
+  lgaId?: number;
+  city?: string;
+  cityId?: number;
+}
 export interface User {
   id: string;
   uid: string;
   name: string;
+  email?: string;
   avatarUrl: string;
   bio?: string;
+  location?: Location;
 }
 
 export interface Comment {
   id: string;
-  user: User;
+  userId: string;
+  authorName: string;
+  authorImage: string;
   text: string;
   timestamp: string;
 }
 
-export type PostCategory = "General" | "Event" | "For Sale";
+export type PostCategory = "General" | "Event" | "For Sale" | "Business";
 
 export interface Post {
   id: string;
-  user: {
-    id: string;
-    name: string;
-    avatarUrl: string;
-  };
+  userId: string; 
+  authorName: string;
+  authorImage: string;
   category: PostCategory;
   text: string;
   imageUrl?: string;
   location?: string;
   likes: number;
   likedBy?: string[];
-  comments: Comment[];
+  commentCount?: number;
   timestamp: string;
 }
 
 export interface Message {
   id: string;
+  senderId: string;
   sender: User;
   text: string;
   timestamp: string;

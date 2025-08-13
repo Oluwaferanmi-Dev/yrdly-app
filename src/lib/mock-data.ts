@@ -1,16 +1,20 @@
+
 import type { User, Post, Conversation } from '@/types';
 
+// NOTE: This mock data is not actively used in the app anymore,
+// but is kept for reference or potential future testing purposes.
+
 export const users: User[] = [
-  { id: 'u1', name: 'Alice Johnson', avatarUrl: 'https://placehold.co/100x100.png', bio: 'Lover of dogs and gardening. Always up for a chat about local plants!' },
-  { id: 'u2', name: 'Bob Smith', avatarUrl: 'https://placehold.co/100x100.png', bio: 'Local musician and dad. Ask me about my band!' },
-  { id: 'u3', name: 'Charlie Brown', avatarUrl: 'https://placehold.co/100x100.png', bio: 'New to the neighborhood. Exploring all the best coffee shops.' },
-  { id: 'u4', name: 'Diana Prince', avatarUrl: 'https://placehold.co/100x100.png', bio: 'Community organizer and history buff.' },
+  { id: 'u1', uid: 'u1', name: 'Alice Johnson', avatarUrl: 'https://placehold.co/100x100.png', bio: 'Lover of dogs and gardening. Always up for a chat about local plants!' },
+  { id: 'u2', uid: 'u2', name: 'Bob Smith', avatarUrl: 'https://placehold.co/100x100.png', bio: 'Local musician and dad. Ask me about my band!' },
+  { id: 'u3', uid: 'u3', name: 'Charlie Brown', avatarUrl: 'https://placehold.co/100x100.png', bio: 'New to the neighborhood. Exploring all the best coffee shops.' },
+  { id: 'u4', uid: 'u4', name: 'Diana Prince', avatarUrl: 'https://placehold.co/100x100.png', bio: 'Community organizer and history buff.' },
 ];
 
 export const posts: Post[] = [
   {
     id: 'p1',
-    user: users[0],
+    user: { id: 'u1', name: 'Alice Johnson', avatarUrl: 'https://placehold.co/100x100.png' },
     category: 'General',
     text: "Just saw a family of deer on Maple Ave! So beautiful. Remember to drive safely, everyone. 🦌",
     likes: 24,
@@ -22,7 +26,7 @@ export const posts: Post[] = [
   },
   {
     id: 'p2',
-    user: users[1],
+    user: { id: 'u2', name: 'Bob Smith', avatarUrl: 'https://placehold.co/100x100.png' },
     category: 'Event',
     text: "Community picnic this Saturday at Oakwood Park! My band 'The Suburbans' will be playing a set at 2 PM. Bring a blanket and some snacks. Hope to see you all there!",
     imageUrl: 'https://placehold.co/600x400.png',
@@ -33,7 +37,7 @@ export const posts: Post[] = [
   },
   {
     id: 'p3',
-    user: users[2],
+    user: { id: 'u3', name: 'Charlie Brown', avatarUrl: 'https://placehold.co/100x100.png' },
     category: 'For Sale',
     text: "Selling my trusty bicycle. It's a great ride for getting around the neighborhood. Barely used, recently serviced. DM me if you're interested! Asking $150.",
     imageUrl: 'https://placehold.co/600x400.png',
@@ -45,7 +49,7 @@ export const posts: Post[] = [
   },
   {
     id: 'p4',
-    user: users[3],
+    user: { id: 'u4', name: 'Diana Prince', avatarUrl: 'https://placehold.co/100x100.png' },
     category: 'General',
     text: "Does anyone have a recommendation for a reliable plumber? We have a leaky faucet that's driving us crazy. Thanks in advance!",
     likes: 8,
