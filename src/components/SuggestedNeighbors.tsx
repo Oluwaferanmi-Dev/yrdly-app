@@ -18,9 +18,12 @@ export function SuggestedNeighbors() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!user || !userDetails) return;
-
         const fetchSuggestions = async () => {
+            if (!user || !userDetails?.location?.lga) {
+                setLoading(false);
+                return;
+            }
+
             setLoading(true);
             try {
                 // Fetch users from the same LGA, excluding the current user and existing friends
@@ -28,7 +31,7 @@ export function SuggestedNeighbors() {
                 
                 const q = query(
                     collection(db, 'users'),
-                    where('location.lga', '==', userDetails.location?.lga),
+                    where('location.lga', '==', userDetails.location.lga),
                     where('uid', 'not-in', friendsAndSelf),
                     limit(5)
                 );

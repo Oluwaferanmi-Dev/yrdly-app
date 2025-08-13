@@ -40,6 +40,9 @@ export const useNotifications = () => {
 
         const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
             const newNotifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
+            // Sort client-side to ensure descending order without needing a new index
+            newNotifications.sort((a, b) => (b.createdAt as any)?.seconds - (a.createdAt as any)?.seconds);
+            
             const newUnreadCount = newNotifications.filter(n => !n.isRead).length;
 
             // Optional: Show a toast for new, unread notifications
