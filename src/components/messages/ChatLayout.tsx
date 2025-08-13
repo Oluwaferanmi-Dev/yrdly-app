@@ -72,7 +72,11 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
                 read: msgData.read
             });
         }
-        setMessages(msgs);
+        // Only update state if the messages have actually changed to prevent infinite loops
+        if (JSON.stringify(msgs) !== JSON.stringify(messages)) {
+          setMessages(msgs);
+        }
+
     });
 
     return () => unsubscribe();
@@ -80,12 +84,18 @@ export function ChatLayout({ conversations: initialConversations, currentUser }:
   }, [selectedConversation, currentUser]);
 
   useEffect(() => {
-    // Scroll to the bottom when messages change
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({
-        top: scrollAreaRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
+    // Scroll to the bottom when messages change, but only if the user is already near the bottom
+    const scrollElement = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (scrollElement) {
+      const { scrollHeight, scrollTop, clientHeight } = scrollElement;
+      const threshold = 50; // Scroll to bottom if within 50px of the end
+
+      if (scrollHeight - scrollTop - clientHeight < threshold) {
+        scrollElement.scrollTo({
+          top: scrollHeight,
+          behavior: 'smooth'
+        });
+      }
     }
   }, [messages]);
 

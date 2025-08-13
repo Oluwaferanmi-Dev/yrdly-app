@@ -7,7 +7,8 @@ import { useState, useEffect } from 'react';
 import type { Conversation, User, Message as MessageType } from '@/types';
 import { collection, query, where, onSnapshot, getDoc, doc, DocumentData, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Skeleton } from '@/components/ui/skeleton';
+
+import { Skeleton } from '../../../components/ui/skeleton';
 import { NoFriendsEmptyState } from '@/components/messages/ChatLayout';
 
 const MessagesLoading = () => (
@@ -38,8 +39,8 @@ const MessagesLoading = () => (
 
 
 export default function MessagesPage() {
-    const { user } = useAuth();
-    const [conversations, setConversations] = useState<Conversation[]>([]);
+    const { user, userDetails } = useAuth() as { user: any, userDetails: UserWithFriends | null };
+    const [conversations, setConversations] = useState<Conversation[]>([]); // Conversations with accepted friends
     const [loading, setLoading] = useState(true);
 
     const currentUser: User | null = user ? {
@@ -51,11 +52,17 @@ export default function MessagesPage() {
 
     useEffect(() => {
         if (!user) {
-            setLoading(false);
+ setConversations([]);
+ setLoading(false);
             return;
         }
 
-        const q = query(collection(db, 'conversations'), where('participantIds', 'array-contains', user.uid));
+        if (!userDetails || !userDetails.friends || userDetails.friends.length === 0) {
+ setConversations([]);
+ setLoading(false);
+ return;
+        }
+        const q = query(collection(db, 'conversations'), where('participantIds', 'array-contains', user.uid), where('participantIds', 'array-contains-any', userDetails.friends));
         
         const unsubscribe = onSnapshot(q, async (querySnapshot) => {
             const convsPromises = querySnapshot.docs.map(async (docSnap) => {

@@ -20,6 +20,7 @@ import type { Location } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { allStates, lgasByState, wardsByLga } from "@/lib/geo-data";
 
+// Assuming you have a way to handle push notification subscriptions and sending on the backend
 export default function SettingsPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -36,6 +37,8 @@ export default function SettingsPage() {
     city: "",
     ward: ""
   });
+  // Push notification state
+ const [pushNotificationsEnabled, setPushNotificationsEnabled] = useState(false);
 
   // Fetch user data
   useEffect(() => {
@@ -52,6 +55,7 @@ export default function SettingsPage() {
           if (!user.displayName) {
             setName(userData.name || "");
           }
+ setPushNotificationsEnabled(userData.pushNotificationsEnabled || false);
         }
       };
       fetchUserData();
@@ -112,7 +116,8 @@ export default function SettingsPage() {
           bio: bio,
           location: location,
           avatarUrl: photoURL,
-          email: user.email
+ email: user.email,
+ pushNotificationsEnabled: pushNotificationsEnabled,
         },
         { merge: true }
       );
@@ -280,7 +285,7 @@ export default function SettingsPage() {
                   <Label className="text-base">Push Notifications</Label>
                   <p className="text-sm text-muted-foreground">Receive notifications on your device.</p>
                 </div>
-                <Switch defaultChecked />
+ <Switch checked={pushNotificationsEnabled} onCheckedChange={setPushNotificationsEnabled} />
               </div>
 
               <div className="flex items-center justify-between rounded-lg border p-4">
@@ -300,7 +305,7 @@ export default function SettingsPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button>Save Preferences</Button>
+ <Button onClick={handleProfileUpdate} disabled={uploading}>Save Preferences</Button>
             </CardFooter>
           </Card>
         </TabsContent>
