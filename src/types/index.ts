@@ -7,6 +7,7 @@ export interface Location {
   lgaId?: number;
   city?: string;
   cityId?: number;
+  ward?: string;
 }
 export interface User {
   id: string;
@@ -16,7 +17,13 @@ export interface User {
   avatarUrl: string;
   bio?: string;
   location?: Location;
+  friends?: User[];
 }
+
+export type UserWithFriends = User & {
+  friends: User[];
+};
+
 
 export interface Comment {
   id: string;
@@ -31,7 +38,7 @@ export type PostCategory = "General" | "Event" | "For Sale" | "Business";
 
 export interface Post {
   id: string;
-  userId: string; 
+  userId: string;
   authorName: string;
   authorImage: string;
   category: PostCategory;
@@ -42,6 +49,11 @@ export interface Post {
   likedBy?: string[];
   commentCount?: number;
   timestamp: string;
+  // Event specific fields
+  eventDate?: string;
+  eventTime?: string;
+  eventLink?: string;
+  attendees?: string[];
 }
 
 export interface Message {
@@ -54,7 +66,7 @@ export interface Message {
 }
 
 export interface Conversation {
-  id: string;
+  id:string;
   participant: User;
   messages: Message[];
 }

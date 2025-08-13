@@ -5,7 +5,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { MapPin, Calendar, Clock, LinkIcon } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
@@ -24,7 +24,7 @@ export function EventCard({ event }: EventCardProps) {
   const [loadingAttending, setLoadingAttending] = useState(false);
 
   // Listen for real-time updates to the attendees list
-  useState(() => {
+  useEffect(() => {
     const eventRef = doc(db, "posts", event.id);
     const unsubscribe = onSnapshot(eventRef, (docSnap) => {
       if (docSnap.exists()) {

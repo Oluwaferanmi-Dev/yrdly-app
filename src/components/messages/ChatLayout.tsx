@@ -87,7 +87,7 @@ export function ChatLayout({
             const userDoc = await getDoc(doc(db, "users", msgData.senderId));
             sender = userDoc.exists()
               ? ({ id: userDoc.id, ...userDoc.data() } as User)
-              : { id: msgData.senderId, name: "Unknown", avatarUrl: "" };
+              : { id: msgData.senderId, uid: msgData.senderId, name: "Unknown", avatarUrl: "" };
           }
 
           return {
