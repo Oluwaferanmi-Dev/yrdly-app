@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Heart, MessageCircle, Share2, MapPin, Briefcase, MoreHorizontal, Trash2, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, getDoc, deleteDoc } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, getDoc, deleteDoc, runTransaction } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Skeleton } from "./ui/skeleton";
 import {
@@ -114,11 +114,22 @@ export function PostCard({ post }: PostCardProps) {
     if (!currentUser || !post.id) return;
     const postRef = doc(db, "posts", post.id);
 
-    if (isLiked) {
-      await updateDoc(postRef, { likedBy: arrayRemove(currentUser.uid) });
-    } else {
-      await updateDoc(postRef, { likedBy: arrayUnion(currentUser.uid) });
-    }
+    await runTransaction(db, async (transaction) => {
+        const postDoc = await transaction.get(postRef);
+        if (!postDoc.exists()) {
+            throw "Document does not exist!";
+        }
+
+        const postData = postDoc.data();
+        const currentLikedBy = postData.likedBy || [];
+        const userHasLiked = currentLikedBy.includes(currentUser.uid);
+
+        if (userHasLiked) {
+            transaction.update(postRef, { likedBy: arrayRemove(currentUser.uid) });
+        } else {
+            transaction.update(postRef, { likedBy: arrayUnion(currentUser.uid) });
+        }
+    });
   };
 
   const handleDelete = async () => {

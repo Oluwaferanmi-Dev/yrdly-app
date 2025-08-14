@@ -1,4 +1,5 @@
 
+
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
@@ -11,6 +12,12 @@ const db = admin.firestore();
 // --- Re-usable notification sender function ---
 const sendNotification = async (userId: string, type: string, senderId: string, relatedId: string, message: string, title: string, clickAction: string) => {
     try {
+        // Do not send notifications to the user who triggered the action
+        if (userId === senderId) {
+            logger.log(`Skipping notification to self for user ${userId}`);
+            return;
+        }
+
         const userDoc = await db.collection('users').doc(userId).get();
         if (!userDoc.exists) {
             logger.log(`User ${userId} not found.`);
@@ -19,7 +26,8 @@ const sendNotification = async (userId: string, type: string, senderId: string, 
         const userData = userDoc.data()!;
 
         const notificationSettings = userData.notificationSettings || {};
-        const typeKey = type.split('_')[0] + 's';
+        const typeKey = type.split('_')[0] + 's'; // e.g., 'friend_request' -> 'friendRequests'
+        
         if (notificationSettings[typeKey] === false) {
             logger.log(`User ${userId} has disabled ${type} notifications.`);
             return;
@@ -57,9 +65,6 @@ export const onfriendrequestcreated = onDocumentCreated("friend_requests/{reques
     }
 });
 
-// onfriendrequestaccepted is now handled inside the acceptfriendrequest callable function to ensure transactional integrity.
-
-// ... (other notification functions remain the same) ...
 export const onnewmessage = onDocumentCreated("conversations/{conversationId}/messages/{messageId}", async (event) => {
     const snapshot = event.data;
     if (!snapshot) return;
@@ -73,7 +78,7 @@ export const onnewmessage = onDocumentCreated("conversations/{conversationId}/me
         const authorDoc = await db.collection('users').doc(senderId).get();
         const authorData = authorDoc.data();
         if (recipientId && authorData) {
-            await sendNotification(recipientId, 'message', senderId, conversationId, `${authorData.name}: ${text.substring(0, 50)}...`, 'New Message', `/messages?convId=${senderId}`);
+            await sendNotification(recipientId, 'message', senderId, recipientId, `${authorData.name}: ${text.substring(0, 50)}...`, 'New Message', `/messages?convId=${senderId}`);
         }
     }
 });
@@ -82,13 +87,14 @@ export const onnewpost = onDocumentCreated("posts/{postId}", async (event) => {
     const snapshot = event.data;
     if (!snapshot) return;
     const post = snapshot.data();
-    const { userId, text, location } = post;
-    const authorDoc = await db.collection('users').doc(userId).get();
-    const authorData = authorDoc.data();
-    if (authorData && location) {
+    const { userId, text, authorName, location } = post;
+    
+    // Only send notifications for posts with location data to target them
+    if (authorName && location?.lga) {
         const usersQuery = await db.collection('users').where('location.lga', '==', location.lga).where('uid', '!=', userId).get();
+        
         const notifications = usersQuery.docs.map(userDoc =>
-            sendNotification(userDoc.id, 'post_update', userId, event.params.postId, `${authorData.name} created a new post: "${text.substring(0, 30)}..."`, 'New Post in Your Neighborhood', '/home')
+            sendNotification(userDoc.id, 'post_update', userId, event.params.postId, `${authorName} created a new post: "${text.substring(0, 30)}..."`, 'New Post in Your Neighborhood', '/home')
         );
         await Promise.all(notifications);
     }
@@ -98,14 +104,14 @@ export const onnewcomment = onDocumentCreated("posts/{postId}/comments/{commentI
     const snapshot = event.data;
     if (!snapshot) return;
     const comment = snapshot.data();
-    const { userId } = comment;
+    const { userId, authorName, text } = comment;
     const { postId } = event.params;
     const postDoc = await db.collection('posts').doc(postId).get();
     const postData = postDoc.data();
-    const authorDoc = await db.collection('users').doc(userId).get();
-    const authorData = authorDoc.data();
-    if (postData && authorData && postData.userId !== userId) {
-        await sendNotification(postData.userId, 'comment', userId, postId, `${authorData.name} commented on your post.`, 'New Comment', `/posts/${postId}`);
+    
+    if (postData && authorName) {
+         // Notify post author
+        await sendNotification(postData.userId, 'comment', userId, postId, `${authorName} commented on your post: "${text.substring(0, 30)}..."`, 'New Comment', `/posts/${postId}`);
     }
 });
 
@@ -116,7 +122,8 @@ export const onnewlike = onDocumentUpdated("posts/{postId}", async (event) => {
     if (before?.likedBy.length < after?.likedBy.length) {
         const newLikerId = after.likedBy.find((id: string) => !before.likedBy.includes(id));
         const postAuthorId = after.userId;
-        if (newLikerId && postAuthorId !== newLikerId) {
+        
+        if (newLikerId && postAuthorId) {
             const likerDoc = await db.collection('users').doc(newLikerId).get();
             const likerData = likerDoc.data();
             if (likerData) {
@@ -126,17 +133,34 @@ export const onnewlike = onDocumentUpdated("posts/{postId}", async (event) => {
     }
 });
 
-export const oneventinvite = onDocumentUpdated("events/{eventId}", async (event) => {
+export const onattendingevent = onDocumentUpdated("posts/{postId}", async (event) => {
     if (!event.data) return;
+
     const before = event.data.before.data();
     const after = event.data.after.data();
-    if (before?.invited.length < after?.invited.length) {
-        const newInviteeId = after.invited.find((id: string) => !before.invited.includes(id));
-        const eventCreatorId = after.authorId;
-        const creatorDoc = await db.collection('users').doc(eventCreatorId).get();
-        const creatorData = creatorDoc.data();
-        if (newInviteeId && creatorData) {
-            await sendNotification(newInviteeId, 'event_invite', eventCreatorId, event.params.eventId, `${creatorData.name} invited you to the event: "${after.title}"`, 'New Event Invitation', '/events');
+
+    // Check if it's an event and attendees list has grown
+    if(after.category !== 'Event' || (before?.attendees?.length ?? 0) >= (after?.attendees?.length ?? 0)) {
+        return;
+    }
+
+    const newAttendeeId = after.attendees.find((id: string) => !(before.attendees || []).includes(id));
+    const eventCreatorId = after.userId;
+
+    if (newAttendeeId && eventCreatorId) {
+        const attendeeDoc = await db.collection('users').doc(newAttendeeId).get();
+        const attendeeData = attendeeDoc.data();
+
+        if (attendeeData) {
+             await sendNotification(
+                eventCreatorId,
+                'event_invite', // Reusing event_invite type for simplicity
+                newAttendeeId,
+                event.params.postId,
+                `${attendeeData.name} is now attending your event: "${after.title}"`,
+                'New Attendee',
+                `/posts/${event.params.postId}`
+            );
         }
     }
 });
@@ -155,7 +179,7 @@ export const acceptfriendrequest = onCall(async (request) => {
     }
 
     const friendRequestRef = db.collection('friend_requests').doc(friendRequestId);
-    let fromUserData: admin.firestore.DocumentData | undefined;
+    let toUserData: admin.firestore.DocumentData | undefined;
 
     try {
         await db.runTransaction(async (transaction) => {
@@ -172,7 +196,6 @@ export const acceptfriendrequest = onCall(async (request) => {
             }
             
             if (friendRequest.status !== 'pending') {
-                // No need to throw an error, just log and exit gracefully.
                 logger.log(`Request ${friendRequestId} is already ${friendRequest.status}.`);
                 return;
             }
@@ -183,9 +206,8 @@ export const acceptfriendrequest = onCall(async (request) => {
             const fromUserRef = db.collection('users').doc(fromUserId);
             const toUserRef = db.collection('users').doc(toUserId);
 
-            // Get user data for notification before committing transaction
             const toUserDoc = await transaction.get(toUserRef);
-            fromUserData = toUserDoc.data();
+            toUserData = toUserDoc.data();
 
             transaction.update(friendRequestRef, { status: 'accepted' });
             transaction.update(fromUserRef, { friends: admin.firestore.FieldValue.arrayUnion(toUserId) });
@@ -193,13 +215,13 @@ export const acceptfriendrequest = onCall(async (request) => {
         });
 
         const friendRequest = (await friendRequestRef.get()).data()!;
-        if (fromUserData) {
+        if (toUserData) {
              await sendNotification(
                 friendRequest.fromUserId, 
                 'friend_request_accepted', 
                 friendRequest.toUserId, 
                 friendRequestId, 
-                `${fromUserData.name} accepted your friend request.`, 
+                `${toUserData.name} accepted your friend request.`, 
                 'Friend Request Accepted', 
                 `/users/${friendRequest.toUserId}`
             );

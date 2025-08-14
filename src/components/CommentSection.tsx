@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, FormEvent } from 'react';
@@ -11,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Send, Smile } from 'lucide-react';
 import { timeAgo } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { useToast } from '@/hooks/use-toast';
 
 interface CommentSectionProps {
     postId: string;
@@ -20,6 +22,7 @@ const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😡'];
 
 export function CommentSection({ postId }: CommentSectionProps) {
     const { user, userDetails } = useAuth();
+    const { toast } = useToast();
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -44,54 +47,70 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
     const handlePostComment = async (e: FormEvent) => {
         e.preventDefault();
-        if (!user || newComment.trim() === '') return;
+        if (!user || !userDetails || newComment.trim() === '') return;
 
-        await addDoc(collection(db, 'posts', postId, 'comments'), {
-            userId: user.uid,
-            authorName: userDetails?.name,
-            authorImage: userDetails?.avatarUrl,
-            text: newComment,
-            timestamp: serverTimestamp(),
-            parentId: replyingTo,
-            reactions: {},
-        });
-
-        // Also update the comment count on the post
         const postRef = doc(db, "posts", postId);
-        await runTransaction(db, async (transaction) => {
-            const postDoc = await transaction.get(postRef);
-            if (!postDoc.exists()) return;
-            const newCount = (postDoc.data().commentCount || 0) + 1;
-            transaction.update(postRef, { commentCount: newCount });
-        });
+        const commentsColRef = collection(postRef, "comments");
 
-        setNewComment('');
-        setReplyingTo(null);
+        try {
+            await runTransaction(db, async (transaction) => {
+                const postDoc = await transaction.get(postRef);
+                if (!postDoc.exists()) {
+                    throw "Post does not exist!";
+                }
+
+                // 1. Add the new comment
+                transaction.set(doc(commentsColRef), {
+                    userId: user.uid,
+                    authorName: userDetails.name,
+                    authorImage: userDetails.avatarUrl,
+                    text: newComment,
+                    timestamp: serverTimestamp(),
+                    parentId: replyingTo || null,
+                    reactions: {},
+                });
+
+                // 2. Update the comment count on the post
+                const newCount = (postDoc.data().commentCount || 0) + 1;
+                transaction.update(postRef, { commentCount: newCount });
+            });
+
+            setNewComment('');
+            setReplyingTo(null);
+
+        } catch (error) {
+            console.error("Error posting comment: ", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not post comment.' });
+        }
     };
 
     const handleReaction = async (commentId: string, emoji: string) => {
         if (!user) return;
         const commentRef = doc(db, 'posts', postId, 'comments', commentId);
 
-        await runTransaction(db, async (transaction) => {
-            const commentDoc = await transaction.get(commentRef);
-            if (!commentDoc.exists()) return;
+        try {
+            await runTransaction(db, async (transaction) => {
+                const commentDoc = await transaction.get(commentRef);
+                if (!commentDoc.exists()) return;
 
-            const reactions = commentDoc.data().reactions || {};
-            const existingReaction = reactions[emoji] || [];
+                const reactions = commentDoc.data().reactions || {};
+                const uidsForEmoji: string[] = reactions[emoji] || [];
+                const userHasReacted = uidsForEmoji.includes(user.uid);
 
-            if (existingReaction.includes(user.uid)) {
-                // User is removing their reaction
+                // Create a new array for the updated UIDs
+                const newUidsForEmoji = userHasReacted
+                    ? uidsForEmoji.filter((uid) => uid !== user.uid)
+                    : [...uidsForEmoji, user.uid];
+
+                // Update the specific emoji field in the reactions map
                 transaction.update(commentRef, {
-                    [`reactions.${emoji}`]: existingReaction.filter((uid: string) => uid !== user.uid)
+                    [`reactions.${emoji}`]: newUidsForEmoji
                 });
-            } else {
-                // User is adding a new reaction
-                transaction.update(commentRef, {
-                    [`reactions.${emoji}`]: [...existingReaction, user.uid]
-                });
-            }
-        });
+            });
+        } catch (error) {
+            console.error("Error handling reaction: ", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not add reaction." });
+        }
     };
 
     const commentTree = useMemo(() => {
@@ -115,8 +134,8 @@ export function CommentSection({ postId }: CommentSectionProps) {
         return tree;
     }, [comments]);
 
-    const renderComment = (comment: Comment & { replies: Comment[] }) => (
-        <div key={comment.id} className="flex flex-col gap-2">
+    const renderComment = (comment: Comment & { replies: Comment[] }, isReply: boolean = false) => (
+        <div key={comment.id} className={cn("flex flex-col gap-2", isReply ? "ml-6" : "")}>
             <div className="flex gap-3">
                 <Avatar className="h-8 w-8">
                     <AvatarImage src={comment.authorImage} />
@@ -128,30 +147,35 @@ export function CommentSection({ postId }: CommentSectionProps) {
                         <span className="text-xs text-muted-foreground">{timeAgo(comment.timestamp?.toDate())}</span>
                     </div>
                     <p className="text-sm mt-1">{comment.text}</p>
-                    {comment.reactions && Object.keys(comment.reactions).length > 0 && (
-                         <div className="flex gap-1 mt-2">
-                            {Object.entries(comment.reactions).map(([emoji, uids]) => (
-                                uids.length > 0 && (
-                                    <div key={emoji} className="flex items-center bg-background px-2 py-0.5 rounded-full text-xs">
-                                        <span>{emoji}</span>
-                                        <span className="ml-1 font-medium">{uids.length}</span>
-                                    </div>
-                                )
-                            ))}
-                        </div>
-                    )}
+                     <div className="flex gap-1 mt-2 flex-wrap">
+                        {comment.reactions && Object.entries(comment.reactions).map(([emoji, uids]) => (
+                            (uids && uids.length > 0) && (
+                                <button 
+                                    key={emoji} 
+                                    onClick={() => handleReaction(comment.id, emoji)}
+                                    className={cn(
+                                        "flex items-center bg-background px-2 py-0.5 rounded-full text-xs border transition-colors",
+                                        user && uids.includes(user.uid) ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
+                                    )}
+                                >
+                                    <span>{emoji}</span>
+                                    <span className="ml-1 font-medium">{uids.length}</span>
+                                </button>
+                            )
+                        ))}
+                    </div>
                 </div>
             </div>
             <div className="ml-11 flex gap-2 items-center">
                 <Button variant="ghost" size="sm" className="text-xs h-auto py-1 px-2" onClick={() => setReplyingTo(comment.id)}>Reply</Button>
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm" className="text-xs h-auto py-1 px-2"><Smile className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="text-xs h-8 w-8"><Smile className="h-4 w-4" /></Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-1">
                         <div className="flex gap-1">
                             {EMOJI_REACTIONS.map(emoji => (
-                                <Button key={emoji} variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleReaction(comment.id, emoji)}>
+                                <Button key={emoji} variant="ghost" size="icon" className="h-8 w-8 text-lg" onClick={() => handleReaction(comment.id, emoji)}>
                                     {emoji}
                                 </Button>
                             ))}
@@ -159,14 +183,18 @@ export function CommentSection({ postId }: CommentSectionProps) {
                     </PopoverContent>
                 </Popover>
             </div>
-            {comment.replies.map(renderComment)}
+             {comment.replies.length > 0 && (
+                <div className="space-y-2">
+                    {comment.replies.map(reply => renderComment(reply, true))}
+                </div>
+            )}
         </div>
     );
 
     return (
         <div className="space-y-4 pt-4">
             <div className="space-y-4">
-                {commentTree.map(renderComment)}
+                {commentTree.map(comment => renderComment(comment))}
             </div>
             <form onSubmit={handlePostComment} className="flex items-start gap-3 pt-4 border-t">
                 <Avatar className="h-8 w-8">
