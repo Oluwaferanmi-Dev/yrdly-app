@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -9,16 +10,25 @@ import Link from 'next/link';
 
 export function WelcomeBanner() {
     const { user } = useAuth();
-    const [isVisible, setIsVisible] = useState(true);
+    const [isVisible, setIsVisible] = useState(false);
 
-    // A simple check to only show this banner if the user has not created any content yet.
-    // In a real app, you'd have a more robust 'is_new_user' flag in your database.
     useEffect(() => {
         const hasSeenWelcome = localStorage.getItem('hasSeenWelcomeBanner');
         if (hasSeenWelcome) {
             setIsVisible(false);
+            return;
         }
-    }, []);
+
+        if (user && user.metadata.creationTime) {
+            const creationDate = new Date(user.metadata.creationTime);
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+            if (creationDate > sevenDaysAgo) {
+                setIsVisible(true);
+            }
+        }
+    }, [user]);
 
     const handleDismiss = () => {
         localStorage.setItem('hasSeenWelcomeBanner', 'true');
