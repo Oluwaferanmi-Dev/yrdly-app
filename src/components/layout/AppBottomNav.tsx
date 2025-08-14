@@ -3,38 +3,37 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ShoppingCart, Users } from "lucide-react";
+import { Home, Users, ShoppingCart, Map, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const navLinks = [
+  { href: "/home", icon: Home, label: "Home" },
+  { href: "/neighbors", icon: Users, label: "Neighbors" },
+  { href: "/marketplace", icon: ShoppingCart, label: "Market" },
+  { href: "/map", icon: Map, label: "Map" },
+  { href: "/businesses", icon: Building, label: "Businesses" },
+];
 
 export function AppBottomNav() {
   const pathname = usePathname();
 
-  const menuItems = [
-    { href: '/home', label: 'Home', icon: Home },
-    { href: '/neighbors', label: 'Community', icon: Users },
-    { href: '/marketplace', label: 'For Sale', icon: ShoppingCart },
-  ];
-
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 h-24 bg-transparent z-20 flex justify-center items-center pointer-events-none">
-       <div className="bg-background/80 backdrop-blur-sm border rounded-full flex justify-around items-center h-16 w-64 shadow-lg pointer-events-auto">
-        {menuItems.map((item) => {
-          const isActive = pathname === item.href;
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50">
+      <nav className="flex justify-around items-center h-16">
+        {navLinks.map(({ href, icon: Icon, label }) => {
+          const isActive = pathname.startsWith(href);
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center justify-center text-muted-foreground hover:text-primary transition-colors w-20 h-16 rounded-full",
-                isActive ? "text-primary" : ""
-              )}
-            >
-              <item.icon className="h-6 w-6" />
-              <span className="text-xs">{item.label}</span>
+            <Link href={href} key={href} legacyBehavior>
+              <a className="flex flex-col items-center justify-center text-center w-full h-full">
+                <Icon className={cn("h-6 w-6 mb-1", isActive ? "text-primary" : "text-muted-foreground")} />
+                <span className={cn("text-xs", isActive ? "text-primary font-semibold" : "text-muted-foreground")}>
+                  {label}
+                </span>
+              </a>
             </Link>
-          )
+          );
         })}
-      </div>
+      </nav>
     </div>
   );
 }

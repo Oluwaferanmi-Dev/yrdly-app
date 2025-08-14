@@ -82,11 +82,11 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
       const hasNewImage = data.image && data.image.length > 0;
       const hasExistingImage = isEditMode && postToEdit?.imageUrl;
 
-      if ((data.category === 'Event' || data.category === 'For Sale') && !hasNewImage && !hasExistingImage) {
+      if ((data.category === 'Event' || data.category === 'For Sale' || data.category === 'Business') && !hasNewImage && !hasExistingImage) {
           ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path: ['image'],
-              message: 'An image is required for Event and For Sale posts.',
+              message: 'An image is required for this post category.',
           });
       }
       if (data.category === 'For Sale' && (data.price === undefined || data.price <= 0)) {

@@ -191,18 +191,20 @@ export default function NeighborsPage() {
         );
 
         const querySnapshot = await getDocs(conversationQuery);
+        let conversationId: string;
 
         if (!querySnapshot.empty) {
             // Conversation exists
-            router.push(`/messages?convId=${neighbor.uid}`);
+            conversationId = querySnapshot.docs[0].id;
         } else {
             // Create new conversation
-            await addDoc(collection(db, "conversations"), {
+            const newConvRef = await addDoc(collection(db, "conversations"), {
                 participantIds: [currentUser.uid, neighbor.uid].sort(),
                 lastMessage: null,
             });
-            router.push(`/messages?convId=${neighbor.uid}`);
+            conversationId = newConvRef.id;
         }
+        router.push(`/messages?convId=${conversationId}`);
     };
 
 
