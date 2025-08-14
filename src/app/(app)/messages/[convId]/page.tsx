@@ -61,7 +61,10 @@ export default function MessagesPage({ params }: { params: { convId: string } })
                     const convData = docSnap.data();
                     const otherParticipantId = convData.participantIds.find((id: string) => id !== user.uid);
                     
-                    if (!otherParticipantId || !friendUids.includes(otherParticipantId)) {
+                    // If the conversation is the one we are trying to open, or if it's with a known friend, process it.
+                    // Otherwise, filter it out. This handles the case where a new friend is messaged before the local
+                    // 'userDetails' state has had time to update with the new friend.
+                    if (!otherParticipantId || (!friendUids.includes(otherParticipantId) && docSnap.id !== params.convId)) {
                         return null;
                     }
 
@@ -90,7 +93,7 @@ export default function MessagesPage({ params }: { params: { convId: string } })
         });
 
         return () => unsubscribe();
-    }, [user, userDetails]);
+    }, [user, userDetails, params.convId]);
 
     if (loading) {
         return <MessagesLoading />;
