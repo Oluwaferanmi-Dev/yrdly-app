@@ -25,6 +25,7 @@ export interface Post {
   authorImage: string;
   text: string;
   imageUrl?: string;
+  imageUrls?: string[];
   timestamp: Timestamp;
   commentCount: number;
   category: PostCategory;
