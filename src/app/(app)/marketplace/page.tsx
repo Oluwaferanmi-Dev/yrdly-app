@@ -21,7 +21,11 @@ function EmptyMarketplace() {
             </div>
             <h2 className="text-2xl font-bold">No items yet</h2>
             <p className="text-muted-foreground mt-2 mb-6">Be the first to list something for sale in your neighborhood!</p>
-             <CreatePostDialog preselectedCategory="For Sale">
+             <CreatePostDialog 
+                preselectedCategory="For Sale"
+                title="List an Item for Sale"
+                description="Provide details about the item you're selling."
+             >
                 <Button>
                     <Plus className="mr-2 h-4 w-4" /> List an Item
                 </Button>
@@ -137,7 +141,11 @@ export default function MarketplacePage() {
         )}
         
         <div className="fixed bottom-20 right-4 z-20">
-            <CreatePostDialog preselectedCategory="For Sale">
+            <CreatePostDialog 
+                preselectedCategory="For Sale"
+                title="List an Item for Sale"
+                description="Provide details about the item you're selling."
+            >
                 <Button className="rounded-full h-14 w-14 shadow-lg" style={{backgroundColor: '#34A853'}}>
                     <Plus className="h-6 w-6" />
                 </Button>

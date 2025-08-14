@@ -64,9 +64,11 @@ type CreatePostDialogProps = {
     preselectedCategory?: PostCategory;
     postToEdit?: Post;
     onOpenChange?: (open: boolean) => void;
+    title?: string;
+    description?: string;
 }
 
-export function CreatePostDialog({ children, preselectedCategory, postToEdit, onOpenChange }: CreatePostDialogProps) {
+export function CreatePostDialog({ children, preselectedCategory, postToEdit, onOpenChange, title, description }: CreatePostDialogProps) {
   const { user, userDetails } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -170,6 +172,10 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
         setImageFile(e.target.files[0]);
     }
   }
+  
+  const finalTitle = title || (isEditMode ? 'Edit Post' : 'Create Post');
+  const finalDescription = description || (isEditMode ? 'Make changes to your post here.' : 'Share an update with your neighborhood.');
+
 
   const FormContent = () => (
     <Form {...form}>
@@ -272,7 +278,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             </SheetTrigger>
             <SheetContent side="bottom" className="p-0">
                 <SheetHeader className="p-4 border-b">
-                    <SheetTitle>{isEditMode ? 'Edit Post' : 'Create Post'}</SheetTitle>
+                    <SheetTitle>{finalTitle}</SheetTitle>
                 </SheetHeader>
                 <div className="py-4">
                     <FormContent />
@@ -294,9 +300,9 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px] p-0">
         <DialogHeader className="p-6 pb-0">
-          <DialogTitle>{isEditMode ? 'Edit Post' : 'Create Post'}</DialogTitle>
+          <DialogTitle>{finalTitle}</DialogTitle>
           <DialogDescription>
-             {isEditMode ? 'Make changes to your post here.' : 'Share an update with your neighborhood.'}
+             {finalDescription}
           </DialogDescription>
         </DialogHeader>
         <FormContent />
