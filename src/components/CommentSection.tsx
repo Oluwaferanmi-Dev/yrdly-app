@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useState, useMemo, FormEvent } from 'react';
-import { collection, query, orderBy, onSnapshot, serverTimestamp, doc, runTransaction } from 'firebase/firestore';
+import { useState, useMemo, FormEvent, useCallback } from 'react';
+import { collection, query, orderBy, onSnapshot, serverTimestamp, doc, runTransaction, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Comment } from '@/types';
+import type { Comment, User } from '@/types';
 import { useAuth } from '@/hooks/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -28,13 +28,18 @@ type CommentWithReplies = Comment & {
 
 const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😡'];
 
+type SelectedUser = {
+    user: User,
+    status: 'friends' | 'request_sent' | 'request_received' | 'none';
+}
+
 export function CommentSection({ postId }: CommentSectionProps) {
-    const { user, userDetails } = useAuth();
+    const { user: currentUser, userDetails } = useAuth();
     const { toast } = useToast();
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
-    const [selectedUser, setSelectedUser] = useState<string | null>(null);
+    const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
 
     useMemo(() => {
         if (!postId) return;
@@ -56,7 +61,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
     const handlePostComment = async (e: FormEvent) => {
         e.preventDefault();
-        if (!user || !userDetails || newComment.trim() === '') return;
+        if (!currentUser || !userDetails || newComment.trim() === '') return;
 
         const postRef = doc(db, "posts", postId);
         const commentsColRef = collection(postRef, "comments");
@@ -69,7 +74,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
                 }
 
                 transaction.set(doc(commentsColRef), {
-                    userId: user.uid,
+                    userId: currentUser.uid,
                     authorName: userDetails.name,
                     authorImage: userDetails.avatarUrl,
                     text: newComment,
@@ -92,7 +97,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
     };
 
     const handleReaction = async (commentId: string, emoji: string) => {
-        if (!user) return;
+        if (!currentUser) return;
         const commentRef = doc(db, 'posts', postId, 'comments', commentId);
 
         try {
@@ -102,11 +107,11 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
                 const reactions = commentDoc.data().reactions || {};
                 const uidsForEmoji: string[] = reactions[emoji] || [];
-                const userHasReacted = uidsForEmoji.includes(user.uid);
+                const userHasReacted = uidsForEmoji.includes(currentUser.uid);
 
                 const newUidsForEmoji = userHasReacted
-                    ? uidsForEmoji.filter((uid) => uid !== user.uid)
-                    : [...uidsForEmoji, user.uid];
+                    ? uidsForEmoji.filter((uid) => uid !== currentUser.uid)
+                    : [...uidsForEmoji, currentUser.uid];
 
                 transaction.update(commentRef, {
                     [`reactions.${emoji}`]: newUidsForEmoji
@@ -115,6 +120,28 @@ export function CommentSection({ postId }: CommentSectionProps) {
         } catch (error) {
             console.error("Error handling reaction: ", error);
             toast({ variant: "destructive", title: "Error", description: "Could not add reaction." });
+        }
+    };
+
+    const getFriendshipStatus = useCallback((neighborId: string): 'friends' | 'none' => {
+        if (userDetails?.friends?.includes(neighborId)) return "friends";
+        return "none";
+    }, [userDetails]);
+    
+    const openProfile = async (userId: string) => {
+        if (userId === currentUser?.uid) {
+            // Maybe navigate to own profile page in the future
+            return;
+        }
+        
+        const userDocRef = doc(db, 'users', userId);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+            const user = {id: userDocSnap.id, ...userDocSnap.data()} as User;
+            // Simplified status for comment section - real-time request status not needed here
+            const status = getFriendshipStatus(userId);
+            setSelectedUser({ user, status });
         }
     };
 
@@ -140,7 +167,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
     const renderComment = (comment: CommentWithReplies, isReply: boolean = false) => (
         <div key={comment.id} className={cn("flex flex-col gap-2", isReply ? "ml-6" : "")}>
             <div className="flex gap-3">
-                <button onClick={() => setSelectedUser(comment.userId)} className="cursor-pointer">
+                <button onClick={() => openProfile(comment.userId)} className="cursor-pointer">
                     <Avatar className="h-8 w-8">
                         <AvatarImage src={comment.authorImage} />
                         <AvatarFallback>{comment.authorName?.charAt(0)}</AvatarFallback>
@@ -148,7 +175,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
                 </button>
                 <div className="flex-1 bg-muted/50 rounded-lg p-3">
                     <div className="flex justify-between items-center">
-                        <button onClick={() => setSelectedUser(comment.userId)} className="cursor-pointer">
+                        <button onClick={() => openProfile(comment.userId)} className="cursor-pointer">
                             <span className="font-semibold text-sm hover:underline">{comment.authorName}</span>
                         </button>
                         <span className="text-xs text-muted-foreground">{timeAgo(comment.timestamp?.toDate())}</span>
@@ -162,7 +189,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
                                     onClick={() => handleReaction(comment.id, emoji)}
                                     className={cn(
                                         "flex items-center bg-background px-2 py-0.5 rounded-full text-xs border transition-colors",
-                                        user && uids.includes(user.uid) ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
+                                        currentUser && uids.includes(currentUser.uid) ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
                                     )}
                                 >
                                     <span>{emoji}</span>
@@ -200,7 +227,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
     return (
         <div className="space-y-4 pt-4">
-            {selectedUser && <UserProfileDialog userId={selectedUser} open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)} />}
+            {selectedUser && <UserProfileDialog user={selectedUser.user} friendshipStatus={selectedUser.status} open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)} />}
             <div className="space-y-4">
                 {commentTree.map(comment => renderComment(comment))}
             </div>
