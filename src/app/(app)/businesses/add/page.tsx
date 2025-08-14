@@ -63,25 +63,31 @@ export default function AddBusinessPage() {
     setLoading(true);
 
     try {
-        const imageFile = values.image[0];
-        const storageRef = ref(storage, `businesses/${user.uid}/${Date.now()}_${imageFile.name}`);
-        await uploadBytes(storageRef, imageFile);
-        const imageUrl = await getDownloadURL(storageRef);
+        const imageFiles = values.image as FileList;
+        if (imageFiles && imageFiles.length > 0) {
+            const imageFile = imageFiles[0];
+            const storageRef = ref(storage, `businesses/${user.uid}/${Date.now()}_${imageFile.name}`);
+            await uploadBytes(storageRef, imageFile);
+            const imageUrl = await getDownloadURL(storageRef);
 
-        const businessData = {
-            ownerId: user.uid,
-            name: values.name,
-            category: values.category,
-            description: values.description,
-            location: businessLocation,
-            imageUrl: imageUrl,
-            createdAt: serverTimestamp(),
-        };
+            const businessData = {
+                ownerId: user.uid,
+                name: values.name,
+                category: values.category,
+                description: values.description,
+                location: businessLocation,
+                imageUrl: imageUrl,
+                createdAt: serverTimestamp(),
+            };
 
-        await addDoc(collection(db, "businesses"), businessData);
+            await addDoc(collection(db, "businesses"), businessData);
 
-        toast({ title: 'Business added!', description: 'Your business is now listed.' });
-        router.push('/businesses');
+            toast({ title: 'Business added!', description: 'Your business is now listed.' });
+            router.push('/businesses');
+        } else {
+            // This case should ideally not be hit due to form validation
+            toast({ variant: 'destructive', title: 'Image missing', description: 'Please select an image.' });
+        }
 
     } catch(error) {
         console.error("Error adding business:", error);

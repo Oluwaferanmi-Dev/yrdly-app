@@ -141,7 +141,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
         let imageUrls: string[] = postToEdit?.imageUrls || [];
         const imageFiles = values.image;
 
-        if (imageFiles && imageFiles.length > 0) {
+        if (imageFiles && imageFiles instanceof FileList && imageFiles.length > 0) {
             if (values.category === 'For Sale') {
                 const uploadedUrls = await Promise.all(
                     Array.from(imageFiles).map(async (file) => {
