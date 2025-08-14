@@ -12,6 +12,7 @@ import {
   arrayUnion,
   arrayRemove,
   increment,
+  deleteDoc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
@@ -19,7 +20,7 @@ import { Post } from '@/types';
 import { useToast } from './use-toast';
 
 export const usePosts = () => {
-  const { user } = useAuth();
+  const { user, userDetails } = useAuth();
   const { toast } = useToast();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,8 +46,8 @@ export const usePosts = () => {
         await addDoc(collection(db, 'posts'), {
           ...postData,
           userId: user.uid,
-          authorName: user.name || 'Anonymous',
-          authorImage: user.avatarUrl || '',
+          authorName: userDetails?.name || 'Anonymous',
+          authorImage: userDetails?.avatarUrl || '',
           timestamp: serverTimestamp(),
           commentCount: 0,
           likedBy: [],
@@ -57,7 +58,7 @@ export const usePosts = () => {
         toast({ title: 'Error', description: 'Failed to create post.' });
       }
     },
-    [user, toast]
+    [user, userDetails, toast]
   );
 
   const likePost = useCallback(
@@ -79,8 +80,8 @@ export const usePosts = () => {
       if (!user) return;
       const commentData = {
         userId: user.uid,
-        authorName: user.name || 'Anonymous',
-        authorImage: user.avatarUrl || '',
+        authorName: userDetails?.name || 'Anonymous',
+        authorImage: userDetails?.avatarUrl || '',
         text: commentText,
         timestamp: serverTimestamp(),
         parentId: null,
@@ -91,7 +92,7 @@ export const usePosts = () => {
         commentCount: increment(1),
       });
     },
-    [user]
+    [user, userDetails]
   );
 
   const updatePost = useCallback(
