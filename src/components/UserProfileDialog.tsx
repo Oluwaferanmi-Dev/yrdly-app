@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { doc, onSnapshot, collection, query, where, addDoc, serverTimestamp, updateDoc, arrayUnion, runTransaction, arrayRemove } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '@/lib/firebase';
@@ -14,6 +14,7 @@ import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton';
 import { MapPin, MessageSquare, UserPlus, Check, X, Clock, MoreHorizontal, ShieldBan } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -32,8 +33,14 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface UserProfileDialogProps {
+    userId: string;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}
+
 const ProfileSkeleton = () => (
-    <Card className="max-w-2xl mx-auto">
+    <Card className="max-w-2xl mx-auto border-none shadow-none">
         <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50">
             <Skeleton className="h-24 w-24 rounded-full mb-4" />
             <Skeleton className="h-8 w-48 mb-2" />
@@ -49,8 +56,7 @@ const ProfileSkeleton = () => (
     </Card>
 );
 
-export default function UserProfilePage() {
-    const { userId } = useParams();
+export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDialogProps) {
     const { user: currentUser, userDetails } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
@@ -62,17 +68,21 @@ export default function UserProfilePage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const profileUid = Array.isArray(userId) ? userId[0] : userId;
-        if (!profileUid || !currentUser) return;
-
-        if (profileUid === currentUser.uid) {
-            router.push('/settings');
+        if (!userId || !currentUser) {
+            setLoading(false);
             return;
         }
-
-        setIsBlocked(userDetails?.blockedUsers?.includes(profileUid) ?? false);
         
-        const userDocRef = doc(db, 'users', profileUid);
+        // Don't open a dialog for the current user
+        if (userId === currentUser.uid) {
+            onOpenChange(false);
+            return;
+        }
+        
+        setLoading(true);
+        setIsBlocked(userDetails?.blockedUsers?.includes(userId) ?? false);
+        
+        const userDocRef = doc(db, 'users', userId);
         const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
             if (doc.exists()) {
                 setProfileUser({ id: doc.id, ...doc.data() } as User);
@@ -84,7 +94,7 @@ export default function UserProfilePage() {
 
         const requestsQuery = query(
             collection(db, 'friend_requests'),
-            where('participantIds', 'in', [[currentUser.uid, profileUid], [profileUid, currentUser.uid]])
+            where('participantIds', 'in', [[currentUser.uid, userId], [userId, currentUser.uid]])
         );
 
         const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
@@ -94,13 +104,13 @@ export default function UserProfilePage() {
                 setFriendRequest(requestData);
                 if (requestData.status === 'pending') {
                     setFriendshipStatus(requestData.fromUserId === currentUser.uid ? 'request_sent' : 'request_received');
-                } else if (userDetails?.friends?.includes(profileUid)) {
+                } else if (userDetails?.friends?.includes(userId)) {
                     setFriendshipStatus('friends');
                 } else {
                     setFriendshipStatus('none');
                 }
             } else {
-                 if (userDetails?.friends?.includes(profileUid)) {
+                 if (userDetails?.friends?.includes(userId)) {
                     setFriendshipStatus('friends');
                 } else {
                     setFriendshipStatus('none');
@@ -114,12 +124,12 @@ export default function UserProfilePage() {
             unsubscribeRequests();
         };
 
-    }, [userId, currentUser, userDetails, router]);
+    }, [userId, currentUser, userDetails, onOpenChange]);
 
     const handleAddFriend = async () => {
         if (!currentUser || !profileUser || isBlocked) return;
         try {
-            await addDoc(collection(db, "friend_requests"), { fromUserId: currentUser.uid, toUserId: profileUser.uid, participantIds: [currentUser.uid, profileUser.uid], status: "pending", timestamp: serverTimestamp() });
+            await addDoc(collection(db, "friend_requests"), { fromUserId: currentUser.uid, toUserId: profileUser.uid, participantIds: [currentUser.uid, profileUser.uid].sort(), status: "pending", timestamp: serverTimestamp() });
             toast({ title: "Friend request sent!" });
         } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not send friend request." });
@@ -174,7 +184,7 @@ export default function UserProfilePage() {
             toast({ variant: "destructive", title: "Error", description: "Could not block user." });
         }
     };
-
+    
     const handleUnblockUser = async () => {
         if (!currentUser || !profileUser) return;
         const currentUserRef = doc(db, "users", currentUser.uid);
@@ -192,6 +202,11 @@ export default function UserProfilePage() {
         return [location.city, location.lga, location.state].filter(Boolean).join(", ");
     };
 
+    const handleMessageClick = () => {
+        onOpenChange(false);
+        router.push(`/messages?convId=${profileUser?.uid}`);
+    }
+
     const renderActionButtons = () => {
         if (!profileUser || profileUser.uid === currentUser?.uid) return null;
         if (isBlocked) {
@@ -200,7 +215,7 @@ export default function UserProfilePage() {
 
         switch (friendshipStatus) {
             case 'friends':
-                return <Button onClick={() => router.push(`/messages?convId=${profileUser.uid}`)}><MessageSquare className="mr-2 h-4 w-4" /> Message</Button>;
+                return <Button onClick={handleMessageClick}><MessageSquare className="mr-2 h-4 w-4" /> Message</Button>;
             case 'request_sent':
                 return <Button disabled><Clock className="mr-2 h-4 w-4" /> Request Sent</Button>;
             case 'request_received':
@@ -216,55 +231,62 @@ export default function UserProfilePage() {
         }
     };
 
-    if (loading) return <ProfileSkeleton />;
-    if (!profileUser) return <div className="text-center py-10">User not found.</div>;
-
     return (
-        <Card className="max-w-2xl mx-auto">
-            <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50 relative">
-                {profileUser.uid !== currentUser?.uid && (
-                    <div className="absolute top-4 right-4">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon"><MoreHorizontal className="h-5 w-5" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
-                                            <ShieldBan className="mr-2 h-4 w-4" /> {isBlocked ? "Unblock" : "Block"} User
-                                        </DropdownMenuItem>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                {isBlocked ? `This will unblock ${profileUser.name}.` : `This will block ${profileUser.name}. You will no longer see their content or be able to interact with them.`}
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={isBlocked ? handleUnblockUser : handleBlockUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                                {isBlocked ? "Unblock" : "Block"}
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-md p-0">
+                {loading ? (
+                    <ProfileSkeleton />
+                ) : !profileUser ? (
+                    <div className="text-center py-10">User not found.</div>
+                ) : (
+                    <Card className="border-none shadow-none">
+                        <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50 relative">
+                            {profileUser.uid !== currentUser?.uid && (
+                                <div className="absolute top-4 right-4">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-5 w-5" /></Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive">
+                                                        <ShieldBan className="mr-2 h-4 w-4" /> {isBlocked ? "Unblock" : "Block"} User
+                                                    </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            {isBlocked ? `This will unblock ${profileUser.name}.` : `This will block ${profileUser.name}. You will no longer see their content or be able to interact with them.`}
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={isBlocked ? handleUnblockUser : handleBlockUser} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                                            {isBlocked ? "Unblock" : "Block"}
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                            )}
+                            <Avatar className="h-24 w-24 mb-4 border-2 border-background"><AvatarImage src={profileUser.avatarUrl} alt={profileUser.name} /><AvatarFallback>{profileUser.name.charAt(0)}</AvatarFallback></Avatar>
+                            <h1 className="text-2xl font-bold">{profileUser.name}</h1>
+                            {profileUser.location && (<div className="flex items-center text-sm text-muted-foreground mt-1"><MapPin className="h-4 w-4 mr-1" /><span>{displayLocation(profileUser.location)}</span></div>)}
+                        </CardHeader>
+                        <CardContent className="p-6">
+                            <h2 className="font-semibold text-lg mb-2">Bio</h2>
+                            <p className="text-muted-foreground">{profileUser.bio || "This user hasn't written a bio yet."}</p>
+                        </CardContent>
+                        <CardFooter className="p-6 justify-center">
+                            {renderActionButtons()}
+                        </CardFooter>
+                    </Card>
                 )}
-                <Avatar className="h-24 w-24 mb-4 border-2 border-background"><AvatarImage src={profileUser.avatarUrl} alt={profileUser.name} /><AvatarFallback>{profileUser.name.charAt(0)}</AvatarFallback></Avatar>
-                <h1 className="text-2xl font-bold">{profileUser.name}</h1>
-                {profileUser.location && (<div className="flex items-center text-sm text-muted-foreground mt-1"><MapPin className="h-4 w-4 mr-1" /><span>{displayLocation(profileUser.location)}</span></div>)}
-            </CardHeader>
-            <CardContent className="p-6">
-                <h2 className="font-semibold text-lg mb-2">Bio</h2>
-                <p className="text-muted-foreground">{profileUser.bio || "This user hasn't written a bio yet."}</p>
-            </CardContent>
-            <CardFooter className="p-6 justify-center">
-                {renderActionButtons()}
-            </CardFooter>
-        </Card>
-    );
+            </DialogContent>
+        </Dialog>
+    )
 }

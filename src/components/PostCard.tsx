@@ -39,7 +39,7 @@ import { CreatePostDialog } from "./CreatePostDialog";
 import { useToast } from "@/hooks/use-toast";
 import { CommentSection } from "./CommentSection";
 import { timeAgo } from "@/lib/utils";
-import Link from 'next/link';
+import { UserProfileDialog } from "./UserProfileDialog";
 
 
 interface PostCardProps {
@@ -55,6 +55,7 @@ export function PostCard({ post }: PostCardProps) {
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
   const [isLiked, setIsLiked] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   useEffect(() => {
     const fetchAuthor = async () => {
@@ -185,6 +186,7 @@ export function PostCard({ post }: PostCardProps) {
 
   return (
     <Card className="overflow-hidden">
+      {author && <UserProfileDialog userId={author.uid} open={isProfileOpen} onOpenChange={setIsProfileOpen} />}
       <CardHeader className="flex flex-row items-center gap-4 p-4">
         {loadingAuthor ? (
             <div className="flex items-center gap-4 w-full">
@@ -196,16 +198,16 @@ export function PostCard({ post }: PostCardProps) {
             </div>
         ) : author ? (
             <>
-                <Link href={`/users/${author.uid}`} className="cursor-pointer">
+                <button onClick={() => setIsProfileOpen(true)} className="cursor-pointer">
                     <Avatar>
                         <AvatarImage src={author.avatarUrl} alt={author.name} data-ai-hint="person portrait" />
                         <AvatarFallback>{author.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
-                </Link>
+                </button>
                 <div className="flex-1">
-                    <Link href={`/users/${author.uid}`} className="cursor-pointer">
+                    <button onClick={() => setIsProfileOpen(true)} className="cursor-pointer">
                         <p className="font-semibold hover:underline">{author.name}</p>
-                    </Link>
+                    </button>
                     <p className="text-xs text-muted-foreground">{timeAgo(post.timestamp?.toDate())}</p>
                 </div>
                 {getCategoryBadge(post.category)}

@@ -47,8 +47,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import Link from 'next/link';
-
+import { UserProfileDialog } from "@/components/UserProfileDialog";
 
 const NeighborSkeleton = () => (
     <Card>
@@ -73,6 +72,7 @@ export default function NeighborsPage() {
     const [filters, setFilters] = useState({ state: "all", lga: "all" });
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
     const [activeTab, setActiveTab] = useState("all");
+    const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
     useEffect(() => {
         if (!currentUser) return;
@@ -250,6 +250,7 @@ export default function NeighborsPage() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
+            {selectedUser && <UserProfileDialog userId={selectedUser} open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)} />}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold font-headline">Community</h1>
@@ -268,16 +269,16 @@ export default function NeighborsPage() {
                                 return (
                                     <div key={request.id} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <Link href={`/users/${fromUser.uid}`} className="cursor-pointer">
+                                            <button onClick={() => setSelectedUser(fromUser.uid)} className="cursor-pointer">
                                                 <Avatar className="h-10 w-10">
                                                     <AvatarImage src={fromUser?.avatarUrl} alt={fromUser.name}/>
                                                     <AvatarFallback>{fromUser.name.charAt(0)}</AvatarFallback>
                                                 </Avatar>
-                                            </Link>
+                                            </button>
                                             <div>
-                                                <Link href={`/users/${fromUser.uid}`} className="cursor-pointer hover:underline">
+                                                <button onClick={() => setSelectedUser(fromUser.uid)} className="cursor-pointer hover:underline">
                                                     <b>{fromUser?.name || "Someone"}</b>
-                                                </Link> wants to be your friend.
+                                                </button> wants to be your friend.
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
@@ -321,7 +322,7 @@ export default function NeighborsPage() {
                             {filteredNeighbors.map((neighbor) => {
                                 const status = getFriendshipStatus(neighbor.uid);
                                 return (
-                                    <Card key={neighbor.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/users/${neighbor.uid}`)}>
+                                    <Card key={neighbor.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(neighbor.uid)}>
                                         <CardContent className="p-4 flex flex-col items-center text-center">
                                             <Avatar className="h-20 w-20 border mb-4"><AvatarImage src={neighbor.avatarUrl} alt={neighbor.name} /><AvatarFallback>{neighbor.name.charAt(0)}</AvatarFallback></Avatar>
                                             <h3 className="font-semibold text-lg">{neighbor.name}</h3>
@@ -350,7 +351,7 @@ export default function NeighborsPage() {
                     ) : friends.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                             {friends.map((friend) => (
-                                <Card key={friend.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/users/${friend.uid}`)}>
+                                <Card key={friend.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(friend.uid)}>
                                     <CardContent className="p-4 flex items-center gap-4">
                                         <Avatar className="h-12 w-12 border"><AvatarImage src={friend.avatarUrl} alt={friend.name} /><AvatarFallback>{friend.name.charAt(0)}</AvatarFallback></Avatar>
                                         <div className="flex-1 space-y-1">

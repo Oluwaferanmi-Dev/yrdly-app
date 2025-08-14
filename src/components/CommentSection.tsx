@@ -13,8 +13,7 @@ import { Send, Smile } from 'lucide-react';
 import { timeAgo, cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { UserProfileDialog } from './UserProfileDialog';
 
 interface CommentSectionProps {
     postId: string;
@@ -25,10 +24,10 @@ const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😡'];
 export function CommentSection({ postId }: CommentSectionProps) {
     const { user, userDetails } = useAuth();
     const { toast } = useToast();
-    const router = useRouter();
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
+    const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
     useMemo(() => {
         if (!postId) return;
@@ -62,7 +61,6 @@ export function CommentSection({ postId }: CommentSectionProps) {
                     throw "Post does not exist!";
                 }
 
-                // 1. Add the new comment
                 transaction.set(doc(commentsColRef), {
                     userId: user.uid,
                     authorName: userDetails.name,
@@ -73,7 +71,6 @@ export function CommentSection({ postId }: CommentSectionProps) {
                     reactions: {},
                 });
 
-                // 2. Update the comment count on the post
                 const newCount = (postDoc.data().commentCount || 0) + 1;
                 transaction.update(postRef, { commentCount: newCount });
             });
@@ -100,12 +97,10 @@ export function CommentSection({ postId }: CommentSectionProps) {
                 const uidsForEmoji: string[] = reactions[emoji] || [];
                 const userHasReacted = uidsForEmoji.includes(user.uid);
 
-                // Create a new array for the updated UIDs
                 const newUidsForEmoji = userHasReacted
                     ? uidsForEmoji.filter((uid) => uid !== user.uid)
                     : [...uidsForEmoji, user.uid];
 
-                // Update the specific emoji field in the reactions map
                 transaction.update(commentRef, {
                     [`reactions.${emoji}`]: newUidsForEmoji
                 });
@@ -140,17 +135,17 @@ export function CommentSection({ postId }: CommentSectionProps) {
     const renderComment = (comment: Comment & { replies: Comment[] }, isReply: boolean = false) => (
         <div key={comment.id} className={cn("flex flex-col gap-2", isReply ? "ml-6" : "")}>
             <div className="flex gap-3">
-                <Link href={`/users/${comment.userId}`} className="cursor-pointer">
+                <button onClick={() => setSelectedUser(comment.userId)} className="cursor-pointer">
                     <Avatar className="h-8 w-8">
                         <AvatarImage src={comment.authorImage} />
                         <AvatarFallback>{comment.authorName?.charAt(0)}</AvatarFallback>
                     </Avatar>
-                </Link>
+                </button>
                 <div className="flex-1 bg-muted/50 rounded-lg p-3">
                     <div className="flex justify-between items-center">
-                        <Link href={`/users/${comment.userId}`} className="cursor-pointer">
+                        <button onClick={() => setSelectedUser(comment.userId)} className="cursor-pointer">
                             <span className="font-semibold text-sm hover:underline">{comment.authorName}</span>
-                        </Link>
+                        </button>
                         <span className="text-xs text-muted-foreground">{timeAgo(comment.timestamp?.toDate())}</span>
                     </div>
                     <p className="text-sm mt-1">{comment.text}</p>
@@ -200,6 +195,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
     return (
         <div className="space-y-4 pt-4">
+            {selectedUser && <UserProfileDialog userId={selectedUser} open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)} />}
             <div className="space-y-4">
                 {commentTree.map(comment => renderComment(comment))}
             </div>
