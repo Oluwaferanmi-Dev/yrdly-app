@@ -41,7 +41,6 @@ export default function Splash() {
           width={128} 
           height={128} 
           className="animate-pulse"
-          style={{ width: '128px', height: 'auto' }}
           priority 
         />
     </div>

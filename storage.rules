@@ -1,0 +1,21 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Match any file in the bucket
+    match /{allPaths=**} {
+      // Allow read access to everyone for any file.
+      // This is useful for public assets like profile pictures and post images.
+      allow read: if true;
+    }
+
+    // User-specific uploads (e.g., post images, profile pictures)
+    // Files are stored in a folder named after the user's ID.
+    match /user-uploads/{userId}/{allPaths=**} {
+      // Allow write access (create, update, delete) only if the user is authenticated
+      // and the `userId` in the path matches their own UID.
+      // This prevents users from uploading files into other users' folders.
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

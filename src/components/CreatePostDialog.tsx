@@ -43,6 +43,7 @@ import { PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect } from "react";
+import * as React from 'react';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -257,8 +258,8 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
     </Form>
   );
 
-  const Trigger = () => (
-     <div className="flex items-center gap-4 w-full">
+  const Trigger = React.forwardRef<HTMLDivElement>((props, ref) => (
+     <div ref={ref} {...props} className="flex items-center gap-4 w-full">
         <Avatar>
             <AvatarImage src={userDetails?.avatarUrl || 'https://placehold.co/100x100.png'}/>
             <AvatarFallback>{userDetails?.name?.charAt(0) || 'U'}</AvatarFallback>
@@ -268,7 +269,8 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
         </div>
         <Button variant="ghost" size="icon"><PlusCircle className="h-6 w-6 text-primary" /></Button>
     </div>
-  );
+  ));
+  Trigger.displayName = 'Trigger';
 
   if (isMobile) {
     return (
@@ -279,6 +281,9 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             <SheetContent side="bottom" className="p-0">
                 <SheetHeader className="p-4 border-b">
                     <SheetTitle>{finalTitle}</SheetTitle>
+                    <DialogDescription>
+                        {finalDescription}
+                    </DialogDescription>
                 </SheetHeader>
                 <div className="py-4">
                     <FormContent />

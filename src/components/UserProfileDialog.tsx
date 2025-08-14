@@ -240,8 +240,11 @@ export function UserProfileDialog({ userId, open, onOpenChange }: UserProfileDia
                     <div className="text-center py-10">User not found.</div>
                 ) : (
                     <>
-                        <DialogHeader className="sr-only">
-                            <DialogTitle>User Profile: {profileUser.name}</DialogTitle>
+                        <DialogHeader>
+                            <DialogTitle className="sr-only">User Profile: {profileUser.name}</DialogTitle>
+                            <AlertDialogDescription className="sr-only">
+                                View and interact with {profileUser.name}'s profile.
+                            </AlertDialogDescription>
                         </DialogHeader>
                         <Card className="border-none shadow-none">
                             <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50 relative">

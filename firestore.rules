@@ -41,8 +41,13 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       // A user can create a post if they are logged in
       allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
-      // A user can only update or delete their own posts
-      allow update, delete: if isAuthenticated() && isOwner(resource.data.userId);
+      // A user can only delete their own posts
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+      // A user can update their own post.
+      // Any user can update the likedBy, attendees, and commentCount fields.
+      allow update: if isAuthenticated() &&
+                    (isOwner(resource.data.userId) ||
+                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'attendees', 'commentCount']));
 
       // Comments subcollection
       match /comments/{commentId} {
@@ -50,8 +55,12 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         // Any authenticated user can create a comment
         allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
-        // Only the author of a comment can update or delete it
-        allow update, delete: if isAuthenticated() && isOwner(resource.data.userId);
+        // Only the author of a comment can delete it
+        allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+        // The author can update their comment, or any user can update the reactions.
+        allow update: if isAuthenticated() &&
+                      (isOwner(resource.data.userId) ||
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));
       }
     }
     
