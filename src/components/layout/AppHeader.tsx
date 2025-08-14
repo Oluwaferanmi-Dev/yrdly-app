@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Search, LogOut, MessageCircle } from 'lucide-react';
+import { Search, LogOut, MessageCircle, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -33,24 +33,28 @@ export function AppHeader() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 md:relative z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4">
-         <div className="flex items-center gap-2">
-           <Link href="/home" className="flex items-center gap-2 text-xl font-bold text-foreground">
-              <Image src="/yrdly-logo.png" alt="Yrdly Logo" width={32} height={32} />
-             <span className="font-headline">Yrdly</span>
-           </Link>
-         </div>
+      <header className="fixed top-0 left-0 right-0 md:relative z-10 flex h-16 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-4">
+        <div className="flex items-center gap-4">
+          <Link href="/home" className="flex items-center gap-2 text-xl font-bold text-foreground">
+            <Image src="/yrdly-logo.png" alt="Yrdly Logo" width={32} height={32} />
+            <span className="font-headline">Yrdly</span>
+          </Link>
+          <Link href="/map" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+            <Map className="h-5 w-5" />
+            <span className="hidden md:inline">Map</span>
+          </Link>
+        </div>
         
-        <div className="flex w-full items-center gap-2 md:w-auto ml-auto">
-          <Button variant="ghost" size="icon" className="rounded-full ml-auto" onClick={() => setIsSearchOpen(true)}>
-              <Search className="h-5 w-5" />
-              <span className="sr-only">Search</span>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setIsSearchOpen(true)}>
+            <Search className="h-5 w-5" />
+            <span className="sr-only">Search</span>
           </Button>
           <Link href="/messages">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                  <MessageCircle className="h-5 w-5" />
-                  <span className="sr-only">Messages</span>
-              </Button>
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <MessageCircle className="h-5 w-5" />
+              <span className="sr-only">Messages</span>
+            </Button>
           </Link>
           <NotificationsPanel />
           <DropdownMenu>
@@ -69,8 +73,8 @@ export function AppHeader() {
               <DropdownMenuItem>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Logout</span>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Logout</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

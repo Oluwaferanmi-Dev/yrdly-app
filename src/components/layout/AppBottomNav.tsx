@@ -3,14 +3,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, ShoppingCart, Map, Building } from "lucide-react";
+import { Home, Users, ShoppingCart, Calendar, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "/home", icon: Home, label: "Home" },
   { href: "/neighbors", icon: Users, label: "Neighbors" },
   { href: "/marketplace", icon: ShoppingCart, label: "Market" },
-  { href: "/map", icon: Map, label: "Map" },
+  { href: "/events", icon: Calendar, label: "Events" },
   { href: "/businesses", icon: Building, label: "Businesses" },
 ];
 
