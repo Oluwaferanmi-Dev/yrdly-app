@@ -56,7 +56,7 @@ type CreateEventDialogProps = {
 }
 
 export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogProps) {
-  const { user } = useAuth();
+  const { user, userDetails } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -76,12 +76,12 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user) {
+    if (!user || !userDetails) {
         toast({ variant: 'destructive', title: 'Not authenticated' });
         return;
     }
     if (!eventLocation) {
-        toast({ variant: 'destructive', title: 'Location required' });
+        toast({ variant: 'destructive', title: 'Location required', description: 'Please select a location for the event.' });
         return;
     }
     setLoading(true);
@@ -95,19 +95,18 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
         }
 
         const eventData = {
-            userId: user.uid,
-            authorName: user.displayName || "Anonymous User",
-            authorImage: user.photoURL || `https://placehold.co/100x100.png`,
+            authorId: user.uid,
+            authorName: userDetails.name,
+            authorImage: userDetails.avatarUrl,
             category: "Event",
-            text: values.description, // Using description as the main text for the post
-            title: values.title, // Storing title separately for event-specific display
+            text: values.description,
+            title: values.title,
             eventLocation: eventLocation,
             eventDate: values.eventDate,
             eventTime: values.eventTime,
             eventLink: values.eventLink || "",
             imageUrl: imageUrl,
             timestamp: serverTimestamp(),
-            likes: 0,
             likedBy: [],
             commentCount: 0,
             attendees: []
@@ -218,8 +217,8 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
   const Trigger = () => (
      <div className="flex items-center gap-4 w-full">
         <Avatar>
-            <AvatarImage src={user?.photoURL || 'https://placehold.co/100x100.png'}/>
-            <AvatarFallback>{user?.displayName?.charAt(0) || "U"}</AvatarFallback>
+            <AvatarImage src={userDetails?.avatarUrl || 'https://placehold.co/100x100.png'}/>
+            <AvatarFallback>{userDetails?.name?.charAt(0) || "U"}</AvatarFallback>
         </Avatar>
         <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md border border-dashed">
             Organize an event in your neighborhood?
@@ -253,7 +252,7 @@ export function CreateEventDialog({ children, onOpenChange }: CreateEventDialogP
           <DialogTitle>Create Event</DialogTitle>
           <DialogDescription>Plan and share your neighborhood event.</DialogDescription>
         </DialogHeader>
-        <FormContent />
+        <div className="py-4"><FormContent /></div>
         <DialogFooter>
           <Button onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
             {loading ? 'Creating...' : 'Create Event'}
