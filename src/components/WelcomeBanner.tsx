@@ -13,6 +13,7 @@ export function WelcomeBanner() {
     const [isVisible, setIsVisible] = useState(false);
 
     useEffect(() => {
+        // Use a more robust check based on creation time, only show for new users.
         const hasSeenWelcome = localStorage.getItem('hasSeenWelcomeBanner');
         if (hasSeenWelcome) {
             setIsVisible(false);
@@ -21,9 +22,10 @@ export function WelcomeBanner() {
 
         if (user && user.metadata.creationTime) {
             const creationDate = new Date(user.metadata.creationTime);
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
+            const now = new Date();
+            // Show if the account was created in the last 7 days
+            const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
+            
             if (creationDate > sevenDaysAgo) {
                 setIsVisible(true);
             }
@@ -38,7 +40,7 @@ export function WelcomeBanner() {
     if (!isVisible) return null;
 
     return (
-        <Alert className="bg-accent border-primary/20 text-accent-foreground">
+        <Alert className="bg-accent border-accent/20 text-accent-foreground">
           <button onClick={handleDismiss} className="absolute top-2 right-2 text-accent-foreground/70 hover:text-accent-foreground">
             <X className="h-4 w-4" />
           </button>
@@ -46,15 +48,15 @@ export function WelcomeBanner() {
             Welcome to Yrdly, {user?.displayName?.split(' ')[0] || 'Neighbor'}! 👋
           </AlertTitle>
           <AlertDescription className="mt-2">
-            <p className="mb-3">You&apos;re now part of your neighborhood network. Here&apos;s how to get started:</p>
+            <p className="mb-4">You&apos;re now part of your neighborhood network. Here&apos;s how to get started:</p>
             <div className="flex flex-col sm:flex-row gap-4 mb-4">
                 <div className="flex items-center gap-2"><Heart className="h-5 w-5 text-primary"/> Share community posts</div>
                 <div className="flex items-center gap-2"><Users className="h-5 w-5 text-primary"/> Connect with neighbors</div>
                 <div className="flex items-center gap-2"><Building className="h-5 w-5 text-primary"/> Discover local businesses</div>
             </div>
             <div className="flex gap-2">
-                <Button asChild variant="default" size="sm"><Link href="/settings">Complete Profile</Link></Button>
-                <Button asChild variant="outline" size="sm"><Link href="/neighbors">Find Neighbors</Link></Button>
+                <Button asChild variant="default" size="sm" className="bg-primary-foreground text-primary hover:bg-primary-foreground/90"><Link href="/settings">Complete Profile</Link></Button>
+                <Button asChild variant="outline" size="sm" className="bg-transparent border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10"><Link href="/neighbors">Find Neighbors</Link></Button>
             </div>
           </AlertDescription>
         </Alert>

@@ -120,7 +120,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 animate-fade-in">
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="text-center flex flex-col items-center">
           <Image src="/yrdly-logo.png" alt="Yrdly Logo" width={96} height={96} className="mb-4" />

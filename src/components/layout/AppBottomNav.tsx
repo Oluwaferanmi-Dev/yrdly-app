@@ -11,7 +11,7 @@ export function AppBottomNav() {
 
   const menuItems = [
     { href: '/home', label: 'Home', icon: Home },
-    { href: '/neighbors', label: 'Search', icon: Search },
+    { href: '/neighbors', label: 'Community', icon: Users },
     { href: '/marketplace', label: 'For Sale', icon: ShoppingCart },
   ];
 

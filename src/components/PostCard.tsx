@@ -150,7 +150,7 @@ export function PostCard({ post }: PostCardProps) {
       case "Event":
         return <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-200">{category}</Badge>;
       case "For Sale":
-        return <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">{category}</Badge>;
+        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">{category}</Badge>;
       case "Business":
          return <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-200 flex items-center gap-1"><Briefcase className="h-3 w-3"/>{category}</Badge>;
       case "General":

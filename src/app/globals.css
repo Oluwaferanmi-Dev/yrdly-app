@@ -16,8 +16,8 @@
     --secondary-foreground: 240 6% 20%;
     --muted: 240 5% 90%;
     --muted-foreground: 240 4% 46%;
-    --accent: 142 76% 90%; /* Light green for banner */
-    --accent-foreground: 142 76% 20%;
+    --accent: 34 97% 64%; /* Warm orange from design */
+    --accent-foreground: 34 97% 20%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 240 6% 88%;
@@ -48,7 +48,7 @@
     --secondary-foreground: 0 0% 98%;
     --muted: 240 4% 16%;
     --muted-foreground: 240 4% 65%;
-    --accent: 142 71% 20%;
+    --accent: 34 97% 59%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 98%;
@@ -78,10 +78,10 @@
 
 @layer utilities {
     .animate-fade-in {
-        animation: fadeIn 1s ease-in-out;
+        animation: fadeIn 0.2s ease-in-out;
     }
     .animate-fade-in-delay {
-        animation: fadeIn 1s ease-in-out 0.5s;
+        animation: fadeIn 0.2s ease-in-out 0.5s;
         animation-fill-mode: both;
     }
     @keyframes fadeIn {

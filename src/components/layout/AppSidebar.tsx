@@ -34,7 +34,7 @@ export function AppSidebar() {
       <SidebarHeader>
         <Link href="/home" className="flex items-center gap-2">
             <Image src="/yrdly-logo.png" alt="Yrdly Logo" width={32} height={32} />
-            <span className="font-bold text-lg font-headline">Yardly</span>
+            <span className="font-bold text-lg font-headline">Yrdly</span>
         </Link>
       </SidebarHeader>
       <SidebarContent className="p-4">
@@ -43,7 +43,7 @@ export function AppSidebar() {
             <SidebarMenuItem key={item.label}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === item.href}
+                isActive={pathname.startsWith(item.href)}
                 tooltip={{ children: item.label, side: 'right' }}
               >
                 <Link href={item.href} className="flex justify-between items-center w-full">
@@ -51,7 +51,7 @@ export function AppSidebar() {
                     <item.icon />
                     <span>{item.label}</span>
                   </div>
-                  {item.badge && <Badge className="h-6 w-6 flex items-center justify-center">{item.badge}</Badge>}
+                  {item.badge != null && item.badge > 0 && <Badge className="h-6 w-6 flex items-center justify-center">{item.badge}</Badge>}
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -63,7 +63,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
              <SidebarMenuButton
                 asChild
-                isActive={pathname === '/settings'}
+                isActive={pathname.startsWith('/settings')}
                  tooltip={{ children: 'Settings', side: 'right' }}
               >
                 <Link href="/settings">
