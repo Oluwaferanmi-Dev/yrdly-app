@@ -101,7 +101,7 @@ export default function SettingsPage() {
         name: name,
         bio: bio,
         location: location,
-        avatarUrl: photoURL || user.photoURL,
+        avatarUrl: photoURL || user.photoURL || undefined,
         email: user.email,
       };
 
