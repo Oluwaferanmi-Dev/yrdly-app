@@ -1,8 +1,8 @@
 
 "use client";
 
-import type { User, Post } from "@/types";
-import { useState, useEffect } from "react";
+import type { User, Post, FriendRequest } from "@/types";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Heart, MessageCircle, Share2, MapPin, Briefcase, MoreHorizontal, Trash2, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { doc, arrayUnion, arrayRemove, onSnapshot, getDoc, deleteDoc, runTransaction } from "firebase/firestore";
+import { doc, arrayUnion, arrayRemove, onSnapshot, getDoc, deleteDoc, runTransaction, collection, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Skeleton } from "./ui/skeleton";
 import {
@@ -46,8 +46,16 @@ interface PostCardProps {
   post: Post;
 }
 
+type FriendshipStatus = 'friends' | 'request_sent' | 'request_received' | 'none';
+
+type SelectedUser = {
+    user: User,
+    status: FriendshipStatus;
+}
+
+
 export function PostCard({ post }: PostCardProps) {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, userDetails } = useAuth();
   const { toast } = useToast();
   const [author, setAuthor] = useState<User | null>(null);
   const [loadingAuthor, setLoadingAuthor] = useState(true);
@@ -55,7 +63,43 @@ export function PostCard({ post }: PostCardProps) {
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
   const [isLiked, setIsLiked] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+
+
+  useEffect(() => {
+    if (!currentUser || !post.userId || currentUser.uid === post.userId) return;
+
+    const requestsQuery = query(
+        collection(db, "friend_requests"),
+        where("participantIds", "in", [[currentUser.uid, post.userId], [post.userId, currentUser.uid]])
+    );
+
+    const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
+        const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest));
+        setFriendRequests(requests);
+    });
+
+    return () => unsubscribeRequests();
+}, [currentUser, post.userId]);
+
+
+  const getFriendshipStatus = useCallback((): FriendshipStatus => {
+    if (!currentUser || !post.userId) return 'none';
+    if (userDetails?.friends?.includes(post.userId)) return "friends";
+    
+    const request = friendRequests.find(req => 
+        ((req.fromUserId === currentUser?.uid && req.toUserId === post.userId) ||
+         (req.fromUserId === post.userId && req.toUserId === currentUser?.uid))
+    );
+
+    if (request && request.status === 'pending') {
+        return request.fromUserId === currentUser?.uid ? 'request_sent' : 'request_received';
+    }
+
+    return "none";
+}, [userDetails, friendRequests, currentUser, post.userId]);
+
 
   useEffect(() => {
     const fetchAuthor = async () => {
@@ -183,10 +227,29 @@ export function PostCard({ post }: PostCardProps) {
       }
     }
   };
+  
+  const openProfile = () => {
+    if (author && author.uid !== currentUser?.uid) {
+        const status = getFriendshipStatus();
+        setSelectedUser({ user: author, status });
+    }
+  };
 
   return (
     <Card className="overflow-hidden">
-      {author && <UserProfileDialog userId={author.uid} open={isProfileOpen} onOpenChange={setIsProfileOpen} />}
+      {selectedUser && (
+          <UserProfileDialog 
+              user={selectedUser.user} 
+              friendshipStatus={selectedUser.status}
+              open={!!selectedUser} 
+              onOpenChange={(wasChanged) => {
+                  if (wasChanged) {
+                    // Logic to refetch or update state if a change (like block/unfriend) happened
+                  }
+                  setSelectedUser(null)
+              }} 
+          />
+      )}
       <CardHeader className="flex flex-row items-center gap-4 p-4">
         {loadingAuthor ? (
             <div className="flex items-center gap-4 w-full">
@@ -198,14 +261,14 @@ export function PostCard({ post }: PostCardProps) {
             </div>
         ) : author ? (
             <>
-                <button onClick={() => setIsProfileOpen(true)} className="cursor-pointer">
+                <button onClick={openProfile} className="cursor-pointer">
                     <Avatar>
                         <AvatarImage src={author.avatarUrl} alt={author.name} data-ai-hint="person portrait" />
                         <AvatarFallback>{author.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                 </button>
                 <div className="flex-1">
-                    <button onClick={() => setIsProfileOpen(true)} className="cursor-pointer">
+                    <button onClick={openProfile} className="cursor-pointer">
                         <p className="font-semibold hover:underline">{author.name}</p>
                     </button>
                     <p className="text-xs text-muted-foreground">{timeAgo(post.timestamp?.toDate())}</p>
