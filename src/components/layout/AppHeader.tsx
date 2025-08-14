@@ -33,7 +33,7 @@ export function AppHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4">
+      <header className="fixed top-0 left-0 right-0 md:relative z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4">
          <div className="flex items-center gap-2">
            <Link href="/home" className="flex items-center gap-2 text-xl font-bold text-foreground">
               <Image src="/yrdly-logo.png" alt="Yrdly Logo" width={32} height={32} />

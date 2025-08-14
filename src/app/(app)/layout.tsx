@@ -38,7 +38,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
           <div className="md:hidden">
               <AppHeader />
           </div>
-          <main className="p-4 sm:p-6 lg:p-8 pb-24 md:pb-8 pt-[calc(env(safe-area-inset-top)+1rem)]">{children}</main>
+          <main className="p-4 sm:p-6 lg:p-8 pb-24 md:pb-8 pt-16 md:pt-6">{children}</main>
           <AppBottomNav />
         </SidebarInset>
       </SidebarProvider>
