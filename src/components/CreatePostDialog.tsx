@@ -77,9 +77,11 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
         (val) => (val === "" ? undefined : Number(val)),
         z.number().positive("Price must be positive.").optional()
     ),
-    image: z.custom<FileList>((val) => val instanceof FileList, "Invalid file input").optional(),
+    image: z.any().optional(),
   }).superRefine((data, ctx) => {
-      const hasNewImage = data.image && data.image.length > 0;
+      // On the server, data.image will be undefined, so this check will pass.
+      // On the client, it will be a FileList.
+      const hasNewImage = typeof window !== 'undefined' && data.image && data.image.length > 0;
       const hasExistingImages = isEditMode && postToEdit?.imageUrls && postToEdit.imageUrls.length > 0;
 
       if ((data.category === 'Event' || data.category === 'For Sale' || data.category === 'Business') && !hasNewImage && !hasExistingImages) {

@@ -28,7 +28,10 @@ const formSchema = z.object({
   name: z.string().min(1, "Business name can't be empty.").max(100),
   category: z.string().min(1, "Category can't be empty.").max(50),
   description: z.string().min(1, "Description can't be empty.").max(1000),
-  image: z.instanceof(FileList).refine((files) => files?.length > 0, "An image is required."),
+  image: z.any().refine((files) => {
+    if (typeof window === 'undefined') return true; // Always pass on server
+    return files instanceof FileList && files.length > 0;
+  }, "An image is required."),
 });
 
 export default function AddBusinessPage() {
