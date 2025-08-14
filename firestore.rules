@@ -67,7 +67,8 @@ service cloud.firestore {
     // Friend Requests collection
     match /friend_requests/{requestId} {
         // A user can only read a friend request if they are part of it
-        allow read: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
+        // They can also list requests sent to them
+        allow read: if isAuthenticated() && (request.auth.uid in resource.data.participantIds || resource.data.toUserId == request.auth.uid);
         // A user can create a friend request if they are the sender
         allow create: if isAuthenticated() && isOwner(request.resource.data.fromUserId);
         // A user can update a request (accept/decline) if they are the recipient or cancel if they are the sender

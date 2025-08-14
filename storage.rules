@@ -14,5 +14,10 @@ service firebase.storage {
     match /posts/{userId}/{allPaths=**} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // Users can only write to a business folder that matches their own user ID.
+    match /businesses/{userId}/{allPaths=**} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }
