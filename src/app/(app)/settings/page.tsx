@@ -59,9 +59,9 @@ export default function SettingsPage() {
     }
   }, [user]);
 
-  const handleLocationChange = (type: keyof User['location'], value: string) => {
+  const handleLocationChange = (type: 'state' | 'lga' | 'city' | 'ward', value: string) => {
     setLocation(prev => {
-        const newLocation = { ...prev, [type]: value };
+        const newLocation: User['location'] = { ...prev, [type]: value };
         if (type === "state") {
           newLocation.lga = "";
           newLocation.ward = "";

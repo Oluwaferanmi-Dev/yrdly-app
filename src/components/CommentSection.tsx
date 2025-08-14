@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, FormEvent } from 'react';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, runTransaction } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, serverTimestamp, doc, runTransaction } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Comment } from '@/types';
 import { useAuth } from '@/hooks/use-auth';

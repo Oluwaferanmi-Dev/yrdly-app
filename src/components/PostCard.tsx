@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Heart, MessageCircle, Share2, MapPin, Briefcase, MoreHorizontal, Trash2, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, getDoc, deleteDoc, runTransaction } from "firebase/firestore";
+import { doc, arrayUnion, arrayRemove, onSnapshot, getDoc, deleteDoc, runTransaction } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Skeleton } from "./ui/skeleton";
 import {
