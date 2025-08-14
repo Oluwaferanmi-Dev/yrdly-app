@@ -195,7 +195,7 @@ export default function NeighborsPage() {
             router.push(`/messages?convId=${neighbor.uid}`);
         } else {
             // Create new conversation
-            await addDoc(collection(db, "conversations"), {
+            const newConvRef = await addDoc(collection(db, "conversations"), {
                 participantIds: [currentUser.uid, neighbor.uid].sort(),
                 lastMessage: null,
             });

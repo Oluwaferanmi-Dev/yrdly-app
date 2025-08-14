@@ -77,6 +77,7 @@ export interface FriendRequest {
     id: string;
     fromUserId: string;
     toUserId: string;
+    participantIds: string[];
     status: 'pending' | 'accepted' | 'declined';
     timestamp: Timestamp;
 }
@@ -86,7 +87,13 @@ export interface Conversation {
   id: string;
   participantIds: string[];
   participant: User;
-  lastMessage?: Message;
+  lastMessage?: {
+      id?: string;
+      senderId: string;
+      text: string;
+      timestamp: string;
+  };
+  messages: Message[];
 }
 
 export interface Message {

@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Conversation, User, Message } from "../../types";
@@ -20,9 +21,11 @@ import {
   addDoc,
   serverTimestamp,
   runTransaction,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 interface NoFriendsEmptyStateProps {
     title?: string;
@@ -69,11 +72,24 @@ export function ChatLayout({
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
 
   // Update conversation list when prop changes
   useEffect(() => {
     setConversations(initialConversations);
   }, [initialConversations]);
+
+  // Check for convId in URL to pre-select a conversation
+  useEffect(() => {
+    const convId = searchParams.get('convId');
+    if (convId && conversations.length > 0) {
+        const conversationToSelect = conversations.find(c => c.participant.uid === convId);
+        if (conversationToSelect) {
+            setSelectedConversation(conversationToSelect);
+        }
+    }
+  }, [searchParams, conversations]);
+
 
   // Listen for messages in the selected conversation
   useEffect(() => {
@@ -137,23 +153,24 @@ export function ChatLayout({
     const messagesRef = collection(conversationRef, "messages");
 
     try {
-      await runTransaction(db, async (transaction) => {
-        await addDoc(messagesRef, {
+        const messageData = {
           senderId: currentUser.id,
           text: newMessage,
           timestamp: serverTimestamp(),
           read: false,
+        };
+        
+        await addDoc(messagesRef, messageData);
+
+        await updateDoc(conversationRef, {
+            lastMessage: {
+                text: newMessage,
+                senderId: currentUser.id,
+                timestamp: serverTimestamp(),
+                read: false,
+            }
         });
 
-        transaction.update(conversationRef, {
-          lastMessage: {
-            text: newMessage,
-            senderId: currentUser.id,
-            timestamp: serverTimestamp(),
-            read: false,
-          },
-        });
-      });
       setNewMessage("");
     } catch (error) {
       console.error("Error sending message: ", error);
@@ -200,7 +217,7 @@ export function ChatLayout({
                 <div className="flex-1 truncate">
                   <p className="font-semibold">{conv.participant.name}</p>
                   <p className="text-sm text-muted-foreground truncate">
-                    {conv.messages[conv.messages.length - 1]?.text}
+                    {conv.lastMessage?.text}
                   </p>
                 </div>
               </div>

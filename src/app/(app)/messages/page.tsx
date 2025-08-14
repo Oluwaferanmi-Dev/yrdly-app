@@ -4,8 +4,8 @@
 import { ChatLayout, NoFriendsEmptyState } from '@/components/messages/ChatLayout';
 import { useAuth } from '@/hooks/use-auth';
 import { useState, useEffect, useMemo } from 'react';
-import type { Conversation, User } from '@/types';
-import { collection, query, where, onSnapshot, getDoc, doc, Timestamp } from 'firebase/firestore';
+import type { Conversation, User, Message as MessageType } from '@/types';
+import { collection, query, where, onSnapshot, getDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -49,7 +49,8 @@ export default function MessagesPage() {
 
         const q = query(
             collection(db, 'conversations'),
-            where('participantIds', 'array-contains', user.uid)
+            where('participantIds', 'array-contains', user.uid),
+            orderBy('lastMessage.timestamp', 'desc')
         );
 
         const unsubscribe = onSnapshot(q, async (querySnapshot) => {
@@ -77,10 +78,8 @@ export default function MessagesPage() {
                         lastMessage: lastMessage ? {
                             id: 'last',
                             senderId: lastMessage.senderId,
-                            sender: lastMessage.senderId === currentUser?.id ? currentUser : participant,
                             text: lastMessage.text,
                             timestamp: (lastMessage.timestamp as Timestamp)?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...',
-                            read: lastMessage.read,
                         } : undefined,
                     } as Conversation;
                 });
@@ -91,7 +90,7 @@ export default function MessagesPage() {
         });
 
         return () => unsubscribe();
-    }, [user, userDetails, currentUser]);
+    }, [user, userDetails]);
 
     if (loading) {
         return <MessagesLoading />;
