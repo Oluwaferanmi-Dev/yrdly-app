@@ -53,6 +53,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 const formSchema = z.object({
   text: z.string().min(1, "Post can't be empty.").max(500),
   category: z.enum(["General", "Event", "For Sale", "Business"]),
+  price: z.preprocess(
+      (val) => (val === "" ? undefined : Number(val)),
+      z.number().positive("Price must be positive.").optional()
+  ),
 });
 
 type CreatePostDialogProps = {
@@ -77,6 +81,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
     defaultValues: {
       text: "",
       category: preselectedCategory || "General",
+      price: undefined,
     },
   });
 
@@ -86,11 +91,13 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
           form.reset({
             text: postToEdit.text,
             category: postToEdit.category,
+            price: postToEdit.price || undefined,
           });
         } else {
             form.reset({
                 text: "",
                 category: preselectedCategory || "General",
+                price: undefined,
             });
         }
     }
@@ -112,10 +119,15 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             imageUrl = await getDownloadURL(snapshot.ref);
         }
 
-        const postData = {
-            ...values,
+        const postData: Partial<Post> = {
+            text: values.text,
+            category: values.category,
             imageUrl: imageUrl || "",
         };
+
+        if(values.category === 'For Sale' && values.price) {
+            postData.price = values.price;
+        }
 
         if (isEditMode) {
             const postRef = doc(db, "posts", postToEdit.id);
@@ -123,10 +135,10 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             toast({ title: 'Post updated!' });
         } else {
              await addDoc(collection(db, "posts"), {
+                ...postData,
                 userId: user.uid,
                 authorName: userDetails?.name || "Anonymous User",
                 authorImage: userDetails?.avatarUrl || `https://placehold.co/100x100.png`,
-                ...postData,
                 timestamp: serverTimestamp(),
                 likedBy: [],
                 commentCount: 0,
@@ -201,6 +213,24 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
                     </FormItem>
                   )}
                 />
+                
+                {form.watch('category') === 'For Sale' && (
+                    <FormField
+                      control={form.control}
+                      name="price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                             <div className="relative">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">$</span>
+                                <Input type="number" placeholder="Price" className="pl-7" {...field} />
+                             </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                )}
             </div>
             
             <FormItem>
