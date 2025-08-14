@@ -10,10 +10,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, Smile } from 'lucide-react';
-import { timeAgo, cn } from '@/lib/utils';
+import { timeAgo } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { UserProfileDialog } from './UserProfileDialog';
+import { cn } from '@/lib/utils';
 
 interface CommentSectionProps {
     postId: string;
@@ -112,8 +113,8 @@ export function CommentSection({ postId }: CommentSectionProps) {
     };
 
     const commentTree = useMemo(() => {
-        const tree: (Comment & { replies: Comment[] })[] = [];
-        const lookup: { [key: string]: Comment & { replies: Comment[] } } = {};
+        const tree: (Comment & { replies: (Comment & { replies: any[] })[] })[] = [];
+        const lookup: { [key: string]: Comment & { replies: any[] } } = {};
 
         comments.forEach(comment => {
             lookup[comment.id] = { ...comment, replies: [] };
@@ -132,7 +133,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
         return tree;
     }, [comments]);
 
-    const renderComment = (comment: Comment & { replies: Comment[] }, isReply: boolean = false) => (
+    const renderComment = (comment: Comment & { replies: (Comment & { replies: any[] })[] }, isReply: boolean = false) => (
         <div key={comment.id} className={cn("flex flex-col gap-2", isReply ? "ml-6" : "")}>
             <div className="flex gap-3">
                 <button onClick={() => setSelectedUser(comment.userId)} className="cursor-pointer">
