@@ -20,7 +20,9 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
 
     useEffect(() => {
         if (inputRef.current && window.google?.maps?.places) {
-            const autocomplete = new google.maps.places.Autocomplete(inputRef.current);
+            const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
+                fields: ["geometry.location", "formatted_address"]
+            });
             autocomplete.addListener('place_changed', () => {
                 const place = autocomplete.getPlace();
                 if (place.geometry?.location) {
