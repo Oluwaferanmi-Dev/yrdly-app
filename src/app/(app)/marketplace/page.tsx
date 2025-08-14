@@ -59,6 +59,7 @@ function CategorySection({ title, items }: CategorySectionProps) {
 export default function MarketplacePage() {
     const [items, setItems] = useState<PostType[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
 
     useEffect(() => {
         const q = query(
@@ -78,14 +79,23 @@ export default function MarketplacePage() {
         return () => unsubscribe();
     }, []);
 
+    const filteredItems = useMemo(() => {
+        if (!searchTerm) {
+            return items;
+        }
+        return items.filter(item =>
+            item.text.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [items, searchTerm]);
+
     // This is a placeholder for actual categorization logic
     // In a real app, you might have sub-categories stored with the post
     const categorizedItems = useMemo(() => {
-        const furniture = items.filter(i => i.text.toLowerCase().includes('desk') || i.text.toLowerCase().includes('cabinet') || i.text.toLowerCase().includes('table'));
-        const pets = items.filter(i => i.text.toLowerCase().includes('dog') || i.text.toLowerCase().includes('pet') || i.text.toLowerCase().includes('tortoise'));
-        const other = items.filter(i => !furniture.includes(i) && !pets.includes(i));
+        const furniture = filteredItems.filter(i => i.text.toLowerCase().includes('desk') || i.text.toLowerCase().includes('cabinet') || i.text.toLowerCase().includes('table'));
+        const pets = filteredItems.filter(i => i.text.toLowerCase().includes('dog') || i.text.toLowerCase().includes('pet') || i.text.toLowerCase().includes('tortoise'));
+        const other = filteredItems.filter(i => !furniture.includes(i) && !pets.includes(i));
         return { furniture, pets, other };
-    }, [items]);
+    }, [filteredItems]);
 
   return (
     <div className="space-y-8">
@@ -98,21 +108,32 @@ export default function MarketplacePage() {
 
         <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input placeholder="Search For sale & free" className="pl-10 h-12 rounded-full bg-muted border-none" />
+            <Input 
+                placeholder="Search For sale & free" 
+                className="pl-10 h-12 rounded-full bg-muted border-none"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
         </div>
         
         {loading ? (
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
             </div>
-        ) : items.length > 0 ? (
+        ) : filteredItems.length > 0 ? (
             <div className="space-y-8">
                 <CategorySection title="Featured" items={categorizedItems.other} />
                 <CategorySection title="Furniture" items={categorizedItems.furniture} />
                 <CategorySection title="Spoil your pets" items={categorizedItems.pets} />
             </div>
         ) : (
-            <EmptyMarketplace />
+             <div className="text-center py-16">
+                <div className="inline-block bg-muted p-4 rounded-full mb-4">
+                    <Search className="h-12 w-12 text-muted-foreground" />
+                </div>
+                <h2 className="text-2xl font-bold">No items found for &quot;{searchTerm}&quot;</h2>
+                <p className="text-muted-foreground mt-2 mb-6">Try searching for something else.</p>
+            </div>
         )}
         
         <div className="fixed bottom-20 right-4 z-20">
