@@ -20,7 +20,6 @@ import {
   getDoc,
   addDoc,
   serverTimestamp,
-  runTransaction,
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -86,9 +85,16 @@ export function ChatLayout({
         const conversationToSelect = conversations.find(c => c.participant.uid === convId);
         if (conversationToSelect) {
             setSelectedConversation(conversationToSelect);
+        } else if (initialConversations.length > 0) {
+          // If convId from URL is not in list, select first conversation
+          // This can happen if the initial list is not yet populated when the effect runs
+           const firstConv = initialConversations.find(c => c.participant.uid === convId);
+            if (firstConv) {
+                setSelectedConversation(firstConv);
+            }
         }
     }
-  }, [searchParams, conversations]);
+  }, [searchParams, conversations, initialConversations]);
 
 
   // Listen for messages in the selected conversation

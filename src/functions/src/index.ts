@@ -1,4 +1,4 @@
-
+'use server';
 
 import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
@@ -78,7 +78,7 @@ export const onnewmessage = onDocumentCreated("conversations/{conversationId}/me
         const authorDoc = await db.collection('users').doc(senderId).get();
         const authorData = authorDoc.data();
         if (recipientId && authorData) {
-            await sendNotification(recipientId, 'message', senderId, recipientId, `${authorData.name}: ${text.substring(0, 50)}...`, 'New Message', `/messages?convId=${senderId}`);
+            await sendNotification(recipientId, 'message', senderId, senderId, `${authorData.name}: ${text.substring(0, 50)}...`, 'New Message', `/messages?convId=${senderId}`);
         }
     }
 });

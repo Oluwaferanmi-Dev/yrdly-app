@@ -102,7 +102,7 @@ export default function SettingsPage() {
         bio: bio,
         location: location,
         avatarUrl: photoURL || user.photoURL || undefined,
-        email: user.email,
+        email: user.email || undefined,
       };
 
       await setDoc(doc(db, "users", user.uid), userData, { merge: true } );
