@@ -3,15 +3,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, ShoppingCart, Calendar, Map } from "lucide-react";
+import { Home, Users, ShoppingCart, Calendar, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
   { href: "/home", icon: Home, label: "Home" },
   { href: "/neighbors", icon: Users, label: "Community" },
   { href: "/marketplace", icon: ShoppingCart, label: "Market" },
-  { href: "/map", icon: Map, label: "Map" },
   { href: "/events", icon: Calendar, label: "Events" },
+  { href: "/businesses", icon: Briefcase, label: "Businesses" },
 ];
 
 export function AppBottomNav() {

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Search, LogOut, MessageCircle } from 'lucide-react';
+import { Search, LogOut, MessageCircle, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -46,6 +46,12 @@ export function AppHeader() {
             <Search className="h-5 w-5" />
             <span className="sr-only">Search</span>
           </Button>
+          <Link href="/map" className="md:hidden">
+            <Button variant="ghost" size="icon" className="rounded-full">
+                <Map className="h-5 w-5" />
+                <span className="sr-only">Map</span>
+            </Button>
+          </Link>
           <Link href="/messages">
             <Button variant="ghost" size="icon" className="rounded-full">
               <MessageCircle className="h-5 w-5" />
