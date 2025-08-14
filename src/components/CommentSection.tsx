@@ -20,6 +20,12 @@ interface CommentSectionProps {
     postId: string;
 }
 
+// Define a recursive type for comments with replies
+type CommentWithReplies = Comment & {
+  replies: CommentWithReplies[];
+};
+
+
 const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😡'];
 
 export function CommentSection({ postId }: CommentSectionProps) {
@@ -113,18 +119,16 @@ export function CommentSection({ postId }: CommentSectionProps) {
     };
 
     const commentTree = useMemo(() => {
-        const tree: (Comment & { replies: (Comment & { replies: any[] })[] })[] = [];
-        const lookup: { [key: string]: Comment & { replies: any[] } } = {};
+        const tree: CommentWithReplies[] = [];
+        const lookup: { [key: string]: CommentWithReplies } = {};
 
         comments.forEach(comment => {
             lookup[comment.id] = { ...comment, replies: [] };
         });
 
         comments.forEach(comment => {
-            if (comment.parentId) {
-                if (lookup[comment.parentId]) {
-                    lookup[comment.parentId].replies.push(lookup[comment.id]);
-                }
+            if (comment.parentId && lookup[comment.parentId]) {
+                lookup[comment.parentId].replies.push(lookup[comment.id]);
             } else {
                 tree.push(lookup[comment.id]);
             }
@@ -133,7 +137,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
         return tree;
     }, [comments]);
 
-    const renderComment = (comment: Comment & { replies: (Comment & { replies: any[] })[] }, isReply: boolean = false) => (
+    const renderComment = (comment: CommentWithReplies, isReply: boolean = false) => (
         <div key={comment.id} className={cn("flex flex-col gap-2", isReply ? "ml-6" : "")}>
             <div className="flex gap-3">
                 <button onClick={() => setSelectedUser(comment.userId)} className="cursor-pointer">

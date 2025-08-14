@@ -7,32 +7,11 @@ import { Search, Plus, PackageOpen } from "lucide-react";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { useState, useEffect, useMemo } from "react";
 import type { Post as PostType } from "@/types";
-import { collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { MarketplaceItemCard } from "@/components/MarketplaceItemCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-
-function EmptyMarketplace() {
-    return (
-        <div className="text-center py-16">
-            <div className="inline-block bg-muted p-4 rounded-full mb-4">
-                <PackageOpen className="h-12 w-12 text-muted-foreground" />
-            </div>
-            <h2 className="text-2xl font-bold">No items yet</h2>
-            <p className="text-muted-foreground mt-2 mb-6">Be the first to list something for sale in your neighborhood!</p>
-             <CreatePostDialog 
-                preselectedCategory="For Sale"
-                title="List an Item for Sale"
-                description="Provide details about the item you're selling."
-             >
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" /> List an Item
-                </Button>
-            </CreatePostDialog>
-        </div>
-    )
-}
 
 interface CategorySectionProps {
     title: string;
