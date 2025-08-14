@@ -92,5 +92,5 @@
 
 /* Fix for Google Maps Autocomplete suggestions appearing behind dialogs */
 .pac-container {
-    z-index: 1050 !important;
+    z-index: 9999 !important;
 }
