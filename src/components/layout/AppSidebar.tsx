@@ -21,6 +21,8 @@ export function AppSidebar() {
 
   const menuItems = [
     { href: '/home', label: 'Newsfeed', icon: Home },
+    { href: '/map', label: 'Map', icon: Map },
+    { href: '/events', label: 'Events', icon: Calendar },
     { href: '/marketplace', label: 'Marketplace', icon: ShoppingCart },
     { href: '/businesses', label: 'Businesses', icon: Briefcase },
     { href: '/neighbors', label: 'Community', icon: Users, badge: pendingRequestCount > 0 ? pendingRequestCount : null },

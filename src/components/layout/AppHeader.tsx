@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Search, LogOut, MessageCircle, Map } from 'lucide-react';
+import { Search, LogOut, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -38,10 +38,6 @@ export function AppHeader() {
           <Link href="/home" className="flex items-center gap-2 text-xl font-bold text-foreground">
             <Image src="/yrdly-logo.png" alt="Yrdly Logo" width={32} height={32} />
             <span className="font-headline">Yrdly</span>
-          </Link>
-          <Link href="/map" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
-            <Map className="h-5 w-5" />
-            <span className="hidden md:inline">Map</span>
           </Link>
         </div>
         
