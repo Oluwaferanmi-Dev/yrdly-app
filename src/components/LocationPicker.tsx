@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
+import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps';
 import { Input } from './ui/input';
 import { Loader2 } from 'lucide-react';
 
@@ -69,8 +70,9 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
                         gestureHandling={'greedy'}
                         disableDefaultUI={true}
                         onClick={handleMapClick}
+                        mapId="YARDLY_MAP_ID_PICKER"
                     >
-                        <AdvancedMarker position={markerPosition} />
+                        <Marker position={markerPosition} />
                     </Map>
                     {loading && (
                         <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
