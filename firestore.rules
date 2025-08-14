@@ -3,97 +3,90 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // Default deny all access
-    match /{document=**} {
-      allow read, write: if false;
-    }
-    
-    // Helper function to check for authentication
-    function isAuthenticated() {
+    // Helper function to check if a user is authenticated
+    function isSignedIn() {
       return request.auth != null;
     }
-    
-    // Helper function to check if the user is the owner of a document
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
 
-    // Rules for the 'users' collection
+    // --- Users Collection ---
     match /users/{userId} {
-      // Anyone authenticated can view a user's profile.
-      allow get: if isAuthenticated();
-      // Users can only create their own user document.
-      allow create: if isOwner(userId);
-      // Users can only update their own profile information.
-      allow update: if isOwner(userId);
-      // Allow authenticated users to list other users (e.g., for the neighbors page).
-      allow list: if isAuthenticated();
-    }
-    
-    // Rules for the 'posts' collection
-    match /posts/{postId} {
-      // Authenticated users can read all posts.
-      allow read: if isAuthenticated();
-      // Authenticated users can create posts.
-      allow create: if isAuthenticated();
-      // Only the author of the post can update or delete it.
-      allow update, delete: if isAuthenticated() && isOwner(resource.data.userId);
-
-      // Rules for 'comments' subcollection
-      match /comments/{commentId} {
-        // Authenticated users can read all comments.
-        allow read: if isAuthenticated();
-        // Authenticated users can create comments.
-        allow create: if isAuthenticated();
-        // Only the author of a comment can update or delete it.
-        allow update, delete: if isAuthenticated() && isOwner(resource.data.userId);
-      }
-    }
-
-    // Rules for the 'businesses' collection
-    match /businesses/{businessId} {
-      // Authenticated users can read all businesses.
-      allow read: if isAuthenticated();
-      // Authenticated users can create a business listing.
-      allow create: if isAuthenticated();
-      // Only the owner of the business listing can update or delete it.
-      allow update, delete: if isAuthenticated() && isOwner(resource.data.ownerId);
-    }
-    
-    // Rules for the 'friend_requests' collection
-    match /friend_requests/{requestId} {
-      // Can only be read by the sender or receiver of the request.
-      allow read: if isAuthenticated() && (isOwner(resource.data.fromUserId) || isOwner(resource.data.toUserId));
-      // Senders can create requests.
-      allow create: if isAuthenticated() && isOwner(request.resource.data.fromUserId);
-      // The receiver can update the status (accept/decline), but not change other fields.
-      allow update: if isAuthenticated() && isOwner(resource.data.toUserId);
-      // No one should be able to delete requests directly, they are updated to a final status.
-      allow delete: if false;
-    }
-    
-    // Rules for the 'conversations' collection (direct messages)
-    match /conversations/{conversationId} {
-      // Can only be read by participants in the conversation.
-      allow read: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
-      // Allow creation by participants.
-      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participantIds;
-      // Participants can update (e.g., lastMessage).
-      allow update: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
+      // Allow reading user profiles if signed in
+      allow read: if isSignedIn();
       
-      // Rules for 'messages' subcollection
-      match /messages/{messageId} {
-        // Can only be read by participants of the parent conversation.
-        allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-        // Participants can create messages.
-        allow create: if isAuthenticated() && isOwner(request.resource.data.senderId) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+      // Allow creating a user profile only for the user themselves
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      
+      // Allow updating a profile only for the user themselves, but don't let them edit their friends list
+      allow update: if isSignedIn() && request.auth.uid == userId
+                    && !("friends" in request.resource.data);
+    }
+    
+    // --- Friend Requests Collection ---
+    match /friend_requests/{requestId} {
+        // Allow read if the user is part of the request
+        allow read: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+        
+        // Allow create if the sender is the current user
+        allow create: if isSignedIn() && request.auth.uid == request.resource.data.fromUserId;
+        
+        // Allow update (decline) if the recipient is the current user. Accept is handled by cloud function.
+        allow update: if isSignedIn() && request.auth.uid == resource.data.toUserId;
+    }
+
+    // --- Businesses Collection ---
+    match /businesses/{businessId} {
+      // Allow anyone signed in to read business listings
+      allow read: if isSignedIn();
+      // Allow creating a business if the user is the owner
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.ownerId;
+      // Allow updating/deleting only by the owner
+      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+    }
+
+    // --- Posts Collection (includes Events and For Sale items) ---
+    match /posts/{postId} {
+      // Allow any signed-in user to read any post
+      allow read: if isSignedIn();
+      
+      // Allow creating a post if the user is authenticated and is the author
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+
+      // Allow a user to update or delete their own post
+      allow update, delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+
+      // --- Comments Subcollection ---
+      match /comments/{commentId} {
+        // Allow any signed-in user to read comments
+        allow read: if isSignedIn();
+        // Allow any signed-in user to create a comment
+        allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+        // Allow updating (e.g., for reactions) if signed in. Deleting can be added later if needed.
+        allow update: if isSignedIn();
       }
     }
     
-    // Rules for the 'notifications' collection
+    // --- Conversations (Chats) Collection ---
+    match /conversations/{conversationId} {
+        // Allow read/write if the user is a participant in the conversation
+        allow read, update, create: if isSignedIn() && request.auth.uid in resource.data.participantIds;
+        
+        // --- Messages Subcollection ---
+        match /messages/{messageId} {
+            // Allow read if user is a participant of the parent conversation
+            allow read: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+            
+            // Allow create if the user is the sender and a participant
+            allow create: if isSignedIn() && request.auth.uid == request.resource.data.senderId &&
+                             request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+        }
+    }
+
+    // --- Notifications Collection ---
     match /notifications/{notificationId} {
-      // Can only be read or updated by the user the notification is for.
-      allow read, update: if isAuthenticated() && isOwner(resource.data.userId);
+        // Only allow a user to read/update their own notifications
+        allow read, update: if isSignedIn() && request.auth.uid == resource.data.userId;
+        // Do not allow client-side creation of notifications
+        allow create: if false;
     }
   }
 }
