@@ -7,6 +7,7 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -328,14 +329,14 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
                     </DialogDescription>
                 </SheetHeader>
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
+                  <form className="flex-1 flex flex-col">
                     <div className="py-4 flex-1 overflow-y-auto">
                         {FormContent}
                     </div>
                     <SheetFooter className="p-4 border-t mt-auto">
-                      <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                        {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
-                      </Button>
+                        <Button type="button" onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
+                            {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
+                        </Button>
                     </SheetFooter>
                   </form>
                 </Form>
@@ -351,7 +352,7 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
       </DialogTrigger>
       <DialogContent className="sm:max-w-[525px] p-0">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form>
             <DialogHeader className="p-6 pb-0">
               <DialogTitle>{finalTitle}</DialogTitle>
               <DialogDescription>
@@ -360,9 +361,9 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
             </DialogHeader>
             {FormContent}
             <DialogFooter className="p-6 pt-0">
-              <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
-              </Button>
+                <Button type="button" onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
+                    {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post')}
+                </Button>
             </DialogFooter>
           </form>
         </Form>
