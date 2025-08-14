@@ -12,15 +12,99 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
 
+import { AspectRatio } from "@/components/ui/aspect-ratio";
+import Image from "next/image";
+import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/use-auth";
+import { CreatePostDialog } from "@/components/CreatePostDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogTrigger,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { usePosts } from "@/hooks/use-posts";
+
 function BusinessCard({ business }: { business: Business }) {
+    const { user } = useAuth();
+    const { deletePost } = usePosts();
+
+    const handleDelete = () => {
+        deletePost(business.id);
+    }
+
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>{business.name}</CardTitle>
-                <p className="text-sm text-muted-foreground">{business.category}</p>
+        <Card className="overflow-hidden">
+            <AspectRatio ratio={16 / 9}>
+                {business.imageUrls && business.imageUrls.length > 0 ? (
+                    <Image
+                        src={business.imageUrls[0]}
+                        alt={business.name}
+                        fill
+                        className="object-cover"
+                    />
+                ) : (
+                    <div className="bg-muted flex items-center justify-center h-full">
+                        <Briefcase className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                )}
+            </AspectRatio>
+            <CardHeader className="flex-row items-start justify-between">
+                <div>
+                    <CardTitle>{business.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">{business.category}</p>
+                </div>
+                {user?.uid === business.ownerId && (
+                    <AlertDialog>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-5 w-5" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <CreatePostDialog postToEdit={business as any}>
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        <span>Edit</span>
+                                    </DropdownMenuItem>
+                                </CreatePostDialog>
+                                <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        <span>Delete</span>
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete this business listing.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
             </CardHeader>
             <CardContent>
-                <p>{business.description}</p>
+                <p className="text-sm text-muted-foreground">{business.description}</p>
                 <div className="flex items-center text-sm text-muted-foreground mt-4">
                     <MapPin className="h-4 w-4 mr-1"/>
                     <span>{business.location.address}</span>

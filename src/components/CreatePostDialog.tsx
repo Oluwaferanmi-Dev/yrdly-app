@@ -49,6 +49,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import type { Post, PostCategory } from "@/types";
+import { usePosts } from "@/hooks/use-posts";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type CreatePostDialogProps = {
@@ -63,6 +64,7 @@ type CreatePostDialogProps = {
 export function CreatePostDialog({ children, preselectedCategory, postToEdit, onOpenChange, title, description }: CreatePostDialogProps) {
   const { user, userDetails } = useAuth();
   const { toast } = useToast();
+  const { createPost: createPostHook, updatePost } = usePosts();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
@@ -171,19 +173,10 @@ export function CreatePostDialog({ children, preselectedCategory, postToEdit, on
         }
 
         if (isEditMode) {
-            const postRef = doc(db, "posts", postToEdit.id);
-            await updateDoc(postRef, postData);
+            await updatePost(postToEdit.id, postData);
             toast({ title: 'Post updated!' });
         } else {
-             await addDoc(collection(db, "posts"), {
-                ...postData,
-                userId: user.uid,
-                authorName: userDetails?.name || "Anonymous User",
-                authorImage: userDetails?.avatarUrl || `https://placehold.co/100x100.png`,
-                timestamp: serverTimestamp(),
-                likedBy: [],
-                commentCount: 0,
-            });
+            await createPostHook(postData as Omit<Post, 'id' | 'userId' | 'authorName' | 'authorImage' | 'timestamp' | 'commentCount' | 'likedBy'>);
             toast({ title: 'Post created!' });
         }
 
