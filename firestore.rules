@@ -1,51 +1,62 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
     // Helper function to check if a user is authenticated
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Users can read their own document and other users' public profiles
+    // Helper function to check if the user is the owner of a document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Users collection
     match /users/{userId} {
-      allow read;
-      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId);
     }
 
-    // Allow authenticated users to create and manage their own friend requests
-    match /friend_requests/{requestId} {
-      allow read, write: if isAuthenticated();
-    }
-    
-    // Allow participants of a conversation to read/write messages
-    match /conversations/{conversationId} {
-      allow read, write: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
-      
-      match /messages/{messageId} {
-        allow read, write: if isAuthenticated() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds[0] == request.auth.uid || get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds[1] == request.auth.uid;
-      }
-    }
-    
-    // Allow authenticated users to read/write to the businesses collection
+    // Businesses collection
     match /businesses/{businessId} {
-       allow read, write: if isAuthenticated();
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && isOwner(resource.data.ownerId);
     }
-    
-    // Allow authenticated users to read/write to the posts collection
-    match /posts/{postId} {
-      allow read, write: if isAuthenticated();
 
-      // Allow authenticated users to read/write to the comments subcollection
+    // Posts collection
+    match /posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && isOwner(resource.data.userId);
+
+      // Comments subcollection
       match /comments/{commentId} {
         allow read, write: if isAuthenticated();
       }
     }
     
-     // Allow authenticated users to read their own notifications
+    // Friend Requests collection
+    match /friend_requests/{requestId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Conversations & Messages
+    match /conversations/{conversationId} {
+      allow list, get: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
+      allow create: if isAuthenticated();
+
+      match /messages/{messageId} {
+        allow list, get: if isAuthenticated() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds[0] == request.auth.uid || get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds[1] == request.auth.uid;
+        allow create: if isAuthenticated() && request.auth.uid == request.resource.data.senderId;
+      }
+    }
+    
+    // Notifications
     match /notifications/{notificationId} {
-      allow read, write: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read, write: if isAuthenticated() && isOwner(resource.data.userId);
     }
   }
 }
