@@ -76,7 +76,7 @@ export default function AddBusinessPage() {
                 category: values.category,
                 description: values.description,
                 location: businessLocation,
-                imageUrl: imageUrl,
+                imageUrls: [imageUrl],
                 createdAt: serverTimestamp(),
             };
 
