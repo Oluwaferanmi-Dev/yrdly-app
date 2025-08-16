@@ -76,6 +76,7 @@ export default function MessagesPage({ params }: { params?: { convId?: string } 
                         senderId: lastMessage.senderId,
                         text: lastMessage.text,
                         timestamp: (lastMessage.timestamp as Timestamp)?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...',
+                        isRead: lastMessage.readBy?.includes(user.uid),
                     } : undefined,
                 } as Conversation;
             });

@@ -36,17 +36,16 @@ type FriendshipStatus = 'friends' | 'request_sent' | 'request_received' | 'none'
 
 interface UserProfileDialogProps {
     user: User;
-    friendshipStatus: FriendshipStatus;
     open: boolean;
     onOpenChange: (wasChanged: boolean) => void;
 }
 
-export function UserProfileDialog({ user: profileUser, friendshipStatus: initialStatus, open, onOpenChange }: UserProfileDialogProps) {
+export function UserProfileDialog({ user: profileUser, open, onOpenChange }: UserProfileDialogProps) {
     const { user: currentUser, userDetails } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
 
-    const [friendshipStatus, setFriendshipStatus] = useState<FriendshipStatus>(initialStatus);
+    const [friendshipStatus, setFriendshipStatus] = useState<FriendshipStatus>('none');
     const [friendRequest, setFriendRequest] = useState<FriendRequest | null>(null);
     const [isBlocked, setIsBlocked] = useState(false);
 
@@ -60,23 +59,36 @@ export function UserProfileDialog({ user: profileUser, friendshipStatus: initial
         }
 
         setIsBlocked(userDetails?.blockedUsers?.includes(profileUser.uid) ?? false);
-        setFriendshipStatus(initialStatus);
-
-        if (initialStatus === 'request_received' || initialStatus === 'request_sent') {
-             const requestsQuery = query(
-                collection(db, 'friend_requests'),
-                where('participantIds', 'in', [[currentUser.uid, profileUser.uid], [profileUser.uid, currentUser.uid]]),
-                where('status', '==', 'pending')
-            );
-            const unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
-                 if (!snapshot.empty) {
-                    setFriendRequest({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as FriendRequest);
-                }
-            });
-            return () => unsubscribe();
+        
+        if (userDetails?.friends?.includes(profileUser.uid)) {
+            setFriendshipStatus('friends');
+            return;
         }
 
-    }, [profileUser, currentUser, userDetails, initialStatus, onOpenChange]);
+        const requestsQuery = query(
+            collection(db, 'friend_requests'),
+            where('participantIds', 'in', [[currentUser.uid, profileUser.uid], [profileUser.uid, currentUser.uid]]),
+            where('status', '==', 'pending')
+        );
+
+        const unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
+             if (!snapshot.empty) {
+                const request = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as FriendRequest
+                setFriendRequest(request);
+                setFriendshipStatus(request.fromUserId === currentUser.uid ? 'request_sent' : 'request_received');
+            } else {
+                setFriendRequest(null);
+                // Check again if they are friends in case the request was just accepted
+                if (userDetails?.friends?.includes(profileUser.uid)) {
+                    setFriendshipStatus('friends');
+                } else {
+                    setFriendshipStatus('none');
+                }
+            }
+        });
+        return () => unsubscribe();
+
+    }, [profileUser, currentUser, userDetails, onOpenChange]);
 
 
     const handleAddFriend = async () => {
@@ -84,7 +96,6 @@ export function UserProfileDialog({ user: profileUser, friendshipStatus: initial
         try {
             await addDoc(collection(db, "friend_requests"), { fromUserId: currentUser.uid, toUserId: profileUser.uid, participantIds: [currentUser.uid, profileUser.uid].sort(), status: "pending", timestamp: serverTimestamp() });
             toast({ title: "Friend request sent!" });
-            setFriendshipStatus('request_sent');
         } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not send friend request." });
         }
@@ -96,7 +107,6 @@ export function UserProfileDialog({ user: profileUser, friendshipStatus: initial
             const acceptFriendRequest = httpsCallable(functions, 'acceptfriendrequest');
             await acceptFriendRequest({ friendRequestId: friendRequest.id });
             toast({ title: "Friend request accepted!" });
-            setFriendshipStatus('friends');
         } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not accept friend request." });
         }
@@ -107,7 +117,6 @@ export function UserProfileDialog({ user: profileUser, friendshipStatus: initial
         const requestRef = doc(db, "friend_requests", friendRequest.id);
         await updateDoc(requestRef, { status: "declined" });
         toast({ title: "Friend request declined." });
-        setFriendshipStatus('none');
     };
 
     const handleUnfriend = async () => {
@@ -119,7 +128,6 @@ export function UserProfileDialog({ user: profileUser, friendshipStatus: initial
                 transaction.update(currentUserRef, { friends: arrayRemove(profileUser.uid) });
                 transaction.update(friendUserRef, { friends: arrayRemove(currentUser.uid) });
             });
-            setFriendshipStatus('none');
             toast({ title: "Friend removed." });
         } catch {
             toast({ variant: "destructive", title: "Error", description: "Could not remove friend." });

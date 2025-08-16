@@ -95,6 +95,8 @@ export interface Conversation {
       senderId: string;
       text: string;
       timestamp: string;
+      isRead?: boolean;
+      readBy?: string[];
   };
   messages: Message[];
   typing?: { [key: string]: boolean };
@@ -106,7 +108,7 @@ export interface Message {
     sender: User;
     text: string;
     timestamp: string; // Should be string for display
-    read: boolean;
+    isRead: boolean;
 }
 
 export interface NotificationSettings {
