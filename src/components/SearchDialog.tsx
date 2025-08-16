@@ -28,47 +28,26 @@ const allPages = [
 
 type FriendshipStatus = 'friends' | 'request_sent' | 'request_received' | 'none';
 
-type SelectedUserData = {
-    user: User,
-    status: FriendshipStatus;
-}
-
 export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void; }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
     const { user: currentUser, userDetails } = useAuth();
-    const [selectedUser, setSelectedUser] = useState<SelectedUserData | null>(null);
-    const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-    useEffect(() => {
-        if (!currentUser) return;
-        const requestsQuery = query(
-            collection(db, "friend_requests"),
-            where("participantIds", "array-contains", currentUser.uid)
-        );
-        const unsubscribe = onSnapshot(requestsQuery, (snapshot) => {
-            setFriendRequests(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest)));
-        });
-        return () => unsubscribe();
-    }, [currentUser]);
-
-    const getFriendshipStatus = useCallback((targetUserId: string): FriendshipStatus => {
-        if (!currentUser) return 'none';
-        if (userDetails?.friends?.includes(targetUserId)) return "friends";
-        
-        const request = friendRequests.find(req => 
-            ((req.fromUserId === currentUser?.uid && req.toUserId === targetUserId) ||
-             (req.fromUserId === targetUserId && req.toUserId === currentUser?.uid))
-        );
-
-        if (request && request.status === 'pending') {
-            return request.fromUserId === currentUser?.uid ? 'request_sent' : 'request_received';
+    const handleResultClick = (result: SearchResult) => {
+        onOpenChange(false);
+        setSearchTerm('');
+        setResults([]);
+        if (result.type === 'user') {
+            setSelectedUser(result.data);
+        } else if (result.type === 'page') {
+            router.push(result.data.path);
+        } else if (result.type === 'post') {
+            router.push(`/posts/${result.data.id}`);
         }
-
-        return "none";
-    }, [userDetails, friendRequests, currentUser]);
+    };
 
     useEffect(() => {
         const performSearch = async () => {
@@ -128,20 +107,6 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
 
         return () => clearTimeout(debounceTimeout);
     }, [searchTerm]);
-
-    const handleResultClick = (result: SearchResult) => {
-        onOpenChange(false);
-        setSearchTerm('');
-        setResults([]);
-        if (result.type === 'user') {
-            const status = getFriendshipStatus(result.data.uid);
-            setSelectedUser({ user: result.data, status });
-        } else if (result.type === 'page') {
-            router.push(result.data.path);
-        } else if (result.type === 'post') {
-            router.push(`/posts/${result.data.id}`);
-        }
-    };
     
     const renderResult = (result: SearchResult) => {
         switch(result.type) {
@@ -176,10 +141,9 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
     return (
         <>
         {selectedUser && <UserProfileDialog 
-            user={selectedUser.user} 
-            friendshipStatus={selectedUser.status}
+            user={selectedUser}
             open={!!selectedUser} 
-            onOpenChange={(open) => !open && setSelectedUser(null)} 
+            onOpenChange={(wasChanged) => !open && setSelectedUser(null)} 
         />}
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px]">

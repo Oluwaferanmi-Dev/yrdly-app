@@ -46,16 +46,8 @@ interface PostCardProps {
   post: Post;
 }
 
-type FriendshipStatus = 'friends' | 'request_sent' | 'request_received' | 'none';
-
-type SelectedUser = {
-    user: User,
-    status: FriendshipStatus;
-}
-
-
 export function PostCard({ post }: PostCardProps) {
-  const { user: currentUser, userDetails } = useAuth();
+  const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const [author, setAuthor] = useState<User | null>(null);
   const [loadingAuthor, setLoadingAuthor] = useState(true);
@@ -63,43 +55,7 @@ export function PostCard({ post }: PostCardProps) {
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
   const [isLiked, setIsLiked] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
-  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
-
-
-  useEffect(() => {
-    if (!currentUser || !post.userId || currentUser.uid === post.userId) return;
-
-    const requestsQuery = query(
-        collection(db, "friend_requests"),
-        where("participantIds", "in", [[currentUser.uid, post.userId], [post.userId, currentUser.uid]])
-    );
-
-    const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
-        const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest));
-        setFriendRequests(requests);
-    });
-
-    return () => unsubscribeRequests();
-}, [currentUser, post.userId]);
-
-
-  const getFriendshipStatus = useCallback((): FriendshipStatus => {
-    if (!currentUser || !post.userId) return 'none';
-    if (userDetails?.friends?.includes(post.userId)) return "friends";
-    
-    const request = friendRequests.find(req => 
-        ((req.fromUserId === currentUser?.uid && req.toUserId === post.userId) ||
-         (req.fromUserId === post.userId && req.toUserId === currentUser?.uid))
-    );
-
-    if (request && request.status === 'pending') {
-        return request.fromUserId === currentUser?.uid ? 'request_sent' : 'request_received';
-    }
-
-    return "none";
-}, [userDetails, friendRequests, currentUser, post.userId]);
-
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   useEffect(() => {
     const fetchAuthor = async () => {
@@ -230,8 +186,7 @@ export function PostCard({ post }: PostCardProps) {
   
   const openProfile = () => {
     if (author && author.uid !== currentUser?.uid) {
-        const status = getFriendshipStatus();
-        setSelectedUser({ user: author, status });
+        setSelectedUser(author);
     }
   };
 
@@ -239,8 +194,7 @@ export function PostCard({ post }: PostCardProps) {
     <Card className="overflow-hidden">
       {selectedUser && (
           <UserProfileDialog 
-              user={selectedUser.user} 
-              friendshipStatus={selectedUser.status}
+              user={selectedUser} 
               open={!!selectedUser} 
               onOpenChange={(wasChanged) => {
                   if (wasChanged) {

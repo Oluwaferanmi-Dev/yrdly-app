@@ -73,7 +73,7 @@ export default function NeighborsPage() {
     const [filters, setFilters] = useState({ state: "all", lga: "all" });
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
     const [activeTab, setActiveTab] = useState("all");
-    const [selectedUser, setSelectedUser] = useState<{ user: User, status: FriendshipStatus } | null>(null);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
     useEffect(() => {
         if (!currentUser) return;
@@ -267,7 +267,7 @@ export default function NeighborsPage() {
     const handleProfileDialogClose = (wasChanged: boolean) => {
         if (wasChanged) {
             // Re-evaluate state if user was blocked/unfriended
-            const updatedNeighbors = allNeighbors.filter(n => n.uid !== selectedUser?.user.uid);
+            const updatedNeighbors = allNeighbors.filter(n => n.uid !== selectedUser?.uid);
             setAllNeighbors(updatedNeighbors);
         }
         setSelectedUser(null)
@@ -275,7 +275,7 @@ export default function NeighborsPage() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
-            {selectedUser && <UserProfileDialog user={selectedUser.user} friendshipStatus={selectedUser.status} open={!!selectedUser} onOpenChange={handleProfileDialogClose} />}
+            {selectedUser && <UserProfileDialog user={selectedUser} open={!!selectedUser} onOpenChange={handleProfileDialogClose} />}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold font-headline">Community</h1>
@@ -294,14 +294,14 @@ export default function NeighborsPage() {
                                 return (
                                     <div key={request.id} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <button onClick={() => setSelectedUser({user: fromUser, status: 'request_received' })} className="cursor-pointer">
+                                            <button onClick={() => setSelectedUser(fromUser)} className="cursor-pointer">
                                                 <Avatar className="h-10 w-10">
                                                     <AvatarImage src={fromUser?.avatarUrl} alt={fromUser.name}/>
                                                     <AvatarFallback>{fromUser.name.charAt(0)}</AvatarFallback>
                                                 </Avatar>
                                             </button>
                                             <div>
-                                                <button onClick={() => setSelectedUser({user: fromUser, status: 'request_received' })} className="cursor-pointer hover:underline">
+                                                <button onClick={() => setSelectedUser(fromUser)} className="cursor-pointer hover:underline">
                                                     <b>{fromUser?.name || "Someone"}</b>
                                                 </button> wants to be your friend.
                                             </div>
@@ -347,7 +347,7 @@ export default function NeighborsPage() {
                             {filteredNeighbors.map((neighbor) => {
                                 const status = getFriendshipStatus(neighbor.uid);
                                 return (
-                                    <Card key={neighbor.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser({ user: neighbor, status })}>
+                                    <Card key={neighbor.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(neighbor)}>
                                         <CardContent className="p-4 flex flex-col items-center text-center">
                                             <Avatar className="h-20 w-20 border mb-4"><AvatarImage src={neighbor.avatarUrl} alt={neighbor.name} /><AvatarFallback>{neighbor.name.charAt(0)}</AvatarFallback></Avatar>
                                             <h3 className="font-semibold text-lg">{neighbor.name}</h3>
@@ -376,7 +376,7 @@ export default function NeighborsPage() {
                     ) : friends.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                             {friends.map((friend) => (
-                                <Card key={friend.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser({user: friend, status: 'friends'})}>
+                                <Card key={friend.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(friend)}>
                                     <CardContent className="p-4 flex items-center gap-4">
                                         <Avatar className="h-12 w-12 border"><AvatarImage src={friend.avatarUrl} alt={friend.name} /><AvatarFallback>{friend.name.charAt(0)}</AvatarFallback></Avatar>
                                         <div className="flex-1 space-y-1">

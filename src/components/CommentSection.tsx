@@ -28,18 +28,13 @@ type CommentWithReplies = Comment & {
 
 const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😡'];
 
-type SelectedUser = {
-    user: User,
-    status: 'friends' | 'request_sent' | 'request_received' | 'none';
-}
-
 export function CommentSection({ postId }: CommentSectionProps) {
     const { user: currentUser, userDetails } = useAuth();
     const { toast } = useToast();
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
-    const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
     useMemo(() => {
         if (!postId) return;
@@ -122,11 +117,6 @@ export function CommentSection({ postId }: CommentSectionProps) {
             toast({ variant: "destructive", title: "Error", description: "Could not add reaction." });
         }
     };
-
-    const getFriendshipStatus = useCallback((neighborId: string): 'friends' | 'none' => {
-        if (userDetails?.friends?.includes(neighborId)) return "friends";
-        return "none";
-    }, [userDetails]);
     
     const openProfile = async (userId: string) => {
         if (userId === currentUser?.uid) {
@@ -139,9 +129,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
         if (userDocSnap.exists()) {
             const user = {id: userDocSnap.id, ...userDocSnap.data()} as User;
-            // Simplified status for comment section - real-time request status not needed here
-            const status = getFriendshipStatus(userId);
-            setSelectedUser({ user, status });
+            setSelectedUser(user);
         }
     };
 
@@ -227,7 +215,7 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
     return (
         <div className="space-y-4 pt-4">
-            {selectedUser && <UserProfileDialog user={selectedUser.user} friendshipStatus={selectedUser.status} open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)} />}
+            {selectedUser && <UserProfileDialog user={selectedUser} open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)} />}
             <div className="space-y-4">
                 {commentTree.map(comment => renderComment(comment))}
             </div>
