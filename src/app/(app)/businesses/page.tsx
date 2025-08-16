@@ -8,8 +8,7 @@ import type { Business } from "@/types";
 import { collection, query, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
 
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -35,6 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { usePosts } from "@/hooks/use-posts";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 function BusinessCard({ business }: { business: Business }) {
     const { user } = useAuth();
@@ -45,25 +45,45 @@ function BusinessCard({ business }: { business: Business }) {
     }
 
     return (
-        <Card className="overflow-hidden">
-            <AspectRatio ratio={16 / 9}>
-                {business.imageUrls && business.imageUrls.length > 0 ? (
-                    <Image
-                        src={business.imageUrls[0]}
-                        alt={business.name}
-                        fill
-                        className="object-cover"
-                    />
-                ) : (
-                    <div className="bg-muted flex items-center justify-center h-full">
-                        <Briefcase className="h-12 w-12 text-muted-foreground" />
-                    </div>
+        <Card className="overflow-hidden flex flex-col h-full">
+             <Carousel className="w-full">
+                <CarouselContent>
+                    {business.imageUrls && business.imageUrls.length > 0 ? (
+                        business.imageUrls.map((url, index) => (
+                             <CarouselItem key={index}>
+                                <AspectRatio ratio={16 / 9}>
+                                    <Image
+                                        src={url}
+                                        alt={`${business.name} image ${index + 1}`}
+                                        fill
+                                        className="object-cover"
+                                        data-ai-hint="business photo"
+                                    />
+                                </AspectRatio>
+                            </CarouselItem>
+                        ))
+                    ) : (
+                         <CarouselItem>
+                            <AspectRatio ratio={16/9}>
+                                <div className="bg-muted flex items-center justify-center h-full">
+                                    <Briefcase className="h-12 w-12 text-muted-foreground" />
+                                </div>
+                            </AspectRatio>
+                        </CarouselItem>
+                    )}
+                </CarouselContent>
+                {business.imageUrls && business.imageUrls.length > 1 && (
+                    <>
+                        <CarouselPrevious className="left-2" />
+                        <CarouselNext className="right-2" />
+                    </>
                 )}
-            </AspectRatio>
+            </Carousel>
+           
             <CardHeader className="flex-row items-start justify-between">
                 <div>
-                    <CardTitle>{business.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{business.category}</p>
+                    <CardTitle className="text-lg">{business.name}</CardTitle>
+                    <CardDescription>{business.category}</CardDescription>
                 </div>
                 {user?.uid === business.ownerId && (
                     <AlertDialog>
@@ -74,7 +94,7 @@ function BusinessCard({ business }: { business: Business }) {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <CreatePostDialog postToEdit={business as any} postType="Business">
+                                <CreatePostDialog postToEdit={business} postType="Business">
                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                         <Edit className="mr-2 h-4 w-4" />
                                         <span>Edit</span>
@@ -103,13 +123,15 @@ function BusinessCard({ business }: { business: Business }) {
                     </AlertDialog>
                 )}
             </CardHeader>
-            <CardContent>
-                <p className="text-sm text-muted-foreground">{business.description}</p>
-                <div className="flex items-center text-sm text-muted-foreground mt-4">
-                    <MapPin className="h-4 w-4 mr-1"/>
-                    <span>{business.location.address}</span>
-                </div>
+            <CardContent className="flex-grow">
+                <p className="text-sm text-muted-foreground line-clamp-3">{business.description}</p>
             </CardContent>
+            <CardFooter>
+                 <div className="flex items-center text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 mr-1 flex-shrink-0"/>
+                    <span className="truncate">{business.location.address}</span>
+                </div>
+            </CardFooter>
         </Card>
     )
 }
@@ -122,11 +144,11 @@ function EmptyBusinesses() {
             </div>
             <h2 className="text-2xl font-bold">No businesses yet</h2>
             <p className="text-muted-foreground mt-2 mb-6">Be the first to add a local business to the directory!</p>
-             <Link href="/businesses/add">
+            <CreatePostDialog postType="Business">
                 <Button>
                     <Plus className="mr-2 h-4 w-4" /> Add Business
                 </Button>
-            </Link>
+            </CreatePostDialog>
         </div>
     )
 }
@@ -159,11 +181,11 @@ export default function BusinessesPage() {
             <h1 className="text-2xl md:text-3xl font-bold font-headline">Local businesses</h1>
             <p className="text-muted-foreground">Discover and support businesses in your neighborhood.</p>
         </div>
-         <Link href="/businesses/add">
+        <CreatePostDialog postType="Business">
             <Button>
-                <Plus className="mr-2 h-4 w-4" /> Add Business
+                <Plus className="mr-2 h-4 w-4" /> Add Your Business
             </Button>
-        </Link>
+        </CreatePostDialog>
        </div>
 
         <div className="relative">
@@ -173,10 +195,10 @@ export default function BusinessesPage() {
         
         {loading ? (
              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                <Skeleton className="h-64 w-full" />
-                <Skeleton className="h-64 w-full" />
-                <Skeleton className="h-64 w-full" />
-                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-80 w-full" />
+                <Skeleton className="h-80 w-full" />
+                <Skeleton className="h-80 w-full" />
+                <Skeleton className="h-80 w-full" />
             </div>
         ) : businesses.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

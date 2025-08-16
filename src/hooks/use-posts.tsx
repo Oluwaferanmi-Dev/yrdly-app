@@ -60,6 +60,28 @@ export const usePosts = () => {
     },
     [user, userDetails, toast]
   );
+  
+  const createBusiness = useCallback(
+    async (businessData: Omit<Business, 'id' | 'ownerId'>) => {
+      if (!user) {
+        toast({ title: 'Error', description: 'You must be logged in to add a business.' });
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, 'businesses'), {
+          ...businessData,
+          ownerId: user.uid,
+          createdAt: serverTimestamp(),
+        });
+        toast({ title: 'Success', description: 'Business added successfully.' });
+      } catch (error) {
+        console.error('Error adding business:', error);
+        toast({ title: 'Error', description: 'Failed to add business.' });
+      }
+    },
+    [user, toast]
+  );
 
   const likePost = useCallback(
     async (postId: string) => {
@@ -169,5 +191,5 @@ export const usePosts = () => {
     [user, toast]
   );
 
-  return { posts, loading, createPost, likePost, addComment, updatePost, deletePost, updateBusiness, deleteBusiness };
+  return { posts, loading, createPost, createBusiness, likePost, addComment, updatePost, deletePost, updateBusiness, deleteBusiness };
 };

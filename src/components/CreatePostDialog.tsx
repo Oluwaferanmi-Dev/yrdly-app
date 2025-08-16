@@ -74,7 +74,7 @@ export function CreatePostDialog({
 }: CreatePostDialogProps) {
   const { user, userDetails } = useAuth();
   const { toast } = useToast();
-  const { createPost, updatePost, updateBusiness } = usePosts();
+  const { createPost, updatePost, createBusiness, updateBusiness } = usePosts();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
@@ -116,7 +116,7 @@ export function CreatePostDialog({
               message: 'A valid price is required for "For Sale" items.',
           });
       }
-      if (postType === 'Business') {
+      if (data.category === 'Business') {
         if (!data.name) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: "Business name can't be empty." });
         if (!data.businessCategory) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['businessCategory'], message: "Category can't be empty." });
         if (!location) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['location'], message: "Location is required" });
@@ -194,9 +194,9 @@ export function CreatePostDialog({
         }
 
         if (postType === 'Business') {
-            const businessData: Partial<Business> = {
-                name: values.name,
-                category: values.businessCategory,
+            const businessData = {
+                name: values.name!,
+                category: values.businessCategory!,
                 description: values.text,
                 location: location!,
                 imageUrls: imageUrls
@@ -204,8 +204,10 @@ export function CreatePostDialog({
             if (isEditMode && postToEdit) {
                 await updateBusiness(postToEdit.id, businessData);
                 toast({ title: 'Business updated!' });
-            } 
-            // 'Add Business' is handled by a separate page, this dialog is only for editing businesses
+            } else {
+                await createBusiness(businessData);
+                toast({ title: 'Business added!' });
+            }
             
         } else { // It's a Post
             const postData: Partial<Post> = {
@@ -229,11 +231,12 @@ export function CreatePostDialog({
         }
 
         form.reset();
+        setLocation(null);
         setOpen(false);
 
     } catch(error) {
-        console.error("Error submitting post:", error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to submit post.' });
+        console.error("Error submitting:", error);
+        toast({ variant: 'destructive', title: 'Error', description: `Failed to submit ${postType.toLowerCase()}.` });
     } finally {
         setLoading(false);
     }
@@ -246,8 +249,8 @@ export function CreatePostDialog({
     }
   }
   
-  const finalTitle = title || (isEditMode ? `Edit ${postType}` : `Create ${postType}`);
-  const finalDescription = description || (isEditMode ? `Make changes to your ${postType.toLowerCase()} here.` : `Share an update with your neighborhood.`);
+  const finalTitle = title || (isEditMode ? `Edit ${postType}` : `Add Your ${postType}`);
+  const finalDescription = description || (isEditMode ? `Make changes to your ${postType.toLowerCase()} here.` : `Share a ${postType.toLowerCase()} with your neighborhood.`);
 
   const imageField = form.register('image');
 
@@ -373,14 +376,14 @@ export function CreatePostDialog({
             render={() => (
               <FormItem>
                   <FormLabel>
-                      Add an image
+                      Add images
                       {(form.watch('category') === 'Event' || form.watch('category') === 'For Sale' || postType === 'Business') && <span className="text-destructive">*</span>}
                   </FormLabel>
                   <FormControl>
                       <Input 
                           type="file" 
                           accept="image/*" 
-                          multiple={form.watch('category') === 'For Sale' || postType === 'Business'}
+                          multiple
                           {...imageField}
                       />
                   </FormControl>
@@ -390,11 +393,7 @@ export function CreatePostDialog({
           />
           {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
               <div className="text-sm text-muted-foreground">
-                  Current images: {postToEdit.imageUrls.map((url, index) => (
-                      <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="underline p-1">
-                          image {index + 1}
-                      </a>
-                  ))}
+                  Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
               </div>
           )}
       </div>
