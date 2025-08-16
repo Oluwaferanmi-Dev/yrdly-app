@@ -231,9 +231,9 @@ export function UserProfileDialog({ user: profileUser, open, onOpenChange }: Use
                 ) : (
                     <>
                         <DialogHeader>
-                            <AlertDialogDescription className="sr-only">
+                            <div className="sr-only">
                             {`View and interact with ${profileUser.name}'s profile.`}
-                            </AlertDialogDescription>
+                            </div>
                         </DialogHeader>
                         <Card className="border-none shadow-none">
                             <CardHeader className="flex flex-col items-center text-center p-6 bg-muted/50 relative">
