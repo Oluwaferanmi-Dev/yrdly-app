@@ -249,8 +249,8 @@ export function CreatePostDialog({
     }
   }
   
-  const finalTitle = title || (isEditMode ? `Edit ${postType}` : `Add Your ${postType}`);
-  const finalDescription = description || (isEditMode ? `Make changes to your ${postType.toLowerCase()} here.` : `Share a ${postType.toLowerCase()} with your neighborhood.`);
+  const finalTitle = title || (isEditMode ? `Edit ${postType}` : `Create ${postType}`);
+  const finalDescription = description || (isEditMode ? `Make changes to your ${postType.toLowerCase()} here.` : `Share something with your neighborhood.`);
 
   const imageField = form.register('image');
 
@@ -472,3 +472,5 @@ export function CreatePostDialog({
     </Dialog>
   );
 }
+
+    
