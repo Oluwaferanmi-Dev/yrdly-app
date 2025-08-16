@@ -62,7 +62,7 @@ export const usePosts = () => {
   );
   
   const createBusiness = useCallback(
-    async (businessData: Omit<Business, 'id' | 'ownerId'>) => {
+    async (businessData: Omit<Business, 'id' | 'ownerId' | 'createdAt'>) => {
       if (!user) {
         toast({ title: 'Error', description: 'You must be logged in to add a business.' });
         return;
