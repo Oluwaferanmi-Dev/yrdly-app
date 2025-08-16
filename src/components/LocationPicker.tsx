@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
@@ -11,16 +12,16 @@ import { Command, CommandGroup, CommandItem } from './ui/command';
 
 interface LocationPickerProps {
     onLocationSelect: (location: { address: string; latitude: number; longitude: number; }) => void;
-    initialLocation?: { latitude: number; longitude: number; };
+    initialLocation?: { address: string, latitude: number; longitude: number; } | null;
 }
 
 export function LocationPicker({ onLocationSelect, initialLocation }: LocationPickerProps) {
     const [markerPosition, setMarkerPosition] = useState(
         initialLocation 
             ? { lat: initialLocation.latitude, lng: initialLocation.longitude } 
-            : { lat: 6.5244, lng: 3.3792 }
+            : { lat: 6.5244, lng: 3.3792 } // Default to Lagos
     );
-    const [address, setAddress] = useState('');
+    const [address, setAddress] = useState(initialLocation?.address || '');
     const [loading, setLoading] = useState(false);
     
     const {
@@ -32,9 +33,17 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
 
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
+    useEffect(() => {
+        if (initialLocation) {
+            setMarkerPosition({ lat: initialLocation.latitude, lng: initialLocation.longitude });
+            setAddress(initialLocation.address);
+        }
+    }, [initialLocation]);
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        getPlacePredictions({ input: e.target.value });
+        setAddress(e.target.value);
         if(e.target.value) {
+            getPlacePredictions({ input: e.target.value });
             setIsPopoverOpen(true);
         } else {
             setIsPopoverOpen(false);
@@ -86,7 +95,7 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
                 <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                      <PopoverTrigger asChild>
                         <Input 
-                            placeholder="Search for a location" 
+                            placeholder="Search for a location or click on the map" 
                             onChange={handleInputChange} 
                             value={address}
                             onFocus={() => address && setIsPopoverOpen(true)}

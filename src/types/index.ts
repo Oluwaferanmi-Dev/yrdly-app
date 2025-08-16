@@ -15,7 +15,7 @@ export interface Business {
   description: string;
   location: Location;
   imageUrls?: string[];
-  createdAt: Timestamp;
+  createdAt?: Timestamp;
 }
 
 export type PostCategory = 'General' | 'Event' | 'For Sale' | 'Business';

@@ -194,12 +194,12 @@ export function CreatePostDialog({
         }
 
         if (postType === 'Business') {
-            const businessData = {
+            const businessData: Omit<Business, 'id' | 'ownerId' | 'createdAt'> = {
                 name: values.name!,
                 category: values.businessCategory!,
                 description: values.text,
                 location: location!,
-                imageUrls: imageUrls
+                imageUrls: imageUrls,
             };
             if (isEditMode && postToEdit) {
                 await updateBusiness(postToEdit.id, businessData);
@@ -294,7 +294,7 @@ export function CreatePostDialog({
             <FormControl>
                 <LocationPicker 
                     onLocationSelect={setLocation} 
-                    initialLocation={location ? { latitude: location.latitude, longitude: location.longitude } : undefined}
+                    initialLocation={location || undefined}
                 />
             </FormControl>
             <FormMessage />
@@ -472,5 +472,3 @@ export function CreatePostDialog({
     </Dialog>
   );
 }
-
-    
