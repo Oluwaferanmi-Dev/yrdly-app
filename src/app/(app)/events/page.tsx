@@ -20,11 +20,7 @@ function EmptyEvents() {
             </div>
             <h2 className="text-2xl font-bold">No upcoming events</h2>
             <p className="text-muted-foreground mt-2 mb-6">Be the first to organize something in your neighborhood!</p>
-            <CreateEventDialog>
-                <Button>
-                    <Plus className="mr-2 h-4 w-4" /> Create Event
-                </Button>
-            </CreateEventDialog>
+            {/* The button is now only in the header */}
         </div>
     )
 }
