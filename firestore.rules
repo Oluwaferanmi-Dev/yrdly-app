@@ -1,70 +1,90 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper functions
-    function isAuthenticated() {
+    function isUserAuthenticated() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-    
-    function isChangingOnly(allowedKeys) {
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedKeys);
+    function isThePostAuthor(postId) {
+      return request.auth.uid == get(/databases/$(database)/documents/posts/$(postId)).data.userId;
     }
 
-    // Users: Can read all, only owner can write
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isOwner(userId);
+    function isTheCommentAuthor(postId, commentId) {
+      return request.auth.uid == get(/databases/$(database)/documents/posts/$(postId)/comments/$(commentId)).data.userId;
     }
     
-    // Businesses: Can read all, only owner can write
-    match /businesses/{businessId} {
-        allow read: if isAuthenticated();
-        allow create, update, delete: if isOwner(request.resource.data.ownerId);
+    function isTheBusinessOwner(businessId) {
+      return request.auth.uid == get(/databases/$(database)/documents/businesses/$(businessId)).data.ownerId;
+    }
+
+    function isChangingAllowedFields(allowedFields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedFields);
+    }
+    
+    function isConversationParticipant() {
+        return request.auth.uid in resource.data.participantIds;
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      allow read: if isUserAuthenticated();
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId;
     }
 
     // Posts
     match /posts/{postId} {
-      allow read, create: if isAuthenticated();
-      allow delete: if isOwner(resource.data.userId);
+      allow read: if isUserAuthenticated();
+      allow create: if isUserAuthenticated();
+      allow delete: if isThePostAuthor(postId);
 
-      allow update: if isAuthenticated() && (
-        isOwner(resource.data.userId) ||
-        isChangingOnly(['likedBy']) ||
-        isChangingOnly(['attendees']) ||
-        isChangingOnly(['commentCount'])
-      );
+      // Allow author to update anything.
+      // Allow anyone to update likes or attendees.
+      // Allow anyone to update comment count.
+      allow update: if (isThePostAuthor(postId)) ||
+                    (isUserAuthenticated() && isChangingAllowedFields(['likedBy', 'attendees', 'commentCount']));
+    }
 
-      // Comments
-      match /comments/{commentId} {
-        allow read, create: if isAuthenticated();
-        allow delete: if isOwner(resource.data.userId);
-        allow update: if isAuthenticated() && isChangingOnly(['reactions']);
+    // Comments
+    match /posts/{postId}/comments/{commentId} {
+        allow read, create: if isUserAuthenticated();
+        allow delete: if isTheCommentAuthor(postId, commentId);
+
+        // Allow user to only update reactions
+        allow update: if isUserAuthenticated() && isChangingAllowedFields(['reactions']);
+    }
+
+    // Businesses
+    match /businesses/{businessId} {
+      allow get: if isUserAuthenticated();
+      allow list: if isUserAuthenticated();
+      allow create: if request.auth.uid == request.resource.data.ownerId;
+      allow update, delete: if isTheBusinessOwner(businessId);
+    }
+    
+    // Conversations & Messages (scoped to participants)
+    match /conversations/{conversationId} {
+      allow read, update, delete: if isConversationParticipant();
+      allow create: if isUserAuthenticated() && request.auth.uid in request.resource.data.participantIds;
+
+      match /messages/{messageId} {
+        allow read, create: if isConversationParticipant();
       }
     }
     
-    // Read-only collections managed by functions
+    // Friend Requests & Notifications (generally managed by Cloud Functions)
     match /friend_requests/{requestId} {
-        allow read, write: if false;
+        allow read: if isUserAuthenticated() && request.auth.uid in resource.data.participantIds;
+        allow create, update, delete: if false; // Managed by backend
     }
+
     match /notifications/{notificationId} {
-        allow read, write: if false;
-    }
-    
-    // Conversations
-    match /conversations/{conversationId} {
-        allow read, update: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
-        allow create: if isAuthenticated() && request.auth.uid in request.resource.data.participantIds;
-        
-        // Messages
-        match /messages/{messageId} {
-            allow read, create: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-        }
+      allow read, update: if request.auth.uid == resource.data.userId;
+      allow create, delete: if false; // Managed by backend
     }
   }
 }
