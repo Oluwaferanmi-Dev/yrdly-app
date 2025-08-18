@@ -43,7 +43,7 @@ export const usePosts = () => {
       }
 
       try {
-        const newPostData = {
+        await addDoc(collection(db, 'posts'), {
           ...postData,
           userId: user.uid,
           authorName: userDetails.name || 'Anonymous',
@@ -51,17 +51,8 @@ export const usePosts = () => {
           timestamp: serverTimestamp(),
           commentCount: 0,
           likedBy: [],
-        };
-        const docRef = await addDoc(collection(db, 'posts'), newPostData);
-        
-        // Create a client-side version of the post for immediate UI update
-        const clientPost = {
-            ...newPostData,
-            id: docRef.id,
-            timestamp: Timestamp.now() // Use a client-side timestamp for the local state
-        }
-        
-        setPosts(prevPosts => [clientPost as Post, ...prevPosts]);
+        });
+        // No local state update needed here. The onSnapshot listener will handle it.
         toast({ title: 'Success', description: 'Post created successfully.' });
       } catch (error) {
         console.error('Error creating post:', error);

@@ -260,7 +260,7 @@ const CreatePostDialogComponent = ({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Business Name</FormLabel>
-              <FormControl><Input placeholder="e.g., The Corner Cafe" {...field} /></FormControl>
+              <FormControl><Input placeholder="e.g., The Corner Cafe" {...field} autoComplete="organization" /></FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -271,7 +271,7 @@ const CreatePostDialogComponent = ({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Category</FormLabel>
-              <FormControl><Input placeholder="e.g., Food & Drink" {...field} /></FormControl>
+              <FormControl><Input placeholder="e.g., Food & Drink" {...field} autoComplete="off" /></FormControl>
               <FormMessage />
             </FormItem>
           )}
