@@ -13,7 +13,7 @@ import { ArrowLeft } from 'lucide-react';
 
 interface PostPageProps {
     params: {
-        postId: string;
+        id: string;
     };
 }
 
@@ -25,12 +25,12 @@ export default function PostPage({ params }: PostPageProps) {
     const router = useRouter();
 
     useEffect(() => {
-        if (!params.postId) {
+        if (!params.id) {
             setLoading(false);
             return;
         }
 
-        const postRef = doc(db, 'posts', params.postId);
+        const postRef = doc(db, 'posts', params.id);
         const unsubscribe = onSnapshot(postRef, (docSnap) => {
             if (docSnap.exists()) {
                 setPost({ id: docSnap.id, ...docSnap.data() } as PostType);
@@ -42,7 +42,7 @@ export default function PostPage({ params }: PostPageProps) {
         });
 
         return () => unsubscribe();
-    }, [params.postId, router]);
+    }, [params.id, router]);
 
     if (loading) {
         return (
@@ -64,9 +64,15 @@ export default function PostPage({ params }: PostPageProps) {
     return (
         <div className="max-w-2xl mx-auto">
              {post.category === "For Sale" && (
-                <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+                <Button variant="ghost" onClick={() => router.push('/marketplace')} className="mb-4">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Marketplace
+                </Button>
+             )}
+              {post.category === "Event" && (
+                <Button variant="ghost" onClick={() => router.push('/events')} className="mb-4">
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Events
                 </Button>
              )}
             <PostCard post={post} />
