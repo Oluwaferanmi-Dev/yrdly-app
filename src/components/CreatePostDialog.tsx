@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -78,9 +79,10 @@ const formSchema = z.object({
 
 }).superRefine((data, ctx) => {
     const isBusiness = data.category === 'Business';
-    const isEditMode = !!data.name; // A simple check for edit mode, assuming name is only for business posts being edited.
+    // This is a simplified check. A more robust way might be needed if posts can also have names.
+    const isEditMode = (data as any).isEditMode || false; 
 
-    // Always check for existing images in edit mode.
+    // Check for existing images only matters in edit mode.
     const hasExistingImages = isEditMode && (data as any).postToEdit?.imageUrls && (data as any).postToEdit.imageUrls.length > 0;
     const hasNewImage = typeof window !== 'undefined' && data.image && data.image.length > 0;
 
@@ -88,11 +90,11 @@ const formSchema = z.object({
       if (!data.name) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: "Business name can't be empty." });
       if (!data.businessCategory) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['businessCategory'], message: "Category can't be empty." });
       if (!data.location || !data.location.address) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['location'], message: "Location is required for a business." });
-      if (!hasNewImage && !hasExistingImages) {
+       if (!hasNewImage && !hasExistingImages) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['image'], message: 'An image is required for a business.' });
       }
     } else if (data.category === 'For Sale') {
-      if (!hasNewImage && !hasExistingImages) {
+       if (!hasNewImage && !hasExistingImages) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['image'], message: 'An image is required for "For Sale" items.' });
       }
       // Price is optional, so no validation needed here unless it's not a positive number (handled by z.number().positive())
@@ -135,6 +137,9 @@ const CreatePostDialogComponent = ({
    useEffect(() => {
     if (open) {
         if (isEditMode && postToEdit) {
+            form.setValue('isEditMode', true, { shouldValidate: false });
+            form.setValue('postToEdit', postToEdit, { shouldValidate: false });
+
             if (postType === 'Business' && 'ownerId' in postToEdit) { // It's a Business
                 form.reset({
                     name: postToEdit.name,
@@ -163,6 +168,7 @@ const CreatePostDialogComponent = ({
                 businessCategory: "",
                 location: { address: "" },
             });
+             form.setValue('isEditMode', false, { shouldValidate: false });
         }
     }
   }, [postToEdit, preselectedCategory, form, isEditMode, open, postType]);
@@ -408,7 +414,7 @@ const CreatePostDialogComponent = ({
               <FormItem>
                   <FormLabel>
                       Add images
-                      {(form.watch('category') === 'Event' || form.watch('category') === 'For Sale' || postType === 'Business') && <span className="text-destructive">*</span>}
+                      {(form.watch('category') === 'For Sale' || postType === 'Business') && <span className="text-destructive">*</span>}
                   </FormLabel>
                   <FormControl>
                       <Input 

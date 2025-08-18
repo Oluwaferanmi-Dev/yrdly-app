@@ -1,144 +1,91 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Reusable Helper Functions ---
-
-    function isAuthenticated() {
+    // Helper functions
+    function isAuth() {
       return request.auth != null;
     }
-
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isAuth() && request.auth.uid == userId;
     }
     
-    function isDataObject(data) {
-        return data is map && data.keys().size() > 0;
-    }
-
-    function isValidLocation(location) {
-      return location is map &&
-             location.keys().hasOnly(['address', 'geopoint']) &&
-             location.address is string &&
-             (!('geopoint' in location) || location.geopoint is latlng);
-    }
-    
-    function isIncomingData() {
-        return request.resource.data;
-    }
-
-    // --- Collection Rules ---
-
+    // User Profiles
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isOwner(userId) &&
-                    isDataObject(isIncomingData()) &&
-                    isIncomingData().name is string &&
-                    isIncomingData().email == request.auth.token.email; // Ensure email matches token
-      
-      // A user can only update their own document, and only specific, non-critical fields.
-      // 'friends' and 'blockedUsers' should be managed by Cloud Functions.
-      allow update: if isOwner(userId) &&
-                    request.resource.data.diff(resource.data).affectedKeys()
-                      .hasOnly(['name', 'bio', 'location', 'avatarUrl', 'fcmToken', 'notificationSettings']);
+      allow read: if isAuth();
+      allow create: if isOwner(userId); // Allow user to create their own profile
+      allow update: if isOwner(userId) && request.resource.data.keys().hasOnly(['name', 'bio', 'avatarUrl', 'location', 'fcmToken', 'friends', 'blockedUsers', 'notificationSettings']);
     }
 
-    match /posts/{postId} {
-      allow read: if isAuthenticated();
-      allow create: if isOwner(isIncomingData().userId) &&
-                      isIncomingData().authorName is string &&
-                      isIncomingData().category is string &&
-                      isIncomingData().text is string &&
-                      isIncomingData().timestamp == request.time &&
-                      // Enforce location rules based on category
-                      (isIncomingData().category == 'Event' ? 
-                          isValidLocation(isIncomingData().eventLocation) : 
-                          !('eventLocation' in isIncomingData()));
-
-      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
-
-      allow update: if isAuthenticated() && (
-        // Case 1: The owner is updating their post.
-        (resource.data.userId == request.auth.uid &&
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['text', 'title', 'description', 'category', 'price', 'imageUrls', 'imageUrl', 'eventLocation', 'eventDate', 'eventTime', 'eventLink']) &&
-            (!('eventLocation' in isIncomingData()) || isValidLocation(isIncomingData().eventLocation))
-        ) ||
-        // Case 2: A user is liking/unliking a post (only adding/removing themselves).
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy']) &&
-          (request.resource.data.likedBy == resource.data.likedBy.concat([request.auth.uid]) || 
-           request.resource.data.likedBy == resource.data.likedBy.remove(request.auth.uid))
-        ) ||
-        // Case 3: A user is attending/unattending an event (only adding/removing themselves).
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['attendees']) &&
-          (request.resource.data.attendees == resource.data.attendees.concat([request.auth.uid]) ||
-           request.resource.data.attendees == resource.data.attendees.remove(request.auth.uid))
-        )
+    // Friend Requests
+    match /friend_requests/{requestId} {
+      allow read: if isAuth() && request.auth.uid in resource.data.participantIds;
+      allow create: if isAuth() && request.auth.uid == request.resource.data.fromUserId;
+      allow update: if isAuth() && (
+        (request.resource.data.status == 'accepted' && isOwner(resource.data.toUserId)) ||
+        (request.resource.data.status == 'declined' && isOwner(resource.data.toUserId)) ||
+        (resource.data.status == 'pending' && isOwner(resource.data.fromUserId)) // Allow sender to cancel
       );
-    }
-
-    match /posts/{postId}/comments/{commentId} {
-        allow read: if isAuthenticated();
-        allow create: if isOwner(isIncomingData().userId) &&
-                        isIncomingData().authorName is string &&
-                        isIncomingData().text is string && isIncomingData().text.size() < 500 &&
-                        isIncomingData().timestamp == request.time;
-
-        // Allow comment author to edit their own comment text.
-        allow update: if isOwner(resource.data.userId) &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text']);
-
-        allow delete: if isAuthenticated() && (
-                        resource.data.userId == request.auth.uid ||
-                        get(/databases/$(database)/documents/posts/$(postId)).data.userId == request.auth.uid
-                      );
+      allow delete: if isOwner(resource.data.fromUserId); // Allow sender to delete/cancel
     }
     
-    match /friend_requests/{requestId} {
-        allow read, update: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
-        allow create: if isAuthenticated() && 
-                        isOwner(isIncomingData().fromUserId) &&
-                        isIncomingData().status == 'pending';
-        allow delete: if isAuthenticated() && isOwner(resource.data.fromUserId);
+    // Businesses
+    match /businesses/{businessId} {
+      allow get: if isAuth();
+      allow list: if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth() && isOwner(resource.data.ownerId);
+      allow delete: if isAuth() && isOwner(resource.data.ownerId);
     }
+    
+    // Posts (General, Events, For Sale)
+    match /posts/{postId} {
+      allow read: if isAuth();
+      allow create: if isAuth() && isOwner(request.resource.data.userId);
+      allow update: if isAuth() && (
+        (isOwner(resource.data.userId)) || // Owner can edit their post
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'attendees'])) || // Anyone can like or RSVP
+        (request.resource.data.commentCount == resource.data.commentCount + 1) // Anyone can increment comment count
+      );
+      allow delete: if isAuth() && isOwner(resource.data.userId);
 
-    match /conversations/{conversationId} {
-      allow read: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
-      allow create, update: if isAuthenticated() && request.auth.uid in request.resource.data.participantIds;
-      
-      match /messages/{messageId} {
-        allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-        allow create: if isAuthenticated() && 
-                        isOwner(isIncomingData().senderId) &&
-                        isIncomingData().text is string && isIncomingData().text.size() < 1000 &&
-                        isIncomingData().timestamp == request.time &&
-                        request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+      // Comments sub-collection
+      match /comments/{commentId} {
+        allow read: if isAuth();
+        allow create: if isAuth(); // Any authenticated user can create a comment
+        allow update: if isAuth() && (
+          isOwner(resource.data.userId) || // Owner can edit their own comment
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']) // Any user can react
+        );
+        allow delete: if isAuth() && isOwner(resource.data.userId);
       }
     }
+    
+    // Conversations
+    match /conversations/{conversationId} {
+      allow read, create: if isAuth() && request.auth.uid in resource.data.participantIds;
+      allow update: if isAuth() && request.auth.uid in resource.data.participantIds;
 
-    match /businesses/{businessId} {
-      allow get; // Publicly readable
-      allow list: if isAuthenticated();
-      allow create: if isOwner(isIncomingData().ownerId) &&
-                      isIncomingData().name is string &&
-                      isIncomingData().category is string &&
-                      isIncomingData().description is string &&
-                      isValidLocation(isIncomingData().location);
-
-      allow update: if isOwner(resource.data.ownerId) &&
-                      request.resource.data.diff(resource.data).affectedKeys()
-                        .hasOnly(['name', 'category', 'description', 'imageUrls', 'location']) &&
-                      isValidLocation(isIncomingData().location);
-
-      allow delete: if isOwner(resource.data.ownerId);
+      // Messages sub-collection
+      match /messages/{messageId} {
+        allow read, create: if isAuth() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+      }
     }
     
+    // Notifications
     match /notifications/{notificationId} {
-        allow read: if isOwner(resource.data.userId);
-        // Only allow updating the 'isRead' status.
-        allow update: if isOwner(resource.data.userId) &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow read: if isAuth() && isOwner(resource.data.userId);
+      allow update: if isAuth() && isOwner(resource.data.userId) && request.resource.data.keys().hasOnly(['isRead']);
+      // No create/delete from client
+    }
+    
+    // Mail Queue for Emails
+    match /mail/{mailId} {
+      // Only allow server-side creation (e.g. from cloud functions)
+      allow read, write: if false; 
+      allow create: if isAuth(); // Allow client to trigger an email
     }
   }
 }
