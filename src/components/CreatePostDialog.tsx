@@ -41,7 +41,7 @@ import {
 import { PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import * as React from 'react';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -100,7 +100,7 @@ const formSchema = z.object({
 });
 
 
-export function CreatePostDialog({ 
+const CreatePostDialogComponent = ({ 
     children, 
     preselectedCategory, 
     postToEdit, 
@@ -108,7 +108,7 @@ export function CreatePostDialog({
     onOpenChange, 
     title, 
     description 
-}: CreatePostDialogProps) {
+}: CreatePostDialogProps) => {
   const { user, userDetails } = useAuth();
   const { toast } = useToast();
   const { createPost, updatePost, createBusiness, updateBusiness } = usePosts();
@@ -502,4 +502,6 @@ export function CreatePostDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export const CreatePostDialog = memo(CreatePostDialogComponent);

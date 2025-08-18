@@ -104,7 +104,8 @@ service cloud.firestore {
     }
 
     match /conversations/{conversationId} {
-      allow read, create, update: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.participantIds;
+      allow create, update: if isAuthenticated() && request.auth.uid in request.resource.data.participantIds;
       
       match /messages/{messageId} {
         allow read: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;

@@ -34,7 +34,7 @@ import {
 import { PlusCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
@@ -61,7 +61,7 @@ type CreateEventDialogProps = {
     postToEdit?: Post;
 }
 
-export function CreateEventDialog({ children, onOpenChange, postToEdit }: CreateEventDialogProps) {
+export const CreateEventDialog = memo(function CreateEventDialog({ children, onOpenChange, postToEdit }: CreateEventDialogProps) {
   const { user, userDetails } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -330,4 +330,4 @@ export function CreateEventDialog({ children, onOpenChange, postToEdit }: Create
       </DialogContent>
     </Dialog>
   );
-}
+});
