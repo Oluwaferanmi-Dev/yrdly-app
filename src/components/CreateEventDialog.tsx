@@ -47,7 +47,7 @@ const formSchema = z.object({
   description: z.string().min(1, "Event description can't be empty.").max(1000),
   eventDate: z.string().min(1, "Date can't be empty."),
   eventTime: z.string().min(1, "Time can't be empty."),
-  eventLink: z.string().optional(),
+  eventLink: z.string().url("Please enter a valid URL.").optional().or(z.literal('')),
   image: z.any().refine((files) => {
     if (typeof window === 'undefined') return true;
     return files instanceof FileList && files.length > 0;

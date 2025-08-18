@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -63,6 +62,44 @@ type CreatePostDialogProps = {
     description?: string;
 }
 
+const formSchema = z.object({
+  text: z.string().min(1, "Title can't be empty.").max(500),
+  description: z.string().optional(),
+  category: z.enum(["General", "Event", "For Sale", "Business"]),
+  price: z.preprocess(
+      (val) => (val === "" ? undefined : Number(val)),
+      z.number().positive("Price must be positive.").optional()
+  ),
+  image: z.any().optional(),
+  // Business specific
+  name: z.string().optional(),
+  businessCategory: z.string().optional(),
+  location: z.any().optional(),
+
+}).superRefine((data, ctx) => {
+    const isBusiness = data.category === 'Business';
+    const isEditMode = !!data.name; // A simple check for edit mode, assuming name is only for business posts being edited.
+
+    // Always check for existing images in edit mode.
+    const hasExistingImages = isEditMode && (data as any).postToEdit?.imageUrls && (data as any).postToEdit.imageUrls.length > 0;
+    const hasNewImage = typeof window !== 'undefined' && data.image && data.image.length > 0;
+
+    if (isBusiness) {
+      if (!data.name) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: "Business name can't be empty." });
+      if (!data.businessCategory) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['businessCategory'], message: "Category can't be empty." });
+      if (!data.location) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['location'], message: "Location is required for a business." });
+      if (!hasNewImage && !hasExistingImages) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['image'], message: 'An image is required for a business.' });
+      }
+    } else if (data.category === 'For Sale') {
+      if (!hasNewImage && !hasExistingImages) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['image'], message: 'An image is required for "For Sale" items.' });
+      }
+      // Price is optional, so no validation needed here unless it's not a positive number (handled by z.number().positive())
+    }
+});
+
+
 export function CreatePostDialog({ 
     children, 
     preselectedCategory, 
@@ -78,51 +115,8 @@ export function CreatePostDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
-  const [location, setLocation] = useState(postToEdit && 'location' in postToEdit ? {
-      address: postToEdit.location.address,
-      latitude: postToEdit.location.latitude,
-      longitude: postToEdit.location.longitude,
-  } : null);
   
   const isEditMode = !!postToEdit;
-
-  const formSchema = z.object({
-    text: z.string().min(1, "Title can't be empty.").max(100),
-    description: z.string().optional(),
-    category: z.enum(["General", "Event", "For Sale", "Business"]),
-    price: z.preprocess(
-        (val) => (val === "" ? undefined : Number(val)),
-        z.number().positive("Price must be positive.").optional()
-    ),
-    image: z.any().optional(),
-    // Business specific
-    name: z.string().optional(),
-    businessCategory: z.string().optional(),
-
-  }).superRefine((data, ctx) => {
-      const hasNewImage = typeof window !== 'undefined' && data.image && data.image.length > 0;
-      const hasExistingImages = isEditMode && postToEdit?.imageUrls && postToEdit.imageUrls.length > 0;
-
-      if ((data.category === 'Event' || data.category === 'For Sale' || data.category === 'Business') && !hasNewImage && !hasExistingImages) {
-          ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ['image'],
-              message: 'An image is required for this post category.',
-          });
-      }
-      if (data.category === 'For Sale' && (data.price === undefined || data.price <= 0)) {
-          ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ['price'],
-              message: 'A valid price is required for "For Sale" items.',
-          });
-      }
-      if (data.category === 'Business') {
-        if (!data.name) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['name'], message: "Business name can't be empty." });
-        if (!data.businessCategory) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['businessCategory'], message: "Category can't be empty." });
-        if (!location) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['location'], message: "Location is required" });
-      }
-  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -134,6 +128,7 @@ export function CreatePostDialog({
       image: undefined,
       name: "",
       businessCategory: "",
+      location: null,
     },
   });
 
@@ -147,8 +142,8 @@ export function CreatePostDialog({
                     text: postToEdit.description,
                     category: 'Business',
                     image: undefined,
+                    location: postToEdit.location
                 });
-                setLocation(postToEdit.location);
             } else if ('userId' in postToEdit) { // It's a Post
                  form.reset({
                     text: postToEdit.text,
@@ -166,8 +161,8 @@ export function CreatePostDialog({
                 image: undefined,
                 name: "",
                 businessCategory: "",
+                location: null,
             });
-            setLocation(null);
         }
     }
   }, [postToEdit, preselectedCategory, form, isEditMode, open, postType]);
@@ -201,14 +196,14 @@ export function CreatePostDialog({
                 name: values.name!,
                 category: values.businessCategory!,
                 description: values.text,
-                location: location!,
+                location: values.location,
                 imageUrls: imageUrls,
             };
             if (isEditMode && postToEdit) {
                 await updateBusiness(postToEdit.id, businessData);
                 toast({ title: 'Business updated!' });
             } else {
-                await createBusiness(businessData as Omit<Business, 'id' | 'ownerId' | 'createdAt'>);
+                await createBusiness(businessData as Omit<Business, 'id' | 'ownerId'>);
                 toast({ title: 'Business added!' });
             }
             
@@ -235,7 +230,6 @@ export function CreatePostDialog({
         }
 
         form.reset();
-        setLocation(null);
         setOpen(false);
 
     } catch(error) {
@@ -293,16 +287,22 @@ export function CreatePostDialog({
             </FormItem>
           )}
         />
-        <FormItem>
-            <FormLabel>Location</FormLabel>
-            <FormControl>
-                <LocationPicker 
-                    onLocationSelect={setLocation} 
-                    initialLocation={location || undefined}
-                />
-            </FormControl>
-            <FormMessage />
-        </FormItem>
+        <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                        <LocationPicker 
+                            onLocationSelect={field.onChange} 
+                            initialLocation={field.value}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}
+        />
       </>
   );
 
@@ -379,11 +379,11 @@ export function CreatePostDialog({
                     name="price"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Price</FormLabel>
+                        <FormLabel>Price (Optional)</FormLabel>
                         <FormControl>
                         <div className="relative">
                             <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₦</span>
-                            <Input type="number" placeholder="Price" className="pl-7" {...field} />
+                            <Input type="number" placeholder="Leave blank for Free" className="pl-7" {...field} />
                         </div>
                         </FormControl>
                         <FormMessage />
