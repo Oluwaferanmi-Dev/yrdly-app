@@ -42,6 +42,24 @@ export const usePosts = () => {
         return;
       }
 
+      import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  orderBy,
+  onSnapshot,
+  doc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  increment,
+  deleteDoc,
+  Timestamp,
+} from 'firebase/firestore';
+
+// ...
+
       try {
         const newPostData = {
           ...postData,
@@ -53,8 +71,15 @@ export const usePosts = () => {
           likedBy: [],
         };
         const docRef = await addDoc(collection(db, 'posts'), newPostData);
-        // Manually update local state to include the new post with its ID
-        setPosts(prevPosts => [{ id: docRef.id, ...newPostData } as Post, ...prevPosts]);
+        
+        // Create a client-side version of the post for immediate UI update
+        const clientPost = {
+            ...newPostData,
+            id: docRef.id,
+            timestamp: Timestamp.now() // Use a client-side timestamp for the local state
+        }
+        
+        setPosts(prevPosts => [clientPost as Post, ...prevPosts]);
         toast({ title: 'Success', description: 'Post created successfully.' });
       } catch (error) {
         console.error('Error creating post:', error);
