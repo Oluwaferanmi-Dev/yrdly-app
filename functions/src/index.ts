@@ -52,18 +52,6 @@ export const processMailQueue = onDocumentCreated("mail/{mailId}", async (event)
                     <p>- The Yrdly Team</p>
                 `;
                 break;
-            
-            case "profileReminder":
-                const reminderData = mailData.template.data;
-                subject = "👋 Complete your Yrdly profile!";
-                htmlBody = `
-                    <h1>Complete Your Profile</h1>
-                    <p>Hi ${reminderData.name},</p>
-                    <p>We noticed your profile is still missing a few details. A complete profile with a bio and location helps you connect with more neighbors.</p>
-                    <p>Take a moment to update your profile and get the full Yrdly experience!</p>
-                    <p>- The Yrdly Team</p>
-                `;
-                break;
 
             default:
                 logger.warn(`Unknown email template: ${mailData.template.name}`);

@@ -5,15 +5,25 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Heart, Users, Building, X } from 'lucide-react';
+import { Heart, Users, Building, X, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 
 export function WelcomeBanner() {
-    const { user } = useAuth();
+    const { user, userDetails } = useAuth();
     const [isVisible, setIsVisible] = useState(false);
+    const [bannerType, setBannerType] = useState<'welcome' | 'completeProfile'>('welcome');
 
     useEffect(() => {
-        // Use a more robust check based on creation time, only show for new users.
+        const hasDismissedProfileReminder = localStorage.getItem('hasDismissedProfileReminder');
+        
+        if (userDetails && (!userDetails.bio || !userDetails.location)) {
+            if (!hasDismissedProfileReminder) {
+                setIsVisible(true);
+                setBannerType('completeProfile');
+            }
+            return;
+        }
+
         const hasSeenWelcome = localStorage.getItem('hasSeenWelcomeBanner');
         if (hasSeenWelcome) {
             setIsVisible(false);
@@ -23,21 +33,44 @@ export function WelcomeBanner() {
         if (user && user.metadata.creationTime) {
             const creationDate = new Date(user.metadata.creationTime);
             const now = new Date();
-            // Show if the account was created in the last 7 days
-            const sevenDaysAgo = new Date(now.setDate(now.getDate() - 7));
+            const sevenDaysAgo = new Date(new Date().setDate(now.getDate() - 7));
             
             if (creationDate > sevenDaysAgo) {
                 setIsVisible(true);
+                setBannerType('welcome');
             }
         }
-    }, [user]);
+    }, [user, userDetails]);
 
     const handleDismiss = () => {
-        localStorage.setItem('hasSeenWelcomeBanner', 'true');
+        if (bannerType === 'welcome') {
+            localStorage.setItem('hasSeenWelcomeBanner', 'true');
+        } else {
+            localStorage.setItem('hasDismissedProfileReminder', 'true');
+        }
         setIsVisible(false);
     };
 
     if (!isVisible) return null;
+
+    if (bannerType === 'completeProfile') {
+        return (
+            <Alert className="bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-200">
+              <button onClick={handleDismiss} className="absolute top-2 right-2 text-current/70 hover:text-current">
+                <X className="h-4 w-4" />
+              </button>
+              <AlertTitle className="font-bold text-lg flex items-center gap-2">
+                <UserCheck /> Complete Your Profile!
+              </AlertTitle>
+              <AlertDescription className="mt-2">
+                <p className="mb-4">A complete profile helps you connect with more neighbors. Add your bio and location to get the most out of Yrdly.</p>
+                <div className="flex gap-2">
+                    <Button asChild variant="default" size="sm" className="bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"><Link href="/settings">Go to Settings</Link></Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+        )
+    }
 
     return (
         <Alert className="bg-accent border-accent/20 text-accent-foreground">
