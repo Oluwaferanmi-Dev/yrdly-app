@@ -1,32 +1,44 @@
-
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow public read access to all files
-    match /{allPaths=**} {
-      allow read;
-    }
-
-    // Allow users to manage their own avatar
+    // Rules for specific paths must come BEFORE the general catch-all rule.
+    
+    // Allow users to upload their own avatar.
+    // They can read anyone's avatar.
     match /avatars/{userId}/{fileName} {
+      allow read;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow users to upload images for posts
+    // Allow users to upload images for their own posts.
+    // Anyone can read post images.
     match /posts/{userId}/{allPaths=**} {
-       allow write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Allow users to upload images for businesses
-    match /businesses/{userId}/{allPaths=**} {
-       allow write: if request.auth != null && request.auth.uid == userId;
+      allow read;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow authenticated users to upload images to chats
+    // Allow users to upload images for their own businesses.
+    // Anyone can read business images.
+    match /businesses/{ownerId}/{allPaths=**} {
+        allow read;
+        allow write: if request.auth != null && request.auth.uid == ownerId;
+    }
+
+    // Allow authenticated users to upload images in any chat.
+    // For now, any authenticated user can read any chat image.
+    // This could be restricted further later if needed.
     match /chat_images/{conversationId}/{allPaths=**} {
+      allow read: if request.auth != null;
       allow write: if request.auth != null;
+    }
+
+    // Fallback rule: Deny all other reads and writes by default.
+    // This rule is not strictly necessary if the paths above cover all cases,
+    // as the default is to deny, but it makes the security posture explicit.
+    match /{allPaths=**} {
+      allow read: if false;
+      allow write: if false;
     }
   }
 }
-    
