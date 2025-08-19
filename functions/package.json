@@ -15,10 +15,9 @@
   "dependencies": {
     "firebase-admin": "^12.2.0",
     "firebase-functions": "^5.0.1",
-    "resend": "^3.4.0"
+    "resend": "^3.4.0",
+    "typescript": "^5.5.3",
+    "@types/react": "^18.3.3"
   },
-  "devDependencies": {
-    "@types/react": "^18.3.3",
-    "typescript": "^5.5.3"
-  }
+  "devDependencies": {}
 }

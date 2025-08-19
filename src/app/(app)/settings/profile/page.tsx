@@ -100,7 +100,9 @@ export default function ProfilePage() {
 
             if (data.avatar && data.avatar.length > 0) {
                 const file = data.avatar[0];
-                const storageRef = ref(storage, `avatars/${user.uid}/${file.name}`);
+                const fileExtension = file.name.split('.').pop();
+                const fileName = `${user.uid}.${fileExtension}`;
+                const storageRef = ref(storage, `avatars/${user.uid}/${fileName}`);
                 await uploadBytes(storageRef, file);
                 avatarUrl = await getDownloadURL(storageRef);
             }

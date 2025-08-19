@@ -1,4 +1,4 @@
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onCall } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
@@ -11,7 +11,55 @@ const db = admin.firestore();
 // Define the Resend API key as a secret parameter
 const resendApiKey = defineString('RESEND_API_KEY');
 
-// --- Email Sending Function (New) ---
+// --- New function to send event confirmation email ---
+export const onEventRsvp = onDocumentUpdated("posts/{postId}", async (event) => {
+    if (!event.data) {
+        logger.log("No data associated with the event");
+        return;
+    }
+
+    const before = event.data.before.data();
+    const after = event.data.after.data();
+
+    // Check if the attendees list has changed
+    if (before.attendees.length >= after.attendees.length) {
+        logger.log("No new attendees, skipping email.");
+        return;
+    }
+
+    // Find the new attendee
+    const newAttendeeId = after.attendees.find((id: string) => !before.attendees.includes(id));
+    if (!newAttendeeId) {
+        logger.log("Could not determine the new attendee.");
+        return;
+    }
+
+    // Get the user's email
+    const userDoc = await db.collection("users").doc(newAttendeeId).get();
+    const userData = userDoc.data();
+    if (!userData || !userData.email) {
+        logger.log(`User ${newAttendeeId} does not have an email.`);
+        return;
+    }
+
+    // Add a new document to the mail collection
+    await db.collection("mail").add({
+        to: userData.email,
+        template: {
+            name: "eventConfirmation",
+            data: {
+                eventName: after.title,
+                eventDate: after.eventDate,
+                eventTime: after.eventTime,
+                eventLocation: after.eventLocation?.address,
+                eventUrl: `https://yrdly-app.vercel.app/posts/${event.params.postId}`
+            }
+        }
+    });
+});
+
+
+// --- Email Sending Function (Existing) ---
 export const processMailQueue = onDocumentCreated("mail/{mailId}", async (event) => {
     const snapshot = event.data;
     if (!snapshot) {
