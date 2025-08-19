@@ -214,7 +214,7 @@ const CreatePostDialogComponent = ({
                 description: values.description,
                 category: values.category,
                 imageUrls: imageUrls,
-                imageUrl: imageUrls.length > 0 ? imageUrls[0] : (postToEdit?.imageUrl || ""),
+                imageUrl: imageUrls.length > 0 ? imageUrls[0] : (postToEdit?.imageUrls?.[0] || ""),
             };
 
             if(values.category === 'For Sale' && values.price) {
