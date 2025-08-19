@@ -137,9 +137,6 @@ const CreatePostDialogComponent = ({
    useEffect(() => {
     if (open) {
         if (isEditMode && postToEdit) {
-            form.setValue('isEditMode', true, { shouldValidate: false });
-            form.setValue('postToEdit', postToEdit, { shouldValidate: false });
-
             if (postType === 'Business' && 'ownerId' in postToEdit) { // It's a Business
                 form.reset({
                     name: postToEdit.name,
@@ -168,7 +165,6 @@ const CreatePostDialogComponent = ({
                 businessCategory: "",
                 location: { address: "" },
             });
-             form.setValue('isEditMode', false, { shouldValidate: false });
         }
     }
   }, [postToEdit, preselectedCategory, form, isEditMode, open, postType]);

@@ -44,12 +44,6 @@ admin.initializeApp();
 const db = admin.firestore();
 // Define the Resend API key as a secret parameter
 const resendApiKey = (0, params_1.defineString)('RESEND_API_KEY');
-// --- Re-usable notification sender function ---
-const sendNotification = async (userId, type, senderId, relatedId, message, title, clickAction) => {
-    // ... (existing code)
-};
-// --- Notification Triggers ---
-// ... (existing code)
 // --- Email Sending Function (New) ---
 exports.processMailQueue = (0, firestore_1.onDocumentCreated)("mail/{mailId}", async (event) => {
     const snapshot = event.data;

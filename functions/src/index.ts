@@ -1,5 +1,5 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { onCall } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import * as logger from "firebase-functions/logger";
 import { Resend } from "resend";
@@ -10,14 +10,6 @@ const db = admin.firestore();
 
 // Define the Resend API key as a secret parameter
 const resendApiKey = defineString('RESEND_API_KEY');
-
-// --- Re-usable notification sender function ---
-const sendNotification = async (userId: string, type: string, senderId: string, relatedId: string, message: string, title: string, clickAction: string) => {
-    // ... (existing code)
-};
-
-// --- Notification Triggers ---
-// ... (existing code)
 
 // --- Email Sending Function (New) ---
 export const processMailQueue = onDocumentCreated("mail/{mailId}", async (event) => {
