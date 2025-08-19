@@ -1,41 +1,32 @@
 
 rules_version = '2';
+
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Allow public read access to all files.
-    // This simplifies displaying images across the app.
+    // Allow public read access to all files
     match /{allPaths=**} {
       allow read;
     }
 
-    // Allow a user to create/update their own avatar.
-    // They can only write to their own user-specific folder.
+    // Allow users to manage their own avatar
     match /avatars/{userId}/{fileName} {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // Allow authenticated users to upload images for posts.
-    match /posts/{userId}/{fileName} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+
+    // Allow users to upload images for posts
+    match /posts/{userId}/{allPaths=**} {
+       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Allow authenticated users to upload images for businesses.
-    match /businesses/{userId}/{fileName} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+    // Allow users to upload images for businesses
+    match /businesses/{userId}/{allPaths=**} {
+       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Allow authenticated users to upload images for events.
-    match /event_images/{userId}/{fileName} {
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Allow any authenticated user to upload images to a chat.
-    // A more secure rule would check if the user is a participant
-    // in the conversation, but that requires Firestore lookups which
-    // can be added later. This rule is secure enough for now.
-    match /chat_images/{conversationId}/{fileName} {
-       allow write: if request.auth != null;
+    // Allow authenticated users to upload images to chats
+    match /chat_images/{conversationId}/{allPaths=**} {
+      allow write: if request.auth != null;
     }
   }
 }
+    
