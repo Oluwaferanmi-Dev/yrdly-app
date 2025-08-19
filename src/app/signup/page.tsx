@@ -31,7 +31,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
+
+
+import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+
 import { AlertCircle } from 'lucide-react';
 
 const formSchema = z.object({
@@ -56,6 +61,10 @@ export default function SignupPage() {
   });
 
   const handleSocialSignIn = async (provider: AuthProvider | OAuthProvider) => {
+    if (!agreed) {
+      setError("You must agree to the Terms and Privacy Policy to continue.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -71,6 +80,7 @@ export default function SignupPage() {
                 email: user.email,
                 avatarUrl: user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.charAt(0)}`,
                 bio: "",
+                termsAccepted: true,
             });
         }
         router.push('/home');
@@ -87,7 +97,12 @@ export default function SignupPage() {
     }
   }
 
+  const [agreed, setAgreed] = useState(false);
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!agreed) {
+      setError("You must agree to the Terms and Privacy Policy to continue.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -103,6 +118,7 @@ export default function SignupPage() {
         email: values.email,
         avatarUrl: `https://placehold.co/100x100.png?text=${values.name.charAt(0)}`,
         bio: "",
+        termsAccepted: true,
       });
 
       router.push('/home');
@@ -189,6 +205,31 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
+              <div className="space-y-2 text-sm">
+                <h3 className="font-semibold">Welcome to Yrdly! Before you get started, here’s a quick summary of our rules:</h3>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    <li>✅ Be respectful — no harmful, offensive, or illegal content.</li>
+                    <li>✅ You own your content, but by posting you let Yrdly display and promote it.</li>
+                    <li>✅ You are responsible for your account and activity.</li>
+                    <li>✅ Yrdly helps connect buyers, sellers & event-goers, but we are not responsible for the quality, safety, or delivery of items or events.</li>
+                    <li>✅ If you break the rules, your account may be suspended or removed.</li>
+                    <li>✅ By using Yrdly, you agree to follow these Terms and our Privacy Policy.</li>
+                </ul>
+                <p>
+                    <Link href="/legal/terms" target="_blank" className="text-primary hover:underline">
+                        Read the full Terms & Privacy Policy
+                    </Link>
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="terms" checked={agreed} onCheckedChange={() => setAgreed(!agreed)} />
+                <label
+                  htmlFor="terms"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  I agree to Yrdly’s Terms and Privacy Policy
+                </label>
+              </div>
                {error && (
                  <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
@@ -196,7 +237,7 @@ export default function SignupPage() {
                     <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading || !agreed}>
                 {loading ? 'Creating account...' : 'Create Account'}
               </Button>
             </form>
