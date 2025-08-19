@@ -19,7 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { allStates, lgasByState } from '@/lib/geo-data';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Palette, Bell, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -30,6 +31,21 @@ const profileFormSchema = z.object({
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
+
+const settingsItems = [
+    {
+        href: "/settings/notifications",
+        icon: Bell,
+        title: "Notifications",
+        description: "Manage how you receive notifications."
+    },
+    {
+        href: "/settings/appearance",
+        icon: Palette,
+        title: "Appearance",
+        description: "Customize the look and feel of the app."
+    }
+]
 
 export default function ProfilePage() {
     const { user, userDetails, loading: authLoading } = useAuth();
@@ -76,6 +92,19 @@ export default function ProfilePage() {
             const previewUrl = URL.createObjectURL(file);
             setAvatarPreview(previewUrl);
         }
+    }
+    
+    const resetFormAndExitEditMode = () => {
+        if (userDetails) {
+            form.reset({
+                name: userDetails.name || '',
+                bio: userDetails.bio || '',
+                locationState: userDetails.location?.state || '',
+                locationLga: userDetails.location?.lga || '',
+            });
+             setAvatarPreview(null);
+        }
+        setIsEditMode(false);
     }
 
     const onSubmit = async (data: ProfileFormValues) => {
@@ -226,7 +255,7 @@ export default function ProfilePage() {
                         <CardFooter className="flex justify-end gap-2">
                             {isEditMode ? (
                                 <>
-                                    <Button variant="ghost" onClick={() => setIsEditMode(false)}>Cancel</Button>
+                                    <Button type="button" variant="ghost" onClick={resetFormAndExitEditMode}>Cancel</Button>
                                     <Button type="submit" disabled={formLoading}>
                                         {formLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         Save Changes
@@ -239,7 +268,29 @@ export default function ProfilePage() {
                     </Card>
                 </form>
             </Form>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>App Settings</CardTitle>
+                     <CardDescription>Manage your notification preferences and app appearance.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <ul className="divide-y">
+                        {settingsItems.map((item) => (
+                            <li key={item.href}>
+                                <Link href={item.href} className="flex items-center gap-4 p-4 hover:bg-muted/50">
+                                    <item.icon className="h-6 w-6 text-muted-foreground" />
+                                    <div className="flex-1">
+                                        <h3 className="font-semibold">{item.title}</h3>
+                                        <p className="text-sm text-muted-foreground">{item.description}</p>
+                                    </div>
+                                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                </Link>
+                            </li>
+                        ))}
+                    </ul>
+                </CardContent>
+            </Card>
         </div>
     );
 }
-
