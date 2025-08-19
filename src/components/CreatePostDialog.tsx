@@ -79,8 +79,6 @@ const getFormSchema = (isEditMode: boolean, postType?: 'Post' | 'Business') => z
 }).superRefine((data, ctx) => {
     const isBusiness = postType === 'Business';
     
-    // In edit mode, postToEdit should be available to check for existing images.
-    // This is a proxy since we can't pass postToEdit directly to the schema.
     const hasExistingImages = isEditMode; 
     const hasNewImage = data.image && data.image.length > 0;
 

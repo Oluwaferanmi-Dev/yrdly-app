@@ -269,8 +269,16 @@ export function PostCard({ post }: PostCardProps) {
     </CardContent>
   );
 
-  const handleCardClick = () => {
-    // Navigate to post details, but not if a collapsible section (like comments) is already open.
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent navigation when clicking on interactive elements
+    if ((e.target as HTMLElement).closest('button, a, [role="dialog"], [role="menu"]')) {
+        return;
+    }
+    // also don't navigate if text is selected
+    if (window.getSelection()?.toString()) {
+        return;
+    }
+
     if (!isCommentsOpen) {
       router.push(`/posts/${post.id}`);
     }
