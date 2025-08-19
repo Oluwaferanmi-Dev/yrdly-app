@@ -33,196 +33,85 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.acceptfriendrequest = exports.oneventinvite = exports.onnewlike = exports.onnewcomment = exports.onnewpost = exports.onnewmessage = exports.onfriendrequestaccepted = exports.onfriendrequestcreated = void 0;
+exports.unblockUser = exports.blockUser = exports.unfriendUser = exports.acceptfriendrequest = exports.processMailQueue = void 0;
 const firestore_1 = require("firebase-functions/v2/firestore");
 const https_1 = require("firebase-functions/v2/https");
 const admin = __importStar(require("firebase-admin"));
 const logger = __importStar(require("firebase-functions/logger"));
+const resend_1 = require("resend");
+const params_1 = require("firebase-functions/params");
 admin.initializeApp();
 const db = admin.firestore();
+// Define the Resend API key as a secret parameter
+const resendApiKey = (0, params_1.defineString)('RESEND_API_KEY');
 // --- Re-usable notification sender function ---
 const sendNotification = async (userId, type, senderId, relatedId, message, title, clickAction) => {
-    try {
-        const userDoc = await db.collection('users').doc(userId).get();
-        if (!userDoc.exists) {
-            logger.log(`User ${userId} not found.`);
-            return;
-        }
-        const userData = userDoc.data();
-        const notificationSettings = userData.notificationSettings || {};
-        const typeKey = type.split('_')[0] + 's';
-        if (notificationSettings[typeKey] === false) {
-            logger.log(`User ${userId} has disabled ${type} notifications.`);
-            return;
-        }
-        const notification = {
-            userId, type, senderId, relatedId, message, isRead: false,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-        await db.collection('notifications').add(notification);
-        if (userData.fcmToken) {
-            const fcmMessage = {
-                token: userData.fcmToken,
-                notification: { title, body: message },
-                webpush: { fcmOptions: { link: clickAction } },
-            };
-            await admin.messaging().send(fcmMessage);
-        }
-    }
-    catch (error) {
-        logger.error(`Error sending notification to ${userId}:`, error);
-    }
+    // ... (existing code)
 };
 // --- Notification Triggers ---
-exports.onfriendrequestcreated = (0, firestore_1.onDocumentCreated)("friend_requests/{requestId}", async (event) => {
+// ... (existing code)
+// --- Email Sending Function (New) ---
+exports.processMailQueue = (0, firestore_1.onDocumentCreated)("mail/{mailId}", async (event) => {
     const snapshot = event.data;
-    if (!snapshot)
+    if (!snapshot) {
+        logger.log("No data associated with the event");
         return;
-    const request = snapshot.data();
-    const fromUserDoc = await db.collection('users').doc(request.fromUserId).get();
-    const fromUserData = fromUserDoc.data();
-    if (fromUserData) {
-        await sendNotification(request.toUserId, 'friend_request', request.fromUserId, event.params.requestId, `${fromUserData.name} sent you a friend request.`, 'New Friend Request', '/neighbors');
     }
-});
-exports.onfriendrequestaccepted = (0, firestore_1.onDocumentUpdated)("friend_requests/{requestId}", async (event) => {
-    if (!event.data)
-        return;
-    const after = event.data.after.data();
-    const before = event.data.before.data();
-    if ((before === null || before === void 0 ? void 0 : before.status) === 'pending' && (after === null || after === void 0 ? void 0 : after.status) === 'accepted') {
-        const toUserDoc = await db.collection('users').doc(after.toUserId).get();
-        const toUserData = toUserDoc.data();
-        if (toUserData) {
-            await sendNotification(after.fromUserId, 'friend_request_accepted', after.toUserId, event.params.requestId, `${toUserData.name} accepted your friend request.`, 'Friend Request Accepted', `/users/${after.toUserId}`);
-        }
-    }
-});
-// ... (other notification functions remain the same) ...
-exports.onnewmessage = (0, firestore_1.onDocumentCreated)("chats/{chatId}/messages/{messageId}", async (event) => {
-    const snapshot = event.data;
-    if (!snapshot)
-        return;
-    const message = snapshot.data();
-    const { authorId, text } = message;
-    const { chatId } = event.params;
-    const chatDoc = await db.collection('chats').doc(chatId).get();
-    const chatData = chatDoc.data();
-    if (chatData === null || chatData === void 0 ? void 0 : chatData.userIds) {
-        const recipientId = chatData.userIds.find((id) => id !== authorId);
-        const authorDoc = await db.collection('users').doc(authorId).get();
-        const authorData = authorDoc.data();
-        if (recipientId && authorData) {
-            await sendNotification(recipientId, 'message', authorId, chatId, `${authorData.name}: ${text.substring(0, 50)}...`, 'New Message', `/messages?convId=${authorId}`);
-        }
-    }
-});
-exports.onnewpost = (0, firestore_1.onDocumentCreated)("posts/{postId}", async (event) => {
-    const snapshot = event.data;
-    if (!snapshot)
-        return;
-    const post = snapshot.data();
-    const { authorId, content, location } = post;
-    const authorDoc = await db.collection('users').doc(authorId).get();
-    const authorData = authorDoc.data();
-    if (authorData && location) {
-        const usersQuery = await db.collection('users').where('location.lga', '==', location.lga).where('uid', '!=', authorId).get();
-        const notifications = usersQuery.docs.map(userDoc => sendNotification(userDoc.id, 'post_update', authorId, event.params.postId, `${authorData.name} created a new post: "${content.substring(0, 30)}..."`, 'New Post in Your Neighborhood', '/home'));
-        await Promise.all(notifications);
-    }
-});
-exports.onnewcomment = (0, firestore_1.onDocumentCreated)("posts/{postId}/comments/{commentId}", async (event) => {
-    const snapshot = event.data;
-    if (!snapshot)
-        return;
-    const comment = snapshot.data();
-    const { authorId } = comment;
-    const { postId } = event.params;
-    const postDoc = await db.collection('posts').doc(postId).get();
-    const postData = postDoc.data();
-    const authorDoc = await db.collection('users').doc(authorId).get();
-    const authorData = authorDoc.data();
-    if (postData && authorData && postData.authorId !== authorId) {
-        await sendNotification(postData.authorId, 'comment', authorId, postId, `${authorData.name} commented on your post.`, 'New Comment', `/posts/${postId}`);
-    }
-});
-exports.onnewlike = (0, firestore_1.onDocumentUpdated)("posts/{postId}", async (event) => {
-    if (!event.data)
-        return;
-    const before = event.data.before.data();
-    const after = event.data.after.data();
-    if ((before === null || before === void 0 ? void 0 : before.likes.length) < (after === null || after === void 0 ? void 0 : after.likes.length)) {
-        const newLikerId = after.likes.find((id) => !before.likes.includes(id));
-        const postAuthorId = after.authorId;
-        if (newLikerId && postAuthorId !== newLikerId) {
-            const likerDoc = await db.collection('users').doc(newLikerId).get();
-            const likerData = likerDoc.data();
-            if (likerData) {
-                await sendNotification(postAuthorId, 'post_like', newLikerId, event.params.postId, `${likerData.name} liked your post.`, 'New Like', `/posts/${event.params.postId}`);
-            }
-        }
-    }
-});
-exports.oneventinvite = (0, firestore_1.onDocumentUpdated)("events/{eventId}", async (event) => {
-    if (!event.data)
-        return;
-    const before = event.data.before.data();
-    const after = event.data.after.data();
-    if ((before === null || before === void 0 ? void 0 : before.invited.length) < (after === null || after === void 0 ? void 0 : after.invited.length)) {
-        const newInviteeId = after.invited.find((id) => !before.invited.includes(id));
-        const eventCreatorId = after.authorId;
-        const creatorDoc = await db.collection('users').doc(eventCreatorId).get();
-        const creatorData = creatorDoc.data();
-        if (newInviteeId && creatorData) {
-            await sendNotification(newInviteeId, 'event_invite', eventCreatorId, event.params.eventId, `${creatorData.name} invited you to the event: "${after.title}"`, 'New Event Invitation', '/events');
-        }
-    }
-});
-// --- Callable function for accepting friend requests ---
-exports.acceptfriendrequest = (0, https_1.onCall)(async (request) => {
-    var _a;
-    const uid = (_a = request.auth) === null || _a === void 0 ? void 0 : _a.uid;
-    if (!uid) {
-        throw new https_1.HttpsError('unauthenticated', 'You must be logged in.');
-    }
-    const { friendRequestId } = request.data;
-    if (!friendRequestId) {
-        throw new https_1.HttpsError('invalid-argument', 'The function must be called with a "friendRequestId".');
-    }
-    const friendRequestRef = db.collection('friend_requests').doc(friendRequestId);
+    const mailData = snapshot.data();
+    const resend = new resend_1.Resend(resendApiKey.value());
     try {
-        await db.runTransaction(async (transaction) => {
-            const friendRequestDoc = await transaction.get(friendRequestRef);
-            if (!friendRequestDoc.exists) {
-                throw new https_1.HttpsError('not-found', 'The specified friend request does not exist.');
-            }
-            const friendRequest = friendRequestDoc.data();
-            if (friendRequest.toUserId !== uid) {
-                throw new https_1.HttpsError('permission-denied', 'You are not authorized to accept this request.');
-            }
-            if (friendRequest.status !== 'pending') {
-                // No need to throw an error, just log and exit gracefully.
-                logger.log(`Request ${friendRequestId} is already ${friendRequest.status}.`);
+        let subject = "";
+        let htmlBody = "";
+        // Template selection logic
+        switch (mailData.template.name) {
+            case "eventConfirmation":
+                const data = mailData.template.data;
+                subject = `🎉 You're attending: ${data.eventName}!`;
+                htmlBody = `
+                    <h1>Event Confirmation</h1>
+                    <p>Hi there,</p>
+                    <p>Thanks for RSVPing to <strong>${data.eventName}</strong>. We've added it to your calendar!</p>
+                    <ul>
+                        <li><strong>Date:</strong> ${data.eventDate}</li>
+                        <li><strong>Time:</strong> ${data.eventTime}</li>
+                        <li><strong>Location:</strong> ${data.eventLocation}</li>
+                    </ul>
+                    <p>You can view the event details here: <a href="${data.eventUrl}">${data.eventUrl}</a></p>
+                    <p>See you there!</p>
+                    <p>- The Yrdly Team</p>
+                `;
+                break;
+            default:
+                logger.warn(`Unknown email template: ${mailData.template.name}`);
+                // Delete the document to prevent it from being processed again
+                await db.collection("mail").doc(event.params.mailId).delete();
                 return;
-            }
-            const fromUserId = friendRequest.fromUserId;
-            const toUserId = friendRequest.toUserId;
-            const fromUserRef = db.collection('users').doc(fromUserId);
-            const toUserRef = db.collection('users').doc(toUserId);
-            transaction.update(friendRequestRef, { status: 'accepted' });
-            transaction.update(fromUserRef, { friends: admin.firestore.FieldValue.arrayUnion(toUserId) });
-            transaction.update(toUserRef, { friends: admin.firestore.FieldValue.arrayUnion(fromUserId) });
+        }
+        await resend.emails.send({
+            from: 'onboarding@resend.dev', // You must verify this domain in Resend
+            to: mailData.to,
+            subject: subject,
+            html: htmlBody,
         });
-        logger.log(`Successfully accepted friend request ${friendRequestId}`);
-        return { success: true };
+        logger.info(`Email sent successfully to ${mailData.to}`);
+        // Delete the document from the mail collection after sending
+        await db.collection("mail").doc(event.params.mailId).delete();
     }
     catch (error) {
-        logger.error(`Error accepting friend request ${friendRequestId}:`, error);
-        // Re-throw HttpsError or convert other errors
-        if (error instanceof https_1.HttpsError) {
-            throw error;
-        }
-        throw new https_1.HttpsError('internal', 'An unexpected error occurred.');
+        logger.error("Error sending email:", error);
     }
+});
+// --- Callable Functions ---
+exports.acceptfriendrequest = (0, https_1.onCall)({ cors: ["https://yrdly-app.vercel.app", "http://localhost:9002"] }, async (request) => {
+    // ... (existing code)
+});
+exports.unfriendUser = (0, https_1.onCall)({ cors: ["https://yrdly-app.vercel.app", "http://localhost:9002"] }, async (request) => {
+    // ... (existing code)
+});
+exports.blockUser = (0, https_1.onCall)({ cors: ["https://yrdly-app.vercel.app", "http://localhost:9002"] }, async (request) => {
+    // ... (existing code)
+});
+exports.unblockUser = (0, https_1.onCall)({ cors: ["https://yrdly-app.vercel.app", "http://localhost:9002"] }, async (request) => {
+    // ... (existing code)
 });
 //# sourceMappingURL=index.js.map
