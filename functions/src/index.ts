@@ -119,7 +119,70 @@ export const processMailQueue = onDocumentCreated("mail/{mailId}", async (event)
 
 // --- Callable Functions ---
 export const acceptfriendrequest = onCall({ cors: ["https://yrdly-app.vercel.app", "http://localhost:9002"] }, async (request) => {
-    // ... (existing code)
+    const { friendRequestId } = request.data;
+    const authUser = request.auth;
+
+    if (!authUser) {
+        throw new Error("User must be authenticated to accept a friend request.");
+    }
+
+    if (!friendRequestId) {
+        throw new Error("Friend request ID is required.");
+    }
+
+    const friendRequestRef = db.collection("friend_requests").doc(friendRequestId);
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const friendRequestDoc = await transaction.get(friendRequestRef);
+
+            if (!friendRequestDoc.exists) {
+                throw new Error("Friend request does not exist.");
+            }
+
+            const friendRequestData = friendRequestDoc.data();
+            if (!friendRequestData) {
+                throw new Error("Friend request data is missing.");
+            }
+
+            if (friendRequestData.toUserId !== authUser.uid) {
+                throw new Error("User is not authorized to accept this friend request.");
+            }
+            
+            if (friendRequestData.status !== 'pending') {
+                throw new Error("This friend request is not pending.");
+            }
+
+            const fromUserRef = db.collection("users").doc(friendRequestData.fromUserId);
+            const toUserRef = db.collection("users").doc(friendRequestData.toUserId);
+
+            // Update friend request status
+            transaction.update(friendRequestRef, { status: "accepted" });
+
+            // Add users to each other's friends list
+            transaction.update(fromUserRef, { friends: admin.firestore.FieldValue.arrayUnion(friendRequestData.toUserId) });
+            transaction.update(toUserRef, { friends: admin.firestore.FieldValue.arrayUnion(friendRequestData.fromUserId) });
+
+            // Create a notification for the user who sent the request
+            const notificationRef = db.collection("notifications").doc();
+            transaction.set(notificationRef, {
+                userId: friendRequestData.fromUserId,
+                type: "friend_request_accepted",
+                senderId: authUser.uid,
+                relatedId: authUser.uid,
+                message: `${authUser.token.name || 'Someone'} accepted your friend request.`,
+                isRead: false,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        });
+
+        logger.log(`Friend request ${friendRequestId} accepted.`);
+        return { success: true, message: "Friend request accepted." };
+
+    } catch (error) {
+        logger.error(`Error accepting friend request ${friendRequestId}:`, error);
+        throw new Error("Failed to accept friend request.");
+    }
 });
 
 export const unfriendUser = onCall({ cors: ["https://yrdly-app.vercel.app", "http://localhost:9002"] }, async (request) => {

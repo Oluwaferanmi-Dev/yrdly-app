@@ -18,9 +18,13 @@ import { timeAgo } from "@/lib/utils"; // Assuming you have a timeAgo utility
 
 import { Notification } from "@/hooks/use-notifications";
 
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Trash2 } from "lucide-react";
+
 export function NotificationsPanel() {
-    const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+    const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications } = useNotifications();
     const router = useRouter();
+    const isMobile = useIsMobile();
 
     const handleNotificationClick = (notification: Notification) => {
         markAsRead(notification.id);
@@ -65,11 +69,18 @@ export function NotificationsPanel() {
             <DropdownMenuContent align="end" className="w-80">
                 <DropdownMenuLabel className="flex justify-between items-center">
                     <span>Notifications</span>
-                    {unreadCount > 0 && (
-                        <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-auto py-0 px-2">
-                            <CheckCheck className="h-4 w-4 mr-1" /> Mark all as read
-                        </Button>
-                    )}
+                    <div className="flex items-center">
+                        {unreadCount > 0 && (
+                            <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-auto py-0 px-2">
+                                <CheckCheck className="h-4 w-4 mr-1" /> Mark all as read
+                            </Button>
+                        )}
+                        {isMobile && notifications.length > 0 && (
+                            <Button variant="ghost" size="sm" onClick={clearAllNotifications} className="h-auto py-0 px-2 text-red-500">
+                                <Trash2 className="h-4 w-4 mr-1" /> Clear All
+                            </Button>
+                        )}
+                    </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <ScrollArea className="h-96">

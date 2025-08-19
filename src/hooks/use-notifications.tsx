@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, Timestamp, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from './use-auth';
 import { useToast } from './use-toast';
@@ -83,5 +83,11 @@ export const useNotifications = () => {
         await Promise.all(promises);
     };
 
-    return { notifications, unreadCount, loading, markAsRead, markAllAsRead };
+    const clearAllNotifications = async () => {
+        if (!user) return;
+        const promises = notifications.map(n => deleteDoc(doc(db, 'notifications', n.id)));
+        await Promise.all(promises);
+    };
+
+    return { notifications, unreadCount, loading, markAsRead, markAllAsRead, clearAllNotifications };
 };
