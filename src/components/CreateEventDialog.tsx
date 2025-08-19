@@ -175,7 +175,7 @@ export const CreateEventDialog = memo(function CreateEventDialog({ children, onO
 
   const handleOpenChange = React.useCallback((newOpenState: boolean) => {
     setOpen(newOpenState);
-    if(onOpen-Change) onOpenChange(newOpenState);
+    if(onOpenChange) onOpenChange(newOpenState);
     if (!newOpenState) {
         form.reset();
     }
