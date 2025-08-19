@@ -511,5 +511,3 @@ const CreatePostDialogComponent = ({
 };
 
 export const CreatePostDialog = memo(CreatePostDialogComponent);
-
-    
