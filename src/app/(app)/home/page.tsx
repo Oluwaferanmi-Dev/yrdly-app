@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyFeed } from "@/components/EmptyFeed";
 import { WelcomeBanner } from "@/components/WelcomeBanner";
 import { SuggestedNeighbors } from "@/components/SuggestedNeighbors";
+import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
 
 export default function Home() {
   const [posts, setPosts] = useState<PostType[]>([]);
@@ -39,6 +40,7 @@ export default function Home() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
       {/* Main Content - 2 columns on large screens */}
       <div className="lg:col-span-2 space-y-6">
+        <EmailVerificationBanner />
         <WelcomeBanner />
         
         <Card>

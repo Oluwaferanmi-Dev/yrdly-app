@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { signInWithEmailAndPassword, signInWithPopup, getAdditionalUserInfo, AuthProvider, OAuthProvider } from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup, getAdditionalUserInfo, AuthProvider, OAuthProvider, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db, googleProvider, appleProvider } from '@/lib/firebase';
 import { doc, setDoc } from "firebase/firestore";
 import { useRouter } from 'next/navigation';
@@ -21,6 +21,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Form,
@@ -40,11 +49,16 @@ const formSchema = z.object({
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
 });
 
+const passwordResetSchema = z.object({
+  email: z.string().email({ message: "Please enter a valid email address." }),
+});
+
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,6 +66,13 @@ export default function LoginPage() {
       email: '',
       password: '',
     },
+  });
+  
+  const resetForm = useForm<z.infer<typeof passwordResetSchema>>({
+      resolver: zodResolver(passwordResetSchema),
+      defaultValues: {
+          email: "",
+      },
   });
 
   const handleSocialSignIn = async (provider: AuthProvider | OAuthProvider) => {
@@ -103,6 +124,30 @@ export default function LoginPage() {
         setLoading(false);
     }
   };
+
+  const handlePasswordReset = async (values: z.infer<typeof passwordResetSchema>) => {
+      setLoading(true);
+      try {
+          await sendPasswordResetEmail(auth, values.email);
+          toast({
+              title: "Password Reset Email Sent",
+              description: "Please check your inbox for instructions to reset your password.",
+          });
+          setResetDialogOpen(false);
+          resetForm.reset();
+      } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          resetForm.setError("email", { type: "manual", message: errorMessage });
+          toast({
+              variant: "destructive",
+              title: "Error",
+              description: errorMessage,
+          });
+      } finally {
+          setLoading(false);
+      }
+  };
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 animate-fade-in">
@@ -158,7 +203,44 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Password</FormLabel>
+                        <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="link" type="button" className="text-xs p-0 h-auto">Forgot Password?</Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                              <Form {...resetForm}>
+                                  <form onSubmit={resetForm.handleSubmit(handlePasswordReset)}>
+                                      <DialogHeader>
+                                          <DialogTitle>Reset Password</DialogTitle>
+                                          <DialogDescription>
+                                              Enter your email address and we'll send you a link to reset your password.
+                                          </DialogDescription>
+                                      </DialogHeader>
+                                      <div className="py-4">
+                                          <FormField
+                                              control={resetForm.control}
+                                              name="email"
+                                              render={({ field }) => (
+                                                  <FormItem>
+                                                      <FormLabel>Email</FormLabel>
+                                                      <FormControl>
+                                                          <Input placeholder="name@example.com" {...field} />
+                                                      </FormControl>
+                                                      <FormMessage />
+                                                  </FormItem>
+                                              )}
+                                          />
+                                      </div>
+                                      <DialogFooter>
+                                          <Button type="submit" disabled={loading}>{loading ? "Sending..." : "Send Reset Link"}</Button>
+                                      </DialogFooter>
+                                  </form>
+                              </Form>
+                          </DialogContent>
+                        </Dialog>
+                    </div>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
