@@ -31,6 +31,7 @@ const MessagesLoading = () => (
 
 
 export default function MessagesPage({ params }: { params?: { convId?: string } }) {
+    console.log("MessagesPage rendered. Params:", params);
     const { user, userDetails } = useAuth();
     const [loading, setLoading] = useState(true);
     const selectedConversationId = params?.convId;
