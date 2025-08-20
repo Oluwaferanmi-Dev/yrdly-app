@@ -20,11 +20,14 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { NotificationsPanel } from './NotificationsPanel';
 import { SearchDialog } from '../SearchDialog';
+import { useUnreadMessages } from '@/hooks/use-unread-messages';
+import { cn } from '@/lib/utils';
 
 export function AppHeader() {
   const { user, userDetails } = useAuth();
   const router = useRouter();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const unreadMessagesCount = useUnreadMessages();
 
   const handleLogout = async () => {
     await auth.signOut();
@@ -56,8 +59,13 @@ export function AppHeader() {
             </Button>
           </Link>
           <Link href="/messages">
-            <Button variant="ghost" size="icon" className="rounded-full">
+            <Button variant="ghost" size="icon" className="rounded-full relative">
               <MessageCircle className="h-5 w-5" />
+              {unreadMessagesCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full h-4 w-4 flex items-center justify-center text-xs font-bold">
+                  {unreadMessagesCount}
+                </span>
+              )}
               <span className="sr-only">Messages</span>
             </Button>
           </Link>

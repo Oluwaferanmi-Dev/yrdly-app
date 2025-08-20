@@ -4,7 +4,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, ShoppingCart } from "lucide-react";
-import { CreatePostDialog } from "@/components/CreatePostDialog";
+import { CreateItemDialog } from "@/components/CreateItemDialog";
 import { useState, useEffect, useMemo } from "react";
 import type { Post as PostType } from "@/types";
 import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
@@ -100,15 +100,11 @@ export default function MarketplacePage() {
         )}
         
         <div className="fixed bottom-20 right-4 z-20">
-            <CreatePostDialog 
-                preselectedCategory="For Sale"
-                title="List an Item for Sale"
-                description="Provide details about the item you're selling."
-            >
+            <CreateItemDialog>
                 <Button className="rounded-full h-14 w-14 shadow-lg" style={{backgroundColor: '#34A853'}}>
                     <Plus className="h-6 w-6" />
                 </Button>
-             </CreatePostDialog>
+             </CreateItemDialog>
         </div>
     </div>
   );

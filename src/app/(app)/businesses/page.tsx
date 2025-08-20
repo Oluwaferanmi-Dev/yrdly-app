@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use-auth";
-import { CreatePostDialog } from "@/components/CreatePostDialog";
+import { CreateBusinessDialog } from "@/components/CreateBusinessDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -99,12 +99,12 @@ function BusinessCard({ business }: { business: Business }) {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <CreatePostDialog postToEdit={business} postType="Business">
+                                <CreateBusinessDialog postToEdit={business}>
                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                         <Edit className="mr-2 h-4 w-4" />
                                         <span>Edit</span>
                                     </DropdownMenuItem>
-                                </CreatePostDialog>
+                                </CreateBusinessDialog>
                                 <AlertDialogTrigger asChild>
                                     <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
                                         <Trash2 className="mr-2 h-4 w-4" />
@@ -149,7 +149,7 @@ function EmptyBusinesses() {
             </div>
             <h2 className="text-2xl font-bold">No businesses yet</h2>
             <p className="text-muted-foreground mt-2 mb-6">Be the first to add a local business to the directory!</p>
-            <CreatePostDialog postType="Business">
+            <CreateBusinessDialog>
                 <Button>
                     <Plus className="mr-2 h-4 w-4" /> Add Business
                 </Button>
@@ -186,7 +186,7 @@ export default function BusinessesPage() {
             <h1 className="text-2xl md:text-3xl font-bold font-headline">Local businesses</h1>
             <p className="text-muted-foreground">Discover and support businesses in your neighborhood.</p>
         </div>
-        <CreatePostDialog postType="Business">
+        <CreateBusinessDialog>
             <Button>
                 <Plus className="mr-2 h-4 w-4" /> Add Your Business
             </Button>

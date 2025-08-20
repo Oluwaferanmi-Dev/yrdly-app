@@ -32,7 +32,6 @@ const MessagesLoading = () => (
 
 export default function MessagesPage({ params }: { params?: { convId?: string } }) {
     const { user, userDetails } = useAuth();
-    const [conversations, setConversations] = useState<Conversation[]>([]);
     const [loading, setLoading] = useState(true);
     const selectedConversationId = params?.convId;
 
@@ -43,75 +42,11 @@ export default function MessagesPage({ params }: { params?: { convId?: string } 
         avatarUrl: user.photoURL || `https://placehold.co/100x100.png`,
     } as User : null, [user]);
 
+    // Simulate loading for a moment, as conversations are now fetched within ChatLayout
     useEffect(() => {
-        if (!user) {
-            setLoading(false);
-            return;
-        }
-
-        const q = query(
-            collection(db, 'conversations'),
-            where('participantIds', 'array-contains', user.uid),
-            orderBy('lastMessage.timestamp', 'desc')
-        );
-
-        const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-            const convsPromises = querySnapshot.docs.map(async (docSnap) => {
-                const convData = docSnap.data();
-                const otherParticipantId = convData.participantIds.find((id: string) => id !== user.uid);
-                
-                if (!otherParticipantId) return null;
-
-                const userDoc = await getDoc(doc(db, 'users', otherParticipantId));
-                if (!userDoc.exists()) return null;
-                const participant = { id: userDoc.id, ...userDoc.data() } as User;
-
-                const lastMessage = convData.lastMessage;
-
-                return {
-                    id: docSnap.id,
-                    participantIds: convData.participantIds,
-                    participant,
-                    lastMessage: lastMessage ? {
-                        id: 'last',
-                        senderId: lastMessage.senderId,
-                        text: lastMessage.text,
-                        timestamp: (lastMessage.timestamp as Timestamp)?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '...',
-                        isRead: lastMessage.readBy?.includes(user.uid),
-                    } : undefined,
-                } as Conversation;
-            });
-
-            const resolvedConvs = (await Promise.all(convsPromises)).filter(Boolean) as Conversation[];
-            
-            // If a specific conversation is selected but not in the list (e.g., brand new), fetch it directly
-            if (selectedConversationId && !resolvedConvs.some(c => c.id === selectedConversationId)) {
-                const convDocRef = doc(db, 'conversations', selectedConversationId);
-                const convDocSnap = await getDoc(convDocRef);
-                if (convDocSnap.exists()) {
-                    const convData = convDocSnap.data();
-                    const otherParticipantId = convData.participantIds.find((id: string) => id !== user.uid);
-                    if (otherParticipantId) {
-                        const userDoc = await getDoc(doc(db, 'users', otherParticipantId));
-                        if(userDoc.exists()){
-                            const participant = { id: userDoc.id, ...userDoc.data() } as User;
-                             resolvedConvs.unshift({ // Add to the top of the list
-                                id: convDocSnap.id,
-                                participantIds: convData.participantIds,
-                                participant,
-                             } as Conversation);
-                        }
-                    }
-                }
-            }
-
-
-            setConversations(resolvedConvs);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [user, selectedConversationId]);
+        const timer = setTimeout(() => setLoading(false), 500); // Adjust as needed
+        return () => clearTimeout(timer);
+    }, []);
 
     if (loading) {
         return <MessagesLoading />;
@@ -126,22 +61,11 @@ export default function MessagesPage({ params }: { params?: { convId?: string } 
         />;
     }
 
-    if (conversations.length === 0) {
-        return (
-            <div className="h-full">
-                <NoFriendsEmptyState 
-                    title="No Conversations Yet"
-                    description="You haven't started any conversations yet. Find neighbors and send them a friend request to start chatting!"
-                    buttonText="Find Neighbors"
-                    buttonLink="/neighbors"
-                />
-            </div>
-        );
-    }
+    // No need for conversations.length === 0 check here, ChatLayout handles it
 
     return (
         <div className="h-[calc(100vh_-_8rem)] md:h-auto">
-            <ChatLayout conversations={conversations} currentUser={currentUser} selectedConversationId={selectedConversationId} />
+            <ChatLayout currentUser={currentUser} selectedConversationId={selectedConversationId} />
         </div>
     );
 }

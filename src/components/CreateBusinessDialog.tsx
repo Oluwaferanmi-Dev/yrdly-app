@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm, UseFormReturn } from "react-hook-form";
@@ -40,25 +41,31 @@ import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/fi
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
-import type { Post } from "@/types";
+import type { Business } from "@/types";
 import { usePosts } from "@/hooks/use-posts";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { LocationInput, LocationValue } from "./LocationInput";
 
-const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
-  text: z.string().min(1, "Text can't be empty.").max(500),
-  image: z.any().optional(),
+const getFormSchema = (isEditMode: boolean, postToEdit?: Business) => z.object({
+  name: z.string().min(1, "Business name can't be empty."),
+  businessCategory: z.string().min(1, "Category can't be empty."),
+  text: z.string().optional(),
+  location: z.custom<LocationValue>().refine(value => value && value.address.length > 0, {
+    message: "Location is required.",
+  }),
+  image: z.any().refine((files) => files && (files.length > 0 || (Array.isArray(files) && files.some(f => typeof f === 'string'))), "An image is required for the business."),
 });
 
-type CreatePostDialogProps = {
+type CreateBusinessDialogProps = {
     children?: React.ReactNode;
-    postToEdit?: Post;
+    postToEdit?: Business;
     onOpenChange?: (open: boolean) => void;
 }
 
-const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: CreatePostDialogProps) => {
+const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: CreateBusinessDialogProps) => {
   const { user, userDetails } = useAuth();
   const { toast } = useToast();
-  const { createPost, updatePost } = usePosts();
+  const { createBusiness, updateBusiness } = usePosts();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
@@ -69,7 +76,10 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      name: "",
+      businessCategory: "",
       text: "",
+      location: { address: "" },
       image: undefined,
     },
   });
@@ -78,12 +88,18 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     if (open) {
         if (isEditMode && postToEdit) {
             form.reset({
-                text: postToEdit.text,
+                name: postToEdit.name,
+                businessCategory: postToEdit.category,
+                text: postToEdit.description,
+                location: postToEdit.location,
                 image: postToEdit.imageUrls || [],
             });
         } else {
             form.reset({
+                name: "",
+                businessCategory: "",
                 text: "",
+                location: { address: "" },
                 image: undefined,
             });
         }
@@ -104,7 +120,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
         if (imageFiles && imageFiles instanceof FileList && imageFiles.length > 0) {
              const uploadedUrls = await Promise.all(
                 Array.from(imageFiles).map(async (file) => {
-                    const storagePath = `posts/${user.uid}/${Date.now()}_${file.name}`;
+                    const storagePath = `businesses/${user.uid}/${Date.now()}_${file.name}`;
                     const storageRef = ref(storage, storagePath);
                     await uploadBytes(storageRef, file);
                     return getDownloadURL(storageRef);
@@ -113,27 +129,28 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
             imageUrls = isEditMode ? [...imageUrls, ...uploadedUrls] : uploadedUrls;
         }
 
-        const postData: Partial<Post> = {
-            text: values.text,
-            category: "General",
+        const businessData: Partial<Business> = {
+            name: values.name,
+            category: values.businessCategory,
+            description: values.text,
+            location: values.location,
             imageUrls: imageUrls,
-            imageUrl: imageUrls.length > 0 ? imageUrls[0] : (postToEdit?.imageUrls?.[0] || ""),
         };
 
         if (isEditMode && postToEdit) {
-            await updatePost(postToEdit.id, postData);
-            toast({ title: 'Post updated!' });
+            await updateBusiness(postToEdit.id, businessData);
+            toast({ title: 'Business updated!' });
         } else {
-            await createPost(postData as Omit<Post, 'id' | 'userId' | 'authorName' | 'authorImage' | 'timestamp' | 'commentCount' | 'likedBy'>);
-            toast({ title: 'Post created!' });
+            await createBusiness(businessData as Omit<Business, 'id' | 'ownerId' | 'createdAt'>);
+            toast({ title: 'Business added!' });
         }
 
         form.reset();
         setOpen(false);
 
     } catch(error) {
-        console.error("Error submitting post:", error);
-        toast({ variant: 'destructive', title: 'Error', description: "Failed to submit post." });
+        console.error("Error submitting business:", error);
+        toast({ variant: 'destructive', title: 'Error', description: "Failed to submit business." });
     } finally {
         setLoading(false);
     }
@@ -149,8 +166,8 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     }
   }, [onOpenChange, form.reset]);
   
-  const finalTitle = isEditMode ? "Edit Post" : "Create Post";
-  const finalDescription = isEditMode ? "Make changes to your post here." : "Share something with your neighborhood.";
+  const finalTitle = isEditMode ? "Edit Business" : "Add a Business";
+  const finalDescription = isEditMode ? "Make changes to your business here." : "Add your business to the neighborhood directory.";
 
   const imageField = form.register('image');
 
@@ -159,19 +176,52 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
         <div className="space-y-4 px-1">
             <FormField
                 control={form.control}
+                name="name"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Business Name</FormLabel>
+                    <FormControl><Input placeholder="e.g., The Corner Cafe" {...field} autoComplete="organization" /></FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="businessCategory"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <FormControl><Input placeholder="e.g., Food & Drink" {...field} autoComplete="off" /></FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
                 name="text"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Post</FormLabel>
-                    <FormControl>
-                    <Textarea
-                        placeholder="What's happening in the neighborhood?"
-                        className="resize-none min-h-[120px]"
-                        {...field}
-                    />
-                    </FormControl>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl><Textarea placeholder="Tell everyone about your business..." {...field} /></FormControl>
                     <FormMessage />
                 </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Location</FormLabel>
+                        <FormControl>
+                            <LocationInput 
+                                name={field.name}
+                                control={form.control}
+                                defaultValue={field.value}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
                 )}
             />
             <FormField
@@ -179,7 +229,9 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                 name="image"
                 render={() => (
                 <FormItem>
-                    <FormLabel>Add images</FormLabel>
+                    <FormLabel>
+                        Add images <span className="text-destructive">*</span>
+                    </FormLabel>
                     <FormControl>
                         <Input 
                             type="file" 
@@ -208,7 +260,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
             <AvatarFallback>{userDetails?.name?.charAt(0) || 'U'}</AvatarFallback>
         </Avatar>
         <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md border border-dashed">
-            What&apos;s happening in your neighborhood?
+            Add a business...
         </div>
         <Button variant="ghost" size="icon"><PlusCircle className="h-6 w-6 text-primary" /></Button>
     </div>
@@ -235,7 +287,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                     </div>
                     <SheetFooter className="p-4 border-t mt-auto">
                         <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                            {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Create Post')}
+                            {loading ? (isEditMode ? 'Saving...' : 'Adding Business...') : (isEditMode ? 'Save Changes' : 'Add Business')}
                         </Button>
                     </SheetFooter>
                   </form>
@@ -264,7 +316,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
             </div>
             <DialogFooter className="p-6 pt-0 border-t">
                 <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                    {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Create Post')}
+                    {loading ? (isEditMode ? 'Saving...' : 'Adding Business...') : (isEditMode ? 'Save Changes' : 'Add Business')}
                 </Button>
             </DialogFooter>
           </form>
@@ -274,4 +326,4 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
   );
 };
 
-export const CreatePostDialog = memo(CreatePostDialogComponent);
+export const CreateBusinessDialog = memo(CreateBusinessDialogComponent);

@@ -22,6 +22,7 @@ import {
   serverTimestamp,
   updateDoc,
   arrayUnion,
+  where,
 } from "firebase/firestore";
 import { db, storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -64,17 +65,15 @@ export function NoFriendsEmptyState({
 }
 
 interface ChatLayoutProps {
-  conversations: Conversation[];
   currentUser: User;
   selectedConversationId?: string;
 }
 
 export function ChatLayout({
-  conversations: initialConversations,
   currentUser,
   selectedConversationId,
 }: ChatLayoutProps) {
-  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -86,12 +85,66 @@ export function ChatLayout({
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const sendTypingStatus = useCallback(async (isTyping: boolean) => {
+      if (!selectedConversation) return;
+      const conversationRef = doc(db, 'conversations', selectedConversation.id);
+      try {
+          await updateDoc(conversationRef, {
+              [`typing.${currentUser.id}`]: isTyping
+          });
+      } catch (e) {
+          console.error("Error updating typing status", e)
+      }
+  }, [selectedConversation, currentUser.id]);
+
+  const debouncedStopTyping = useDebouncedCallback(() => {
+      sendTypingStatus(false);
+  }, 2000);
+
   const [showChat, setShowChat] = useState(false);
 
-  // Update conversation list when prop changes
+  // Listen for real-time updates to conversations
   useEffect(() => {
-    setConversations(initialConversations);
-  }, [initialConversations]);
+    if (!currentUser?.id) return;
+
+    const q = query(
+      collection(db, "conversations"),
+      where("participantIds", "array-contains", currentUser.id)
+    );
+
+    const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+      const convsPromises = querySnapshot.docs.map(async (docSnap) => {
+        const convData = docSnap.data();
+        const otherParticipantId = convData.participantIds.find((id: string) => id !== currentUser.id);
+        
+        if (!otherParticipantId) return null;
+
+        const userDoc = await getDoc(doc(db, 'users', otherParticipantId));
+        if (!userDoc.exists()) return null;
+        const participant = { id: userDoc.id, ...userDoc.data() } as User;
+
+        const lastMessage = convData.lastMessage;
+
+        return {
+            id: docSnap.id,
+            participantIds: convData.participantIds,
+            participant,
+            lastMessage: lastMessage ? {
+                id: 'last',
+                senderId: lastMessage.senderId,
+                text: lastMessage.text,
+                timestamp: lastMessage.timestamp,
+                readBy: lastMessage.readBy || [],
+            } : undefined,
+        } as Conversation;
+      });
+
+      const resolvedConvs = (await Promise.all(convsPromises)).filter(Boolean) as Conversation[];
+      setConversations(resolvedConvs);
+    });
+
+    return () => unsubscribe();
+  }, [currentUser.id]);
 
   // Pre-select a conversation if an ID is passed
   useEffect(() => {
@@ -182,12 +235,13 @@ export function ChatLayout({
         }
     });
 
-
     return () => {
         unsubscribeMessages();
         unsubscribeConversation();
+        debouncedStopTyping.cancel();
+        sendTypingStatus(false); // Ensure typing status is false on unmount
     };
-  }, [selectedConversation, currentUser, markMessagesAsRead]);
+  }, [selectedConversation, currentUser, markMessagesAsRead, debouncedStopTyping, sendTypingStatus]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -195,26 +249,13 @@ export function ChatLayout({
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages, isTyping]);
-  
-  const debouncedUpdateTyping = useDebouncedCallback(async (isTyping: boolean) => {
-      if (!selectedConversation) return;
-      const conversationRef = doc(db, 'conversations', selectedConversation.id);
-      try {
-          await updateDoc(conversationRef, {
-              [`typing.${currentUser.id}`]: isTyping
-          });
-      } catch (e) {
-          console.error("Error updating typing status", e)
-      }
-
-  }, 2000);
 
 
   const handleTyping = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setNewMessage(e.target.value);
-      debouncedUpdateTyping.cancel();
-      debouncedUpdateTyping(true);
-  }, [debouncedUpdateTyping]);
+      sendTypingStatus(true); // Send true immediately
+      debouncedStopTyping(); // Start/reset debounce for sending false
+  }, [sendTypingStatus, debouncedStopTyping]);
   
   const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,7 +298,7 @@ imageUrl = await getDownloadURL(uploadTask.ref);
             [`typing.${currentUser.id}`]: false,
         });
         
-        debouncedUpdateTyping.cancel();
+        debouncedStopTyping.cancel(); // Cancel any pending stop typing
         setNewMessage("");
         setImageFile(null);
         setImagePreview(null);
@@ -266,7 +307,7 @@ imageUrl = await getDownloadURL(uploadTask.ref);
       console.error("Error sending message: ", error);
       setUploadProgress(null);
     }
-  }, [newMessage, imageFile, selectedConversation, currentUser.id, debouncedUpdateTyping]);
+  }, [newMessage, imageFile, selectedConversation, currentUser.id, debouncedStopTyping]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -425,6 +466,7 @@ imageUrl = await getDownloadURL(uploadTask.ref);
                         placeholder="Type a message..."
                         value={newMessage}
                         onChange={handleTyping}
+                        onBlur={() => debouncedUpdateTyping(false)}
                         className="flex-1 resize-none"
                         rows={1}
                         onKeyDown={(e) => {

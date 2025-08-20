@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm, UseFormReturn } from "react-hook-form";
@@ -45,17 +46,22 @@ import { usePosts } from "@/hooks/use-posts";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
-  text: z.string().min(1, "Text can't be empty.").max(500),
-  image: z.any().optional(),
+  text: z.string().min(1, "Item title can't be empty.").max(100),
+  description: z.string().optional(),
+  price: z.preprocess(
+      (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
+      z.number().positive("Price must be positive.").optional()
+  ),
+  image: z.any().refine((files) => files && (files.length > 0 || (Array.isArray(files) && files.some(f => typeof f === 'string'))), "An image is required for the item."),
 });
 
-type CreatePostDialogProps = {
+type CreateItemDialogProps = {
     children?: React.ReactNode;
     postToEdit?: Post;
     onOpenChange?: (open: boolean) => void;
 }
 
-const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: CreatePostDialogProps) => {
+const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: CreateItemDialogProps) => {
   const { user, userDetails } = useAuth();
   const { toast } = useToast();
   const { createPost, updatePost } = usePosts();
@@ -70,6 +76,8 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     resolver: zodResolver(formSchema),
     defaultValues: {
       text: "",
+      description: "",
+      price: undefined,
       image: undefined,
     },
   });
@@ -79,11 +87,15 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
         if (isEditMode && postToEdit) {
             form.reset({
                 text: postToEdit.text,
+                description: postToEdit.description || "",
+                price: postToEdit.price || undefined,
                 image: postToEdit.imageUrls || [],
             });
         } else {
             form.reset({
                 text: "",
+                description: "",
+                price: undefined,
                 image: undefined,
             });
         }
@@ -115,25 +127,27 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
 
         const postData: Partial<Post> = {
             text: values.text,
-            category: "General",
+            description: values.description,
+            category: "For Sale",
             imageUrls: imageUrls,
             imageUrl: imageUrls.length > 0 ? imageUrls[0] : (postToEdit?.imageUrls?.[0] || ""),
+            price: values.price || 0,
         };
 
         if (isEditMode && postToEdit) {
             await updatePost(postToEdit.id, postData);
-            toast({ title: 'Post updated!' });
+            toast({ title: 'Item updated!' });
         } else {
             await createPost(postData as Omit<Post, 'id' | 'userId' | 'authorName' | 'authorImage' | 'timestamp' | 'commentCount' | 'likedBy'>);
-            toast({ title: 'Post created!' });
+            toast({ title: 'Item listed for sale!' });
         }
 
         form.reset();
         setOpen(false);
 
     } catch(error) {
-        console.error("Error submitting post:", error);
-        toast({ variant: 'destructive', title: 'Error', description: "Failed to submit post." });
+        console.error("Error submitting item:", error);
+        toast({ variant: 'destructive', title: 'Error', description: "Failed to submit item." });
     } finally {
         setLoading(false);
     }
@@ -149,8 +163,8 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     }
   }, [onOpenChange, form.reset]);
   
-  const finalTitle = isEditMode ? "Edit Post" : "Create Post";
-  const finalDescription = isEditMode ? "Make changes to your post here." : "Share something with your neighborhood.";
+  const finalTitle = isEditMode ? "Edit Item" : "Create Item for Sale";
+  const finalDescription = isEditMode ? "Make changes to your item here." : "Sell something in your neighborhood.";
 
   const imageField = form.register('image');
 
@@ -162,13 +176,42 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                 name="text"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Post</FormLabel>
+                    <FormLabel>Item Title</FormLabel>
+                    <FormControl>
+                    <Input placeholder="e.g. Slightly used armchair" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Description (Optional)</FormLabel>
                     <FormControl>
                     <Textarea
-                        placeholder="What's happening in the neighborhood?"
-                        className="resize-none min-h-[120px]"
+                        placeholder="Add more details about the item, its condition, etc."
+                        className="resize-none min-h-[100px]"
                         {...field}
                     />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Price (Optional)</FormLabel>
+                    <FormControl>
+                    <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₦</span>
+                        <Input type="number" placeholder="Leave blank for Free" className="pl-7" {...field} />
+                    </div>
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -179,7 +222,9 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                 name="image"
                 render={() => (
                 <FormItem>
-                    <FormLabel>Add images</FormLabel>
+                    <FormLabel>
+                        Add images <span className="text-destructive">*</span>
+                    </FormLabel>
                     <FormControl>
                         <Input 
                             type="file" 
@@ -208,7 +253,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
             <AvatarFallback>{userDetails?.name?.charAt(0) || 'U'}</AvatarFallback>
         </Avatar>
         <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md border border-dashed">
-            What&apos;s happening in your neighborhood?
+            Sell something...
         </div>
         <Button variant="ghost" size="icon"><PlusCircle className="h-6 w-6 text-primary" /></Button>
     </div>
@@ -235,7 +280,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                     </div>
                     <SheetFooter className="p-4 border-t mt-auto">
                         <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                            {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Create Post')}
+                            {loading ? (isEditMode ? 'Saving...' : 'Listing Item...') : (isEditMode ? 'Save Changes' : 'List Item')}
                         </Button>
                     </SheetFooter>
                   </form>
@@ -264,7 +309,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
             </div>
             <DialogFooter className="p-6 pt-0 border-t">
                 <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                    {loading ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Create Post')}
+                    {loading ? (isEditMode ? 'Saving...' : 'Listing Item...') : (isEditMode ? 'Save Changes' : 'List Item')}
                 </Button>
             </DialogFooter>
           </form>
@@ -274,4 +319,4 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
   );
 };
 
-export const CreatePostDialog = memo(CreatePostDialogComponent);
+export const CreateItemDialog = memo(CreateItemDialogComponent);
