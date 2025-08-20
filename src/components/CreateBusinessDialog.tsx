@@ -37,14 +37,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, memo, useCallback } from "react";
 import * as React from 'react';
-import { collection, addDoc, updateDoc, doc, serverTimestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
-import { useToast } from "@/hooks/use-toast";
-import type { Business } from "@/types";
 import { usePosts } from "@/hooks/use-posts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LocationInput, LocationValue } from "./LocationInput";
+import type { Business } from "@/types";
 
 const getFormSchema = (isEditMode: boolean, postToEdit?: Business) => z.object({
   name: z.string().min(1, "Business name can't be empty."),
@@ -63,9 +59,7 @@ type CreateBusinessDialogProps = {
 }
 
 const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: CreateBusinessDialogProps) => {
-  const { user, userDetails } = useAuth();
-  const { toast } = useToast();
-  const { createBusiness, updateBusiness } = usePosts();
+  const { createBusiness } = usePosts();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
@@ -84,7 +78,6 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
     },
   });
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (open) {
         if (isEditMode && postToEdit) {
@@ -105,79 +98,39 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
             });
         }
     }
-  }, [postToEdit, isEditMode, open, form.reset]);
+  }, [postToEdit, isEditMode, open, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user) {
-        toast({ variant: 'destructive', title: 'Not authenticated' });
-        return;
-    }
     setLoading(true);
-
-    try {
-        let imageUrls: string[] = postToEdit?.imageUrls || [];
-        const imageFiles = values.image;
-
-        if (imageFiles && imageFiles instanceof FileList && imageFiles.length > 0) {
-             const uploadedUrls = await Promise.all(
-                Array.from(imageFiles).map(async (file) => {
-                    const storagePath = `businesses/${user.uid}/${Date.now()}_${file.name}`;
-                    const storageRef = ref(storage, storagePath);
-                    await uploadBytes(storageRef, file);
-                    return getDownloadURL(storageRef);
-                })
-            );
-            imageUrls = isEditMode ? [...imageUrls, ...uploadedUrls] : uploadedUrls;
-        }
-
-        const businessData: Partial<Business> = {
-            name: values.name,
-            category: values.businessCategory,
-            description: values.text,
-            location: values.location,
-            imageUrls: imageUrls,
-        };
-
-        if (isEditMode && postToEdit) {
-            await updateBusiness(postToEdit.id, businessData);
-            toast({ title: 'Business updated!' });
-        } else {
-            await createBusiness(businessData as Omit<Business, 'id' | 'ownerId' | 'createdAt'>);
-            toast({ title: 'Business added!' });
-        }
-
-        form.reset();
-        setOpen(false);
-
-    } catch(error) {
-        console.error("Error submitting business:", error);
-        toast({ variant: 'destructive', title: 'Error', description: "Failed to submit business." });
-    } finally {
-        setLoading(false);
-    }
+    const businessData: Omit<Business, 'id' | 'ownerId' | 'createdAt'> = {
+        name: values.name,
+        category: values.businessCategory,
+        description: values.text || '',
+        location: values.location,
+        imageUrls: [], // Will be handled in createBusiness
+    };
+    await createBusiness(businessData, postToEdit?.id, values.image);
+    setLoading(false);
+    handleOpenChange(false);
   }
-  
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   const handleOpenChange = useCallback((newOpenState: boolean) => {
     setOpen(newOpenState);
     if(onOpenChange) {
         onOpenChange(newOpenState);
     }
-     if (!newOpenState) {
-        form.reset();
-    }
-  }, [onOpenChange, form.reset]);
-  
+  }, [onOpenChange]);
+
   const finalTitle = isEditMode ? "Edit Business" : "Add a Business";
   const finalDescription = isEditMode ? "Make changes to your business here." : "Add your business to the neighborhood directory.";
 
   const imageField = form.register('image');
 
-  const FormContent = memo(function FormContent({ form }: { form: UseFormReturn<z.infer<typeof formSchema>> }) {
+  const FormContent = memo(function FormContent({ formInstance }: { formInstance: UseFormReturn<z.infer<typeof formSchema>> }) {
     return (
         <div className="space-y-4 px-1">
             <FormField
-                control={form.control}
+                control={formInstance.control}
                 name="name"
                 render={({ field }) => (
                 <FormItem>
@@ -188,7 +141,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                 )}
             />
             <FormField
-                control={form.control}
+                control={formInstance.control}
                 name="businessCategory"
                 render={({ field }) => (
                 <FormItem>
@@ -199,7 +152,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                 )}
             />
             <FormField
-                control={form.control}
+                control={formInstance.control}
                 name="text"
                 render={({ field }) => (
                 <FormItem>
@@ -210,15 +163,15 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                 )}
             />
             <FormField
-                control={form.control}
+                control={formInstance.control}
                 name="location"
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Location</FormLabel>
                         <FormControl>
-                            <LocationInput 
+                            <LocationInput
                                 name={field.name}
-                                control={form.control}
+                                control={formInstance.control}
                                 defaultValue={field.value}
                             />
                         </FormControl>
@@ -227,7 +180,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                 )}
             />
             <FormField
-                control={form.control}
+                control={formInstance.control}
                 name="image"
                 render={() => (
                 <FormItem>
@@ -235,9 +188,9 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                         Add images <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
-                        <Input 
-                            type="file" 
-                            accept="image/*" 
+                        <Input
+                            type="file"
+                            accept="image/*"
                             multiple
                             {...imageField}
                         />
@@ -254,8 +207,11 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
         </div>
     );
   });
+  FormContent.displayName = "FormContent";
 
-  const Trigger = React.forwardRef<HTMLDivElement>((props, ref) => (
+  const Trigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
+    const { userDetails } = useAuth();
+    return (
      <div ref={ref} {...props} className="flex items-center gap-4 w-full">
         <Avatar>
             <AvatarImage src={userDetails?.avatarUrl || 'https://placehold.co/100x100.png'}/>
@@ -266,7 +222,8 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
         </div>
         <Button variant="ghost" size="icon"><PlusCircle className="h-6 w-6 text-primary" /></Button>
     </div>
-  ));
+    )
+  });
   Trigger.displayName = 'Trigger';
 
   if (isMobile) {
@@ -285,7 +242,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
                     <div className="p-4 flex-1 overflow-y-auto">
-                        <FormContent form={form} />
+                        <FormContent formInstance={form} />
                     </div>
                     <SheetFooter className="p-4 border-t mt-auto">
                         <Button type="submit" className="w-full" variant="default" disabled={loading}>
@@ -314,7 +271,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-[70vh] overflow-y-auto p-6">
-                <FormContent form={form} />
+                <FormContent formInstance={form} />
             </div>
             <DialogFooter className="p-6 pt-0 border-t">
                 <Button type="submit" className="w-full" variant="default" disabled={loading}>

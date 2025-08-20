@@ -37,13 +37,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, memo, useCallback } from "react";
 import * as React from 'react';
-import { collection, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
-import { useToast } from "@/hooks/use-toast";
 import { LocationInput, LocationValue } from "./LocationInput";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Post } from "@/types";
+import { usePosts } from "@/hooks/use-posts";
+import type { Post } from "@/types";
 
 const formSchema = z.object({
   title: z.string().min(1, "Event title can't be empty.").max(100),
@@ -63,9 +60,8 @@ type CreateEventDialogProps = {
     postToEdit?: Post;
 }
 
-export const CreateEventDialog = memo(function CreateEventDialog({ children, onOpenChange, postToEdit }: CreateEventDialogProps) {
-  const { user, userDetails } = useAuth();
-  const { toast } = useToast();
+const CreateEventDialogComponent = memo(function CreateEventDialog({ children, onOpenChange, postToEdit }: CreateEventDialogProps) {
+  const { createPost } = usePosts();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
@@ -84,7 +80,6 @@ export const CreateEventDialog = memo(function CreateEventDialog({ children, onO
     },
   });
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (open) {
         if (isEditMode && postToEdit) {
@@ -109,92 +104,41 @@ export const CreateEventDialog = memo(function CreateEventDialog({ children, onO
             });
         }
     }
-  }, [isEditMode, postToEdit, open, form.reset]);
+  }, [isEditMode, postToEdit, open, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user || !userDetails) {
-        toast({ variant: 'destructive', title: 'Not authenticated' });
-        return;
-    }
     setLoading(true);
-
-    try {
-        let imageUrls: string[] = postToEdit?.imageUrls || [];
-        const imageFiles = values.image;
-
-        if (imageFiles && imageFiles instanceof FileList && imageFiles.length > 0) {
-            const uploadedUrls = await Promise.all(
-                Array.from(imageFiles).map(async (file) => {
-                    const storageRef = ref(storage, `event_images/${user.uid}/${Date.now()}_${file.name}`);
-                    await uploadBytes(storageRef, file);
-                    return getDownloadURL(storageRef);
-                })
-            );
-            imageUrls = isEditMode ? [...imageUrls, ...uploadedUrls] : uploadedUrls;
-        }
-
-        const eventData = {
-            ...postToEdit, // Carry over existing fields like attendees, likedBy etc.
-            userId: user.uid,
-            authorName: userDetails.name,
-            authorImage: userDetails.avatarUrl,
-            category: "Event",
-            text: values.description,
-            title: values.title,
-            eventLocation: values.location,
-            eventDate: values.eventDate,
-            eventTime: values.eventTime,
-            eventLink: values.eventLink,
-            imageUrls: imageUrls,
-            imageUrl: imageUrls[0] || "",
-            timestamp: isEditMode && postToEdit.timestamp ? postToEdit.timestamp : serverTimestamp(),
-        };
-
-        if (isEditMode && postToEdit) {
-            const postRef = doc(db, "posts", postToEdit.id);
-            await updateDoc(postRef, eventData);
-            toast({ title: 'Event updated!' });
-        } else {
-            await addDoc(collection(db, "posts"), {
-                ...eventData,
-                likedBy: [],
-                commentCount: 0,
-                attendees: []
-            });
-            toast({ title: 'Event created!' });
-        }
-        
-        form.reset();
-        setOpen(false);
-
-    } catch(error) {
-        console.error("Error submitting event:", error);
-        toast({ variant: 'destructive', title: 'Error', description: `Failed to ${isEditMode ? 'update' : 'create'} event.` });
-    } finally {
-        setLoading(false);
-    }
+    const eventData: Partial<Post> = {
+        category: "Event",
+        text: values.description,
+        title: values.title,
+        eventLocation: values.location,
+        eventDate: values.eventDate,
+        eventTime: values.eventTime,
+        eventLink: values.eventLink,
+        attendees: postToEdit?.attendees || [],
+    };
+    await createPost(eventData, postToEdit?.id, values.image);
+    setLoading(false);
+    handleOpenChange(false);
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleOpenChange = useCallback((newOpenState: boolean) => {
     setOpen(newOpenState);
     if(onOpenChange) onOpenChange(newOpenState);
-    if (!newOpenState) {
-        form.reset();
-    }
-  }, [onOpenChange, form.reset]);
-  
+  }, [onOpenChange]);
+
   const finalTitle = isEditMode ? "Edit Event" : "Create Event";
   const finalDescription = isEditMode ? "Make changes to your event." : "Plan and share your neighborhood event.";
 
   type FormValues = z.infer<typeof formSchema>;
 
-const FormContent = memo(function FormContent({ form }: { form: UseFormReturn<FormValues> }) {
+  const FormContent = memo(function FormContent({ formInstance }: { formInstance: UseFormReturn<FormValues> }) {
     return (
-      <Form {...form}>
+      <Form {...formInstance}>
             <form className="space-y-4 px-1">
                <FormField
-                  control={form.control}
+                  control={formInstance.control}
                   name="title"
                   render={({ field }) => (
                     <FormItem>
@@ -205,7 +149,7 @@ const FormContent = memo(function FormContent({ form }: { form: UseFormReturn<Fo
                   )}
                 />
               <FormField
-                control={form.control}
+                control={formInstance.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
@@ -216,15 +160,15 @@ const FormContent = memo(function FormContent({ form }: { form: UseFormReturn<Fo
                 )}
               />
               <FormField
-                control={form.control}
+                control={formInstance.control}
                 name="location"
                 render={({ field }) => (
                   <FormItem>
                       <FormLabel>Location</FormLabel>
                       <FormControl>
-                          <LocationInput 
+                          <LocationInput
                               name={field.name}
-                              control={form.control}
+                              control={formInstance.control}
                               defaultValue={field.value}
                           />
                       </FormControl>
@@ -234,7 +178,7 @@ const FormContent = memo(function FormContent({ form }: { form: UseFormReturn<Fo
               />
               <div className="grid grid-cols-2 gap-4">
                   <FormField
-                      control={form.control}
+                      control={formInstance.control}
                       name="eventDate"
                       render={({ field }) => (
                         <FormItem>
@@ -245,7 +189,7 @@ const FormContent = memo(function FormContent({ form }: { form: UseFormReturn<Fo
                       )}
                     />
                    <FormField
-                      control={form.control}
+                      control={formInstance.control}
                       name="eventTime"
                       render={({ field }) => (
                         <FormItem>
@@ -257,7 +201,7 @@ const FormContent = memo(function FormContent({ form }: { form: UseFormReturn<Fo
                     />
               </div>
               <FormField
-                  control={form.control}
+                  control={formInstance.control}
                   name="eventLink"
                   render={({ field }) => (
                       <FormItem>
@@ -268,7 +212,7 @@ const FormContent = memo(function FormContent({ form }: { form: UseFormReturn<Fo
                   )}
               />
               <FormField
-                control={form.control}
+                control={formInstance.control}
                 name="image"
                 render={({ field: { onChange, value, ...rest }}) => (
                   <FormItem>
@@ -290,19 +234,25 @@ const FormContent = memo(function FormContent({ form }: { form: UseFormReturn<Fo
           </Form>
     )
   });
+  FormContent.displayName = "FormContent";
 
-  const Trigger = () => (
-     <div className="flex items-center gap-4 w-full">
-        <Avatar>
-            <AvatarImage src={userDetails?.avatarUrl || 'https://placehold.co/100x100.png'}/>
-            <AvatarFallback>{userDetails?.name?.charAt(0) || "U"}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md border border-dashed">
-            Organize an event in your neighborhood?
+  const Trigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
+    const { userDetails } = useAuth();
+    return (
+        <div ref={ref} {...props} className="flex items-center gap-4 w-full">
+            <Avatar>
+                <AvatarImage src={userDetails?.avatarUrl || 'https://placehold.co/100x100.png'}/>
+                <AvatarFallback>{userDetails?.name?.charAt(0) || "U"}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md border border-dashed">
+                Organize an event in your neighborhood?
+            </div>
+             <Button variant="ghost" size="icon"><PlusCircle className="h-6 w-6 text-primary" /></Button>
         </div>
-         <Button variant="ghost" size="icon"><PlusCircle className="h-6 w-6 text-primary" /></Button>
-    </div>
-  );
+    );
+  });
+  Trigger.displayName = "Trigger";
+
 
   if (isMobile) {
     return (
@@ -310,7 +260,7 @@ const FormContent = memo(function FormContent({ form }: { form: UseFormReturn<Fo
             <SheetTrigger asChild>{children ? children : <Trigger />}</SheetTrigger>
             <SheetContent side="bottom" className="max-h-screen overflow-y-auto">
                 <SheetHeader className="px-4"><SheetTitle>{finalTitle}</SheetTitle></SheetHeader>
-                <div className="py-4"><FormContent form={form} /></div>
+                <div className="py-4"><FormContent formInstance={form} /></div>
                 <SheetFooter className="px-4 pb-4">
                     <Button onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
                         {loading ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Event')}
@@ -329,7 +279,7 @@ const FormContent = memo(function FormContent({ form }: { form: UseFormReturn<Fo
           <DialogTitle>{finalTitle}</DialogTitle>
           <DialogDescription>{finalDescription}</DialogDescription>
         </DialogHeader>
-        <div className="py-4"><FormContent form={form} /></div>
+        <div className="py-4"><FormContent formInstance={form} /></div>
         <DialogFooter>
           <Button onClick={form.handleSubmit(onSubmit)} className="w-full" variant="default" disabled={loading}>
             {loading ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Event')}
@@ -339,3 +289,7 @@ const FormContent = memo(function FormContent({ form }: { form: UseFormReturn<Fo
     </Dialog>
   );
 });
+CreateEventDialogComponent.displayName = "CreateEventDialogComponent";
+
+export const CreateEventDialog = CreateEventDialogComponent;
+

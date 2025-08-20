@@ -106,7 +106,7 @@ export default function NeighborsPage() {
             unsubscribeRequests();
         };
     }, [currentUser]);
-    
+
     const handleFilterChange = (type: "state" | "lga", value: string) => {
         setFilters((prev) => {
             const newFilters = { ...prev, [type]: value };
@@ -114,11 +114,11 @@ export default function NeighborsPage() {
             return newFilters;
         });
     };
-    
+
     const getFriendshipStatus = useCallback((neighborId: string): FriendshipStatus => {
         if (userDetails?.friends?.includes(neighborId)) return "friends";
-        
-        const request = friendRequests.find(req => 
+
+        const request = friendRequests.find(req =>
             req.status === 'pending' &&
             ((req.fromUserId === currentUser?.uid && req.toUserId === neighborId) ||
              (req.fromUserId === neighborId && req.toUserId === currentUser?.uid))
@@ -134,7 +134,7 @@ export default function NeighborsPage() {
     const filteredAndSortedNeighbors = useMemo(() => {
         if (!currentUser) return [];
         const blockedByMe = userDetails?.blockedUsers || [];
-        
+
         return allNeighbors.filter((neighbor) => {
             // Basic filters
             if (neighbor.uid === currentUser.uid) return false;
@@ -144,7 +144,7 @@ export default function NeighborsPage() {
             // Location filters
             const stateMatch = filters.state === "all" || neighbor.location?.state === filters.state;
             const lgaMatch = filters.lga === "all" || neighbor.location?.lga === filters.lga;
-            
+
             return stateMatch && lgaMatch;
         });
     }, [allNeighbors, filters, userDetails, currentUser]);
@@ -186,13 +186,13 @@ export default function NeighborsPage() {
         await updateDoc(requestRef, { status: "declined" });
         toast({ title: "Friend request declined." });
     };
-    
+
      const handleMessage = async (e: React.MouseEvent, friendId: string) => {
         e.stopPropagation();
         if (!currentUser) return;
 
         const sortedParticipantIds = [currentUser.uid, friendId].sort();
-        
+
         const q = query(
             collection(db, "conversations"),
             where("participantIds", "==", sortedParticipantIds)
@@ -214,7 +214,7 @@ export default function NeighborsPage() {
                 // Conversation exists
                 conversationId = querySnapshot.docs[0].id;
             }
-            
+
             router.push(`/messages/${conversationId}`);
         } catch (error) {
             console.error("Error handling message action:", error);
@@ -235,8 +235,8 @@ export default function NeighborsPage() {
 
     const incomingRequests = useMemo(() => {
         const blockedByMe = userDetails?.blockedUsers || [];
-        return friendRequests.filter(req => 
-            req.toUserId === currentUser?.uid && 
+        return friendRequests.filter(req =>
+            req.toUserId === currentUser?.uid &&
             req.status === 'pending' &&
             !blockedByMe.includes(req.fromUserId)
         );
@@ -244,20 +244,16 @@ export default function NeighborsPage() {
 
     const friends = useMemo(() => {
         const blockedByMe = userDetails?.blockedUsers || [];
-        return allNeighbors.filter(n => 
+        return allNeighbors.filter(n =>
             userDetails?.friends?.includes(n.uid) &&
             !blockedByMe.includes(n.uid)
         );
     }, [allNeighbors, userDetails]);
-    
+
     const handleProfileDialogClose = useCallback((wasChanged: boolean) => {
-        if (wasChanged) {
-            // The userDetails listener in useAuth should handle the main state update.
-            // But we can optimistically filter the user out if they were blocked.
-            if(selectedUser) {
-                const blockedId = selectedUser.uid;
-                 setAllNeighbors(prev => prev.filter(n => n.uid !== blockedId));
-            }
+        if (wasChanged && selectedUser) {
+            const blockedId = selectedUser.uid;
+             setAllNeighbors(prev => prev.filter(n => n.uid !== blockedId));
         }
         setSelectedUser(null)
     }, [selectedUser]);
