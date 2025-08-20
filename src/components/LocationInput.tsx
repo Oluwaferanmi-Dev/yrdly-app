@@ -69,6 +69,10 @@ export function LocationInput({ name, control, defaultValue }: LocationInputProp
     setFormValue(name, { address: newAddress }, { shouldValidate: true, shouldDirty: true });
     setShowSuggestions(true);
   };
+  
+  if (!ready) {
+    return <Skeleton className="h-10 w-full" />;
+  }
 
   return (
     <div className="relative" ref={containerRef}>
