@@ -60,7 +60,10 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
           <div className="md:hidden">
               <AppHeader />
           </div>
-          <main className="p-4 sm:p-6 lg:p-8 pb-24 md:pb-8 pt-16 md:pt-6">{children}</main>
+          {/* Safe area handling for mobile devices */}
+          <main className="p-4 sm:p-6 lg:p-8 pb-24 md:pb-8 pt-16 md:pt-6 safe-area-inset">
+            {children}
+          </main>
           <AppBottomNav />
         </SidebarInset>
       </SidebarProvider>

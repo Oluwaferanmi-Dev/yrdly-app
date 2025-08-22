@@ -4,13 +4,24 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 9002",
+    "dev": "next dev -p 9002 --hostname 0.0.0.0",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build",
+    "build:mobile": "next build && npm run copy:mobile",
+    "copy:mobile": "mkdir -p out && cp -r .next/* out/ && cp -r .next/static out/ 2>/dev/null || echo 'Files copied'",
+    "cap:sync": "npx cap sync",
     "start": "next start",
+    "android": "npm run build:mobile && npx cap sync android && npx cap open android",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "android:run": "npm run dev && npx cap run android -l --external",
+    "typecheck": "tsc --noEmit",
+    "android:build": "npm run build:mobile && npx cap sync android && npx cap build android",
+    "android:build:release": "npm run build:mobile && npx cap sync android && npx cap build android --release",
+    "ios": "npm run build:mobile && npx cap sync ios && npx cap open ios",
+    "ios:build": "npm run build:mobile && npx cap sync ios && npx cap build ios",
+    "beta:android": "npm run build:mobile && npx cap sync android && npx cap build android --release && echo 'Beta APK ready in android/app/build/outputs/apk/release/'",
+    "beta:ios": "npm run build:mobile && npx cap sync ios && npx cap build ios --release && echo 'Beta IPA ready for distribution'"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",
