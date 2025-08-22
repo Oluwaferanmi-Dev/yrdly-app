@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   description: 'Connect with your neighbors, share updates, and build a stronger community with Yrdly.',
 };
 
-// import { ThemeProvider } from '@/components/ThemeProvider';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 export default function RootLayout({
   children,
@@ -33,19 +33,18 @@ export default function RootLayout({
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
       <body className={cn('font-body antialiased min-h-screen bg-background', ptSans.variable)}>
-        {/* Temporarily disabled ThemeProvider for React 19 RC compatibility testing */}
-        {/* <ThemeProvider
+        <ThemeProvider
             attribute="class"
             defaultTheme="system"
             enableSystem
             disableTransitionOnChange
-        > */}
+        >
             <AuthProvider>
                 {children}
             </AuthProvider>
             <Toaster />
             <Analytics />
-        {/* </ThemeProvider> */}
+        </ThemeProvider>
       </body>
     </html>
   );
