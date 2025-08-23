@@ -75,6 +75,9 @@ export interface User {
   blockedUsers?: string[];
   notificationSettings?: NotificationSettings;
   timestamp?: Timestamp;
+  // Online status fields
+  isOnline?: boolean;
+  lastSeen?: Timestamp;
 }
 
 export interface FriendRequest {

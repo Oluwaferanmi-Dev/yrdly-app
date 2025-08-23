@@ -66,6 +66,7 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
 
   const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
 
+  // Create form once and stabilize it
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -76,17 +77,23 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     },
   });
 
+  // Stabilize form.reset function to prevent dependency issues
+  const stableFormReset = useCallback((values: any) => {
+    form.reset(values);
+  }, [form]);
+
+  // Fix useEffect dependencies - use stable form reset
   useEffect(() => { // eslint-disable-next-line react-hooks/exhaustive-deps
     if (open) {
       if (isEditMode && postToEdit) {
-        form.reset({
+        stableFormReset({
           text: postToEdit.text,
           description: postToEdit.description,
           price: postToEdit.price,
           image: postToEdit.imageUrls || [],
         });
       } else if (!isEditMode) {
-        form.reset({
+        stableFormReset({
           text: "",
           description: "",
           price: undefined,
@@ -94,7 +101,7 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
         });
       }
     }
-  }, [open, isEditMode, postToEdit, form.reset]);
+  }, [open, isEditMode, postToEdit, stableFormReset]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);

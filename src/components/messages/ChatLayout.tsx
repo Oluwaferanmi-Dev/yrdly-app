@@ -2,7 +2,7 @@
 "use client";
 
 import type { Conversation, User, Message } from "../../types";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,6 +31,8 @@ import { useRouter } from "next/navigation";
 import { UserProfileDialog } from "../UserProfileDialog";
 import Image from "next/image";
 import { Progress } from "../ui/progress";
+import { OnlineStatusService } from "@/lib/online-status";
+import { AvatarOnlineIndicator } from "../ui/online-indicator";
 
 // Helper function to format date for display
 const formatMessageDate = (timestamp: any) => {
@@ -117,22 +119,55 @@ export function ChatLayout({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const [showChat, setShowChat] = useState(false);
+  const [onlineStatuses, setOnlineStatuses] = useState<{ [userId: string]: boolean }>({});
+
+  // Initialize online status tracking for current user
+  useEffect(() => {
+    if (currentUser?.uid) {
+      OnlineStatusService.getInstance().initialize(currentUser.uid);
+      
+      return () => {
+        OnlineStatusService.getInstance().cleanup();
+      };
+    }
+  }, [currentUser?.uid]);
+
+  // Track online status of conversation participants
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+
+    const participants = conversations.map(conv => conv.participant);
+    const unsubscribeFunctions: (() => void)[] = [];
+
+    participants.forEach(participant => {
+      const unsubscribe = OnlineStatusService.listenToUserOnlineStatus(participant.uid, (status) => {
+        setOnlineStatuses(prev => ({
+          ...prev,
+          [participant.uid]: status.isOnline
+        }));
+      });
+      unsubscribeFunctions.push(unsubscribe);
+    });
+
+    return () => {
+      unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
+    };
+  }, [currentUser?.uid, conversations]);
 
   // Listen for real-time updates to conversations
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.uid) return;
 
     const q = query(
       collection(db, "conversations"),
-      where("participantIds", "array-contains", currentUser.id)
+      where("participantIds", "array-contains", currentUser.uid)
     );
 
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
       const convsPromises = querySnapshot.docs.map(async (docSnap) => {
         const convData = docSnap.data();
-        const otherParticipantId = convData.participantIds.find((id: string) => id !== currentUser.id);
+        const otherParticipantId = convData.participantIds.find((id: string) => id !== currentUser.uid);
         
         if (!otherParticipantId) return null;
 
@@ -161,7 +196,7 @@ export function ChatLayout({
     });
 
     return () => unsubscribe();
-  }, [currentUser.id]);
+  }, [currentUser.uid]);
 
   // Pre-select a conversation if an ID is passed
   useEffect(() => {
@@ -187,13 +222,13 @@ export function ChatLayout({
   const markMessagesAsRead = useCallback(async (conversationId: string) => {
     const conversationRef = doc(db, 'conversations', conversationId);
     await updateDoc(conversationRef, {
-        'lastMessage.readBy': arrayUnion(currentUser.id)
+        'lastMessage.readBy': arrayUnion(currentUser.uid)
     });
-  }, [currentUser.id]);
+  }, [currentUser.uid]);
 
   // Listen for messages in the selected conversation
   useEffect(() => {
-    if (!selectedConversation?.id || !currentUser?.id) return;
+    if (!selectedConversation?.id || !currentUser?.uid) return;
 
     markMessagesAsRead(selectedConversation.id);
 
@@ -208,9 +243,9 @@ export function ChatLayout({
           const msgData = docSnap.data();
           let sender: User;
 
-          if (msgData.senderId === currentUser.id) {
+          if (msgData.senderId === currentUser.uid) {
             sender = currentUser;
-          } else if (msgData.senderId === selectedConversation.participant.id) {
+          } else if (msgData.senderId === selectedConversation.participant.uid) {
             sender = selectedConversation.participant;
           } else {
             const userDoc = await getDoc(doc(db, "users", msgData.senderId));
@@ -272,7 +307,7 @@ export function ChatLayout({
         }
 
         const messageData: Partial<Message> = {
-          senderId: currentUser.id,
+          senderId: currentUser.uid,
           timestamp: serverTimestamp() as any,
         };
 
@@ -288,9 +323,9 @@ export function ChatLayout({
         await updateDoc(conversationRef, {
             lastMessage: {
                 text: imageUrl ? "📷 Image" : newMessage,
-                senderId: currentUser.id,
+                senderId: currentUser.uid,
                 timestamp: serverTimestamp(),
-                readBy: [currentUser.id]
+                readBy: [currentUser.uid]
             },
         });
         
@@ -302,7 +337,24 @@ export function ChatLayout({
       console.error("Error sending message: ", error);
       setUploadProgress(null);
     }
-  }, [newMessage, imageFile, selectedConversation, currentUser.id]);
+  }, [newMessage, imageFile, selectedConversation, currentUser.uid]);
+
+  // Memoize the chat input to prevent unnecessary re-renders
+  const ChatInput = useMemo(() => (
+    <Textarea
+      placeholder="Type a message..."
+      value={newMessage}
+      onChange={handleTyping}
+      className="flex-1 resize-none"
+      rows={1}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleSendMessage(e);
+        }
+      }}
+    />
+  ), [newMessage, handleTyping, handleSendMessage]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -332,7 +384,7 @@ export function ChatLayout({
         <ScrollArea className="flex-1">
             {conversations.length > 0 ? (
                 conversations.map((conv) => {
-                    const isUnread = conv.lastMessage?.senderId !== currentUser.id && !conv.lastMessage?.readBy?.includes(currentUser.id);
+                    const isUnread = conv.lastMessage?.senderId !== currentUser.uid && !conv.lastMessage?.readBy?.includes(currentUser.uid);
                     return (
                         <div
                             key={conv.id}
@@ -342,10 +394,15 @@ export function ChatLayout({
                             )}
                             onClick={() => handleConversationSelect(conv)}
                         >
-                            <Avatar>
-                                <AvatarImage src={conv.participant.avatarUrl} alt={conv.participant.name} />
-                                <AvatarFallback>{conv.participant.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
+                            <div className="relative">
+                                <Avatar>
+                                    <AvatarImage src={conv.participant.avatarUrl} alt={conv.participant.name} />
+                                    <AvatarFallback>{conv.participant.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <AvatarOnlineIndicator 
+                                    isOnline={onlineStatuses[conv.participant.uid] || false} 
+                                />
+                            </div>
                             <div className="flex-1 truncate">
                                 <p className="font-semibold">{conv.participant.name}</p>
                                 <p className={cn("text-sm truncate", isUnread ? "text-foreground font-medium" : "text-muted-foreground")}>
@@ -396,11 +453,18 @@ export function ChatLayout({
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <button className="flex items-center gap-2" onClick={() => setProfileUser(selectedConversation.participant)}>
-                    <Avatar>
-                        <AvatarImage src={selectedConversation.participant.avatarUrl} alt={selectedConversation.participant.name} />
-                        <AvatarFallback>{selectedConversation.participant.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <p className="font-semibold">{selectedConversation.participant.name}</p>
+                    <div className="relative">
+                        <Avatar>
+                            <AvatarImage src={selectedConversation.participant.avatarUrl} alt={selectedConversation.participant.name} />
+                            <AvatarFallback>{selectedConversation.participant.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <AvatarOnlineIndicator 
+                            isOnline={onlineStatuses[selectedConversation.participant.uid] || false} 
+                        />
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <p className="font-semibold">{selectedConversation.participant.name}</p>
+                    </div>
                 </button>
             </div>
             <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 bg-gray-50 dark:bg-gray-900 min-h-0">
@@ -423,22 +487,22 @@ export function ChatLayout({
                                     </div>
                                 )}
                                 <div
-                                    className={cn("flex gap-3", msg.sender.id === currentUser.id ? "justify-end" : "justify-start")}
+                                    className={cn("flex gap-3", msg.sender.uid === currentUser.uid ? "justify-end" : "justify-start")}
                                 >
-                                    {msg.sender.id !== currentUser.id && (
+                                    {msg.sender.uid !== currentUser.uid && (
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src={msg.sender.avatarUrl} />
                                             <AvatarFallback>{msg.sender.name.charAt(0)}</AvatarFallback>
                                         </Avatar>
                                     )}
-                                    <div className={cn("rounded-lg px-3 py-2 max-w-xs lg:max-w-md break-words", msg.sender.id === currentUser.id ? "bg-primary text-primary-foreground" : "bg-card border")}>
+                                    <div className={cn("rounded-lg px-3 py-2 max-w-xs lg:max-w-md break-words", msg.sender.uid === currentUser.uid ? "bg-primary text-primary-foreground" : "bg-card border")}>
                                         {msg.imageUrl && (
                                             <div className="relative w-48 h-48 mb-2">
                                                 <Image src={msg.imageUrl} alt="Chat image" layout="fill" className="rounded-md object-cover" />
                                             </div>
                                         )}
                                         {msg.text && <p>{msg.text}</p>}
-                                        <p className={cn("text-xs opacity-70 mt-1", msg.sender.id === currentUser.id ? "text-right" : "text-left")}>
+                                        <p className={cn("text-xs opacity-70 mt-1", msg.sender.uid === currentUser.uid ? "text-right" : "text-left")}>
                                             {msg.timestamp}
                                         </p>
                                     </div>
@@ -463,19 +527,7 @@ export function ChatLayout({
                     <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
                         <ImagePlus className="h-5 w-5" />
                     </Button>
-                    <Textarea
-                        placeholder="Type a message..."
-                        value={newMessage}
-                        onChange={handleTyping}
-                        className="flex-1 resize-none"
-                        rows={1}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSendMessage(e);
-                            }
-                        }}
-                    />
+                    {ChatInput}
                     <Button type="submit" size="icon" disabled={(!newMessage.trim() && !imageFile) || uploadProgress !== null}>
                         <SendHorizonal className="h-5 w-5" />
                     </Button>

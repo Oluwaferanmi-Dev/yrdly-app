@@ -62,6 +62,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
 
   const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
 
+  // Create form once and stabilize it
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -70,21 +71,27 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     },
   });
 
+  // Stabilize form.reset function to prevent dependency issues
+  const stableFormReset = useCallback((values: any) => {
+    form.reset(values);
+  }, [form]);
+
+  // Fix useEffect dependencies - use stable form reset
   useEffect(() => {
     if (open) {
       if (isEditMode && postToEdit) {
-        form.reset({
+        stableFormReset({
           text: postToEdit.text,
           image: postToEdit.imageUrls || [],
         });
       } else if (!isEditMode) {
-        form.reset({
+        stableFormReset({
           text: "",
           image: undefined,
         });
       }
     }
-  }, [open, isEditMode, postToEdit, form.reset]);
+  }, [open, isEditMode, postToEdit, stableFormReset]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -103,7 +110,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
   const finalTitle = isEditMode ? "Edit Post" : "Create Post";
   const finalDescription = isEditMode ? "Make changes to your post here." : "Share something with your neighborhood.";
 
-  const FormContent = memo(function FormContent({ formInstance }: { formInstance: UseFormReturn<z.infer<typeof formSchema>> }) {
+  const FormContent = React.memo(function FormContent({ formInstance }: { formInstance: UseFormReturn<z.infer<typeof formSchema>> }) {
     return (
         <div className="space-y-4 px-1">
             <FormField

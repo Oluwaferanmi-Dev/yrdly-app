@@ -69,6 +69,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
 
   const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
 
+  // Create form once and stabilize it
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -82,10 +83,16 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
     },
   });
 
+  // Stabilize form.reset function to prevent dependency issues
+  const stableFormReset = useCallback((values: any) => {
+    form.reset(values);
+  }, [form]);
+
+  // Fix useEffect dependencies - use stable form reset
   useEffect(() => {
     if (open) {
       if (isEditMode && postToEdit) {
-        form.reset({
+        stableFormReset({
           title: postToEdit.title,
           description: postToEdit.description,
           location: postToEdit.eventLocation,
@@ -95,7 +102,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
           image: postToEdit.imageUrls || [],
         });
       } else if (!isEditMode) {
-        form.reset({
+        stableFormReset({
           title: "",
           description: "",
           location: { address: "" },
@@ -106,7 +113,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
         });
       }
     }
-  }, [open, isEditMode, postToEdit, form.reset]);
+  }, [open, isEditMode, postToEdit, stableFormReset]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);

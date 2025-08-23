@@ -68,6 +68,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
 
   const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
 
+  // Create form once and stabilize it
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -79,10 +80,16 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
     },
   });
 
+  // Stabilize form.reset function to prevent dependency issues
+  const stableFormReset = useCallback((values: any) => {
+    form.reset(values);
+  }, [form]);
+
+  // Fix useEffect dependencies - use stable form reset
   useEffect(() => {
     if (open) {
       if (isEditMode && postToEdit) {
-        form.reset({
+        stableFormReset({
           name: postToEdit.name,
           category: postToEdit.category,
           description: postToEdit.description,
@@ -90,7 +97,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
           image: postToEdit.imageUrls || [],
         });
       } else if (!isEditMode) {
-        form.reset({
+        stableFormReset({
           name: "",
           category: "",
           description: "",
@@ -99,7 +106,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
         });
       }
     }
-  }, [open, isEditMode, postToEdit, form.reset]);
+  }, [open, isEditMode, postToEdit, stableFormReset]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
