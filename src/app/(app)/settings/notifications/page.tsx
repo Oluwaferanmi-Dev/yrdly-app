@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';

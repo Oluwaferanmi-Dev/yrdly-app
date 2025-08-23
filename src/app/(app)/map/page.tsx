@@ -2,6 +2,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Business, Post } from '@/types';

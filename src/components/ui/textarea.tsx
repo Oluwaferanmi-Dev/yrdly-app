@@ -7,7 +7,7 @@ import {cn} from '@/lib/utils';
 const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'textarea'>>(
   ({ className, onFocus, onBlur, ...props }, ref) => {
     const [isFocused, setIsFocused] = useState(false);
-    const internalRef = useRef<HTMLTextAreaElement>(null);
+    const internalRef = useRef<HTMLTextAreaElement | null>(null);
     
     // Use both refs to ensure compatibility
     const setRefs = useCallback((element: HTMLTextAreaElement | null) => {
@@ -15,7 +15,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<'tex
       if (typeof ref === 'function') {
         ref(element);
       } else if (ref) {
-        ref.current = element;
+        (ref as React.MutableRefObject<HTMLTextAreaElement | null>).current = element;
       }
     }, [ref]);
 

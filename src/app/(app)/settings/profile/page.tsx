@@ -2,6 +2,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';

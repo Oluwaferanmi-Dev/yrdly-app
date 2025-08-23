@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, onFocus, onBlur, ...props }, ref) => {
     const [isFocused, setIsFocused] = useState(false);
-    const internalRef = useRef<HTMLInputElement>(null);
+    const internalRef = useRef<HTMLInputElement | null>(null);
     
     // Use both refs to ensure compatibility
     const setRefs = useCallback((element: HTMLInputElement | null) => {
@@ -14,7 +14,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       if (typeof ref === 'function') {
         ref(element);
       } else if (ref) {
-        ref.current = element;
+        (ref as React.MutableRefObject<HTMLInputElement | null>).current = element;
       }
     }, [ref]);
 

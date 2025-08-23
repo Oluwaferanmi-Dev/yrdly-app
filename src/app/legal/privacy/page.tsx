@@ -1,5 +1,9 @@
+"use client";
 
 import React from 'react';
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 
 const PrivacyPolicyPage = () => {
   return (

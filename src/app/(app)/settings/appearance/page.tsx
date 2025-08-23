@@ -1,6 +1,11 @@
 
+"use client";
+
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 
 export default function AppearancePage() {
   return (

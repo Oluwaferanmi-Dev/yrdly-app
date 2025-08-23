@@ -2,6 +2,9 @@
 "use client";
 
 import { PostCard } from "@/components/PostCard";
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";

@@ -2,6 +2,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import { Input } from "@/components/ui/input";
 import { Search, Plus, ShoppingCart } from "lucide-react";
 import { CreateItemDialog } from "@/components/CreateItemDialog";
