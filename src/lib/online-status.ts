@@ -1,9 +1,8 @@
-import { ref, onValue, set, serverTimestamp } from 'firebase/database';
-import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { database, db } from './firebase';
+import { doc, updateDoc, onSnapshot, setDoc, serverTimestamp, collection } from 'firebase/firestore';
+import { db } from './firebase';
 
-// Firebase Realtime Database reference for online status
-const getOnlineStatusRef = (userId: string) => ref(database, `onlineStatus/${userId}`);
+// Firestore reference for online status
+const getOnlineStatusRef = (userId: string) => doc(db, 'onlineStatus', userId);
 
 // Firestore reference for last seen
 const getLastSeenRef = (userId: string) => doc(db, 'users', userId);
@@ -26,6 +25,7 @@ export class OnlineStatusService {
 
   // Initialize online status tracking for a user
   initialize(userId: string) {
+    console.log('🔵 OnlineStatusService: Initializing for user:', userId);
     this.userId = userId;
     this.onlineStatusRef = getOnlineStatusRef(userId);
     this.lastSeenRef = getLastSeenRef(userId);
@@ -48,22 +48,25 @@ export class OnlineStatusService {
   private async setOnlineStatus(isOnline: boolean) {
     if (!this.userId || !this.onlineStatusRef) return;
 
+    console.log('🔵 OnlineStatusService: Setting status to:', isOnline, 'for user:', this.userId);
+
     try {
-      await set(this.onlineStatusRef, {
+      await setDoc(this.onlineStatusRef, {
         isOnline,
         lastSeen: serverTimestamp(),
         userId: this.userId
-      });
+      }, { merge: true });
 
-      // Update last seen in Firestore
+      // Update last seen in users collection
       await updateDoc(this.lastSeenRef, {
         isOnline,
         lastSeen: serverTimestamp()
       });
 
       this.isOnline = isOnline;
+      console.log('✅ OnlineStatusService: Status updated successfully');
     } catch (error) {
-      console.error('Error updating online status:', error);
+      console.error('❌ Error updating online status:', error);
     }
   }
 
@@ -98,12 +101,12 @@ export class OnlineStatusService {
     return new Promise((resolve) => {
       const statusRef = getOnlineStatusRef(userId);
       
-      onValue(statusRef, (snapshot) => {
-        const data = snapshot.val();
-        if (data) {
+      const unsubscribe = onSnapshot(statusRef, (doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
           resolve({
-            isOnline: data.isOnline || false,
-            lastSeen: data.lastSeen
+            isOnline: data?.isOnline || false,
+            lastSeen: data?.lastSeen
           });
         } else {
           resolve({
@@ -111,27 +114,44 @@ export class OnlineStatusService {
             lastSeen: null
           });
         }
-      }, { onlyOnce: true });
+        unsubscribe();
+      }, (error) => {
+        console.error('Error getting online status:', error);
+        resolve({
+          isOnline: false,
+          lastSeen: null
+        });
+      });
     });
   }
 
   // Listen to online status changes of a user
   static listenToUserOnlineStatus(userId: string, callback: (status: { isOnline: boolean; lastSeen: any }) => void) {
+    console.log('🔵 OnlineStatusService: Listening to status for user:', userId);
     const statusRef = getOnlineStatusRef(userId);
     
-    return onValue(statusRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        callback({
-          isOnline: data.isOnline || false,
-          lastSeen: data.lastSeen
-        });
+    return onSnapshot(statusRef, (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        const status = {
+          isOnline: data?.isOnline || false,
+          lastSeen: data?.lastSeen
+        };
+        console.log('🔵 OnlineStatusService: Status update for', userId, ':', status);
+        callback(status);
       } else {
+        console.log('🔵 OnlineStatusService: No status data for', userId, '- setting offline');
         callback({
           isOnline: false,
           lastSeen: null
         });
       }
+    }, (error) => {
+      console.error('❌ Error listening to online status for', userId, ':', error);
+      callback({
+        isOnline: false,
+        lastSeen: null
+      });
     });
   }
 

@@ -4,7 +4,6 @@ import { getAuth, GoogleAuthProvider, OAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
-import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
   "projectId": "yrdly-coyig",
@@ -13,8 +12,7 @@ const firebaseConfig = {
   "apiKey": "AIzaSyCOE_L6g9c3J6jhcajVzNkC4flEao4Av2I",
   "authDomain": "yrdly-coyig.firebaseapp.com",
   "measurementId": "",
-  "messagingSenderId": "166095077947",
-  "databaseURL": "https://yrdly-coyig-default-rtdb.firebaseio.com"
+  "messagingSenderId": "166095077947"
 };
 
 // Initialize Firebase
@@ -23,9 +21,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 const functions = getFunctions(app);
-const database = getDatabase(app);
 
 const googleProvider = new GoogleAuthProvider();
 const appleProvider = new OAuthProvider('apple.com');
 
-export { app, auth, db, storage, functions, database, googleProvider, appleProvider };
+export { app, auth, db, storage, functions, googleProvider, appleProvider };

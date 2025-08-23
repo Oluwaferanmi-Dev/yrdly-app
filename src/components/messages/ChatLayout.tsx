@@ -124,27 +124,27 @@ export function ChatLayout({
 
   // Initialize online status tracking for current user
   useEffect(() => {
-    if (currentUser?.id) {
-      OnlineStatusService.getInstance().initialize(currentUser.id);
+    if (currentUser?.uid) {
+      OnlineStatusService.getInstance().initialize(currentUser.uid);
       
       return () => {
         OnlineStatusService.getInstance().cleanup();
       };
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.uid]);
 
   // Track online status of conversation participants
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.uid) return;
 
     const participants = conversations.map(conv => conv.participant);
     const unsubscribeFunctions: (() => void)[] = [];
 
     participants.forEach(participant => {
-      const unsubscribe = OnlineStatusService.listenToUserOnlineStatus(participant.id, (status) => {
+      const unsubscribe = OnlineStatusService.listenToUserOnlineStatus(participant.uid, (status) => {
         setOnlineStatuses(prev => ({
           ...prev,
-          [participant.id]: status.isOnline
+          [participant.uid]: status.isOnline
         }));
       });
       unsubscribeFunctions.push(unsubscribe);
@@ -153,21 +153,21 @@ export function ChatLayout({
     return () => {
       unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
     };
-  }, [currentUser?.id, conversations]);
+  }, [currentUser?.uid, conversations]);
 
   // Listen for real-time updates to conversations
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.uid) return;
 
     const q = query(
       collection(db, "conversations"),
-      where("participantIds", "array-contains", currentUser.id)
+      where("participantIds", "array-contains", currentUser.uid)
     );
 
     const unsubscribe = onSnapshot(q, async (querySnapshot) => {
       const convsPromises = querySnapshot.docs.map(async (docSnap) => {
         const convData = docSnap.data();
-        const otherParticipantId = convData.participantIds.find((id: string) => id !== currentUser.id);
+        const otherParticipantId = convData.participantIds.find((id: string) => id !== currentUser.uid);
         
         if (!otherParticipantId) return null;
 
@@ -196,7 +196,7 @@ export function ChatLayout({
     });
 
     return () => unsubscribe();
-  }, [currentUser.id]);
+  }, [currentUser.uid]);
 
   // Pre-select a conversation if an ID is passed
   useEffect(() => {
@@ -222,13 +222,13 @@ export function ChatLayout({
   const markMessagesAsRead = useCallback(async (conversationId: string) => {
     const conversationRef = doc(db, 'conversations', conversationId);
     await updateDoc(conversationRef, {
-        'lastMessage.readBy': arrayUnion(currentUser.id)
+        'lastMessage.readBy': arrayUnion(currentUser.uid)
     });
-  }, [currentUser.id]);
+  }, [currentUser.uid]);
 
   // Listen for messages in the selected conversation
   useEffect(() => {
-    if (!selectedConversation?.id || !currentUser?.id) return;
+    if (!selectedConversation?.id || !currentUser?.uid) return;
 
     markMessagesAsRead(selectedConversation.id);
 
@@ -243,9 +243,9 @@ export function ChatLayout({
           const msgData = docSnap.data();
           let sender: User;
 
-          if (msgData.senderId === currentUser.id) {
+          if (msgData.senderId === currentUser.uid) {
             sender = currentUser;
-          } else if (msgData.senderId === selectedConversation.participant.id) {
+          } else if (msgData.senderId === selectedConversation.participant.uid) {
             sender = selectedConversation.participant;
           } else {
             const userDoc = await getDoc(doc(db, "users", msgData.senderId));
@@ -307,7 +307,7 @@ export function ChatLayout({
         }
 
         const messageData: Partial<Message> = {
-          senderId: currentUser.id,
+          senderId: currentUser.uid,
           timestamp: serverTimestamp() as any,
         };
 
@@ -323,9 +323,9 @@ export function ChatLayout({
         await updateDoc(conversationRef, {
             lastMessage: {
                 text: imageUrl ? "📷 Image" : newMessage,
-                senderId: currentUser.id,
+                senderId: currentUser.uid,
                 timestamp: serverTimestamp(),
-                readBy: [currentUser.id]
+                readBy: [currentUser.uid]
             },
         });
         
@@ -337,7 +337,7 @@ export function ChatLayout({
       console.error("Error sending message: ", error);
       setUploadProgress(null);
     }
-  }, [newMessage, imageFile, selectedConversation, currentUser.id]);
+  }, [newMessage, imageFile, selectedConversation, currentUser.uid]);
 
   // Memoize the chat input to prevent unnecessary re-renders
   const ChatInput = useMemo(() => (
@@ -384,7 +384,7 @@ export function ChatLayout({
         <ScrollArea className="flex-1">
             {conversations.length > 0 ? (
                 conversations.map((conv) => {
-                    const isUnread = conv.lastMessage?.senderId !== currentUser.id && !conv.lastMessage?.readBy?.includes(currentUser.id);
+                    const isUnread = conv.lastMessage?.senderId !== currentUser.uid && !conv.lastMessage?.readBy?.includes(currentUser.uid);
                     return (
                         <div
                             key={conv.id}
@@ -400,7 +400,7 @@ export function ChatLayout({
                                     <AvatarFallback>{conv.participant.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <AvatarOnlineIndicator 
-                                    isOnline={onlineStatuses[conv.participant.id] || false} 
+                                    isOnline={onlineStatuses[conv.participant.uid] || false} 
                                 />
                             </div>
                             <div className="flex-1 truncate">
@@ -408,7 +408,7 @@ export function ChatLayout({
                                     <p className="font-semibold">{conv.participant.name}</p>
                                     <div className={cn(
                                         "w-2 h-2 rounded-full",
-                                        onlineStatuses[conv.participant.id] 
+                                        onlineStatuses[conv.participant.uid] 
                                             ? "bg-green-500" 
                                             : "bg-gray-400"
                                     )} />
@@ -467,14 +467,14 @@ export function ChatLayout({
                             <AvatarFallback>{selectedConversation.participant.name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <AvatarOnlineIndicator 
-                            isOnline={onlineStatuses[selectedConversation.participant.id] || false} 
+                            isOnline={onlineStatuses[selectedConversation.participant.uid] || false} 
                         />
                     </div>
                     <div className="flex items-center gap-2">
                         <p className="font-semibold">{selectedConversation.participant.name}</p>
                         <div className={cn(
                             "w-2 h-2 rounded-full",
-                            onlineStatuses[selectedConversation.participant.id] 
+                            onlineStatuses[selectedConversation.participant.uid] 
                                 ? "bg-green-500" 
                                 : "bg-gray-400"
                         )} />
@@ -501,22 +501,22 @@ export function ChatLayout({
                                     </div>
                                 )}
                                 <div
-                                    className={cn("flex gap-3", msg.sender.id === currentUser.id ? "justify-end" : "justify-start")}
+                                    className={cn("flex gap-3", msg.sender.uid === currentUser.uid ? "justify-end" : "justify-start")}
                                 >
-                                    {msg.sender.id !== currentUser.id && (
+                                    {msg.sender.uid !== currentUser.uid && (
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src={msg.sender.avatarUrl} />
                                             <AvatarFallback>{msg.sender.name.charAt(0)}</AvatarFallback>
                                         </Avatar>
                                     )}
-                                    <div className={cn("rounded-lg px-3 py-2 max-w-xs lg:max-w-md break-words", msg.sender.id === currentUser.id ? "bg-primary text-primary-foreground" : "bg-card border")}>
+                                    <div className={cn("rounded-lg px-3 py-2 max-w-xs lg:max-w-md break-words", msg.sender.uid === currentUser.uid ? "bg-primary text-primary-foreground" : "bg-card border")}>
                                         {msg.imageUrl && (
                                             <div className="relative w-48 h-48 mb-2">
                                                 <Image src={msg.imageUrl} alt="Chat image" layout="fill" className="rounded-md object-cover" />
                                             </div>
                                         )}
                                         {msg.text && <p>{msg.text}</p>}
-                                        <p className={cn("text-xs opacity-70 mt-1", msg.sender.id === currentUser.id ? "text-right" : "text-left")}>
+                                        <p className={cn("text-xs opacity-70 mt-1", msg.sender.uid === currentUser.uid ? "text-right" : "text-left")}>
                                             {msg.timestamp}
                                         </p>
                                     </div>
