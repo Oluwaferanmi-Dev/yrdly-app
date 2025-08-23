@@ -108,8 +108,14 @@
   
   /* Aggressive header spacing to prevent any overlap */
   .header-spacing {
-    padding-top: 8rem; /* 128px - very aggressive spacing */
+    padding-top: 9rem; /* 144px - very aggressive spacing */
     margin-top: 1rem; /* Additional margin for safety */
+  }
+  
+  /* Ensure first content element is fully visible */
+  .first-content-safe {
+    margin-top: 2rem; /* Additional margin for the first content element */
+    padding-top: 1rem; /* Extra padding for safety */
   }
 }
 

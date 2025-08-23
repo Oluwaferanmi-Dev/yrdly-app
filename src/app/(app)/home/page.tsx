@@ -37,7 +37,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="space-y-6 pt-4">
+    <div className="space-y-6 pt-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Main Content - 2 columns on large screens */}
         <div className="lg:col-span-2 space-y-6">

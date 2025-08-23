@@ -40,7 +40,7 @@ export function EmailVerificationBanner() {
     }
 
     return (
-        <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-950 dark:border-yellow-800 dark:text-yellow-200 relative">
+        <Alert className="bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-950 dark:border-yellow-800 dark:text-yellow-200 relative first-content-safe">
             <button onClick={() => setIsVisible(false)} className="absolute top-2 right-2 text-current/70 hover:text-current">
                 <X className="h-4 w-4" />
             </button>
