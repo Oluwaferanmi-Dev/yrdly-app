@@ -72,7 +72,10 @@
     "tailwindcss-animate": "^1.0.7",
     "use-debounce": "^10.0.1",
     "use-places-autocomplete": "^4.0.1",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8",
+    "typescript": "^5"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.4.2",
@@ -81,9 +84,6 @@
     "@types/react-dom": "^18",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
-    "postcss": "^8",
-    "rimraf": "^5.0.7",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "rimraf": "^5.0.7"
   }
 }
