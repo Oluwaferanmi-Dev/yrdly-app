@@ -404,15 +404,7 @@ export function ChatLayout({
                                 />
                             </div>
                             <div className="flex-1 truncate">
-                                <div className="flex items-center gap-2">
-                                    <p className="font-semibold">{conv.participant.name}</p>
-                                    <div className={cn(
-                                        "w-2 h-2 rounded-full",
-                                        onlineStatuses[conv.participant.uid] 
-                                            ? "bg-green-500" 
-                                            : "bg-gray-400"
-                                    )} />
-                                </div>
+                                <p className="font-semibold">{conv.participant.name}</p>
                                 <p className={cn("text-sm truncate", isUnread ? "text-foreground font-medium" : "text-muted-foreground")}>
                                     {conv.lastMessage?.text}
                                 </p>
@@ -472,12 +464,6 @@ export function ChatLayout({
                     </div>
                     <div className="flex items-center gap-2">
                         <p className="font-semibold">{selectedConversation.participant.name}</p>
-                        <div className={cn(
-                            "w-2 h-2 rounded-full",
-                            onlineStatuses[selectedConversation.participant.uid] 
-                                ? "bg-green-500" 
-                                : "bg-gray-400"
-                        )} />
                     </div>
                 </button>
             </div>

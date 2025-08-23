@@ -427,15 +427,7 @@ export default function NeighborsPage() {
                                                 />
                                             </div>
                                             <div className="flex-1 space-y-1">
-                                                <div className="flex items-center gap-2">
-                                                    <h3 className="font-semibold text-base">{friend.name}</h3>
-                                                    <div className={cn(
-                                                        "w-2 h-2 rounded-full",
-                                                        isOnline 
-                                                            ? "bg-green-500" 
-                                                            : "bg-gray-400"
-                                                    )} />
-                                                </div>
+                                                <h3 className="font-semibold text-base">{friend.name}</h3>
                                                 {friend.location && (
                                                     <div className="flex items-center text-xs text-muted-foreground">
                                                         <MapPin className="h-3 w-3 mr-1" />

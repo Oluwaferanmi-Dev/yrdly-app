@@ -25,7 +25,6 @@ export class OnlineStatusService {
 
   // Initialize online status tracking for a user
   initialize(userId: string) {
-    console.log('🔵 OnlineStatusService: Initializing for user:', userId);
     this.userId = userId;
     this.onlineStatusRef = getOnlineStatusRef(userId);
     this.lastSeenRef = getLastSeenRef(userId);
@@ -48,8 +47,6 @@ export class OnlineStatusService {
   private async setOnlineStatus(isOnline: boolean) {
     if (!this.userId || !this.onlineStatusRef) return;
 
-    console.log('🔵 OnlineStatusService: Setting status to:', isOnline, 'for user:', this.userId);
-
     try {
       await setDoc(this.onlineStatusRef, {
         isOnline,
@@ -64,9 +61,8 @@ export class OnlineStatusService {
       });
 
       this.isOnline = isOnline;
-      console.log('✅ OnlineStatusService: Status updated successfully');
     } catch (error) {
-      console.error('❌ Error updating online status:', error);
+      console.error('Error updating online status:', error);
     }
   }
 
@@ -127,7 +123,6 @@ export class OnlineStatusService {
 
   // Listen to online status changes of a user
   static listenToUserOnlineStatus(userId: string, callback: (status: { isOnline: boolean; lastSeen: any }) => void) {
-    console.log('🔵 OnlineStatusService: Listening to status for user:', userId);
     const statusRef = getOnlineStatusRef(userId);
     
     return onSnapshot(statusRef, (doc) => {
@@ -137,17 +132,15 @@ export class OnlineStatusService {
           isOnline: data?.isOnline || false,
           lastSeen: data?.lastSeen
         };
-        console.log('🔵 OnlineStatusService: Status update for', userId, ':', status);
         callback(status);
       } else {
-        console.log('🔵 OnlineStatusService: No status data for', userId, '- setting offline');
         callback({
           isOnline: false,
           lastSeen: null
         });
       }
     }, (error) => {
-      console.error('❌ Error listening to online status for', userId, ':', error);
+      console.error('Error listening to online status for', userId, ':', error);
       callback({
         isOnline: false,
         lastSeen: null
