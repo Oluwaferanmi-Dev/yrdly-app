@@ -47,7 +47,7 @@ export default function EventsPage() {
     }, []);
 
   return (
-    <div className="space-y-6 pt-8">
+    <div className="space-y-6 pt-16">
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 className="text-2xl md:text-3xl font-bold font-headline">Events</h1>

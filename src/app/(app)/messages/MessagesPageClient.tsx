@@ -59,7 +59,7 @@ export function MessagesPageClient({ selectedConversationId }: { selectedConvers
     // No need for conversations.length === 0 check here, ChatLayout handles it
 
     return (
-        <div className="h-[calc(100vh_-_8rem)] md:h-auto pt-8">
+        <div className="h-[calc(100vh_-_8rem)] md:h-auto pt-16">
             <ChatLayout currentUser={currentUser} selectedConversationId={selectedConversationId} />
         </div>
     );
