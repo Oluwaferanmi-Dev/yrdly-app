@@ -259,7 +259,7 @@ export default function NeighborsPage() {
     }, [selectedUser]);
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 pb-8">
+        <div className="max-w-4xl mx-auto space-y-6 pb-8 first-content-safe">
             {selectedUser && <UserProfileDialog user={selectedUser} open={!!selectedUser} onOpenChange={handleProfileDialogClose} />}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
