@@ -66,9 +66,10 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
   const isMobile = useIsMobile();
   const isEditMode = !!postToEdit;
 
+  // Create form schema once and stabilize it
   const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
 
-  // Create form once and stabilize it
+  // Create form once and stabilize it - don't recreate on every render
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -85,28 +86,33 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
     form.reset(values);
   }, [form]);
 
-  // Fix useEffect dependencies - use stable form reset
+  // Fix useEffect dependencies - only reset when dialog opens, not on every change
   useEffect(() => {
     if (open) {
-      if (isEditMode && postToEdit) {
-        stableFormReset({
-          name: postToEdit.name,
-          category: postToEdit.category,
-          description: postToEdit.description,
-          location: postToEdit.location,
-          image: postToEdit.imageUrls || [],
-        });
-      } else if (!isEditMode) {
-        stableFormReset({
-          name: "",
-          category: "",
-          description: "",
-          location: { address: "" },
-          image: undefined,
-        });
-      }
+      // Use setTimeout to ensure this runs after the dialog is fully opened
+      const timer = setTimeout(() => {
+        if (isEditMode && postToEdit) {
+          stableFormReset({
+            name: postToEdit.name,
+            category: postToEdit.category,
+            description: postToEdit.description,
+            location: postToEdit.location,
+            image: postToEdit.imageUrls || [],
+          });
+        } else if (!isEditMode) {
+          stableFormReset({
+            name: "",
+            category: "",
+            description: "",
+            location: { address: "" },
+            image: undefined,
+          });
+        }
+      }, 0);
+      
+      return () => clearTimeout(timer);
     }
-  }, [open, isEditMode, postToEdit, stableFormReset]);
+  }, [open, isEditMode, postToEdit, stableFormReset]); // Include all dependencies
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -132,89 +138,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
   const finalTitle = isEditMode ? "Edit Business" : "Add a Business";
   const finalDescription = isEditMode ? "Make changes to your business here." : "Add your business to the neighborhood directory.";
 
-  const FormContent = memo(function FormContent({ formInstance }: { formInstance: UseFormReturn<z.infer<typeof formSchema>> }) {
-    return (
-        <div className="space-y-4 px-1">
-            <FormField
-                control={formInstance.control}
-                name="name"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Business Name</FormLabel>
-                    <FormControl><Input placeholder="e.g., The Corner Cafe" {...field} autoComplete="organization" /></FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={formInstance.control}
-                name="category"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <FormControl><Input placeholder="e.g., Food & Drink" {...field} autoComplete="off" /></FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={formInstance.control}
-                name="description"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl><Textarea placeholder="Tell everyone about your business..." {...field} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={formInstance.control}
-                name="location"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Location</FormLabel>
-                        <FormControl>
-                            <LocationInput
-                                name={field.name}
-                                control={formInstance.control}
-                                defaultValue={field.value}
-                            />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <FormField
-                control={formInstance.control}
-                name="image"
-                render={({ field: { onChange, value, ...rest } }) => (
-                <FormItem>
-                    <FormLabel>
-                        Add images <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                        <Input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={(e) => onChange(e.target.files)}
-                            {...rest}
-                        />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
-                <div className="text-sm text-muted-foreground">
-                    Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
-                </div>
-            )}
-        </div>
-    );
-  });
-  FormContent.displayName = "FormContent";
+
 
   const Trigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
     const { userDetails } = useAuth();
@@ -249,7 +173,84 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
                     <div className="p-4 flex-1 overflow-y-auto">
-                        <FormContent formInstance={form} />
+                        <div className="space-y-4 px-1">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Business Name</FormLabel>
+                                    <FormControl><Input placeholder="e.g., The Corner Cafe" {...field} autoComplete="organization" /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="category"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Category</FormLabel>
+                                    <FormControl><Input placeholder="e.g., Food & Drink" {...field} autoComplete="off" /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Description</FormLabel>
+                                    <FormControl><Textarea placeholder="Tell everyone about your business..." {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="location"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Location</FormLabel>
+                                        <FormControl>
+                                            <LocationInput
+                                                name={field.name}
+                                                control={form.control}
+                                                defaultValue={field.value}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="image"
+                                render={({ field: { onChange, value, ...rest } }) => (
+                                <FormItem>
+                                    <FormLabel>
+                                        Add images <span className="text-destructive">*</span>
+                                    </FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={(e) => onChange(e.target.files)}
+                                            {...rest}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                                <div className="text-sm text-muted-foreground">
+                                    Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <SheetFooter className="p-4 border-t mt-auto">
                         <Button type="submit" className="w-full" variant="default" disabled={loading}>
@@ -278,7 +279,84 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-[70vh] overflow-y-auto p-6">
-                <FormContent formInstance={form} />
+                <div className="space-y-4 px-1">
+                    <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Business Name</FormLabel>
+                            <FormControl><Input placeholder="e.g., The Corner Cafe" {...field} autoComplete="organization" /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Category</FormLabel>
+                            <FormControl><Input placeholder="e.g., Food & Drink" {...field} autoComplete="off" /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl><Textarea placeholder="Tell everyone about your business..." {...field} /></FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="location"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Location</FormLabel>
+                                <FormControl>
+                                    <LocationInput
+                                        name={field.name}
+                                        control={form.control}
+                                        defaultValue={field.value}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="image"
+                        render={({ field: { onChange, value, ...rest } }) => (
+                        <FormItem>
+                            <FormLabel>
+                                Add images <span className="text-destructive">*</span>
+                            </FormLabel>
+                            <FormControl>
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={(e) => onChange(e.target.files)}
+                                    {...rest}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                        <div className="text-sm text-muted-foreground">
+                            Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
+                        </div>
+                    )}
+                </div>
             </div>
             <DialogFooter className="p-6 pt-0 border-t">
                 <Button type="submit" className="w-full" variant="default" disabled={loading}>

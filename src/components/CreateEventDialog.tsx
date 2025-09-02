@@ -67,9 +67,10 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
   const isMobile = useIsMobile();
   const isEditMode = !!postToEdit;
 
+  // Create form schema once and stabilize it
   const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
 
-  // Create form once and stabilize it
+  // Create form once and stabilize it - don't recreate on every render
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -88,32 +89,37 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
     form.reset(values);
   }, [form]);
 
-  // Fix useEffect dependencies - use stable form reset
+  // Fix useEffect dependencies - only reset when dialog opens, not on every change
   useEffect(() => {
     if (open) {
-      if (isEditMode && postToEdit) {
-        stableFormReset({
-          title: postToEdit.title,
-          description: postToEdit.description,
-          location: postToEdit.eventLocation,
-          eventDate: postToEdit.eventDate,
-          eventTime: postToEdit.eventTime,
-          eventLink: postToEdit.eventLink,
-          image: postToEdit.imageUrls || [],
-        });
-      } else if (!isEditMode) {
-        stableFormReset({
-          title: "",
-          description: "",
-          location: { address: "" },
-          eventDate: "",
-          eventTime: "",
-          eventLink: "",
-          image: undefined,
-        });
-      }
+      // Use setTimeout to ensure this runs after the dialog is fully opened
+      const timer = setTimeout(() => {
+        if (isEditMode && postToEdit) {
+          stableFormReset({
+            title: postToEdit.title,
+            description: postToEdit.description,
+            location: postToEdit.eventLocation,
+            eventDate: postToEdit.eventDate,
+            eventTime: postToEdit.eventTime,
+            eventLink: postToEdit.eventLink,
+            image: postToEdit.imageUrls || [],
+          });
+        } else if (!isEditMode) {
+          stableFormReset({
+            title: "",
+            description: "",
+            location: { address: "" },
+            eventDate: "",
+            eventTime: "",
+            eventLink: "",
+            image: undefined,
+          });
+        }
+      }, 0);
+      
+      return () => clearTimeout(timer);
     }
-  }, [open, isEditMode, postToEdit, stableFormReset]);
+  }, [open, isEditMode, postToEdit, stableFormReset]); // Include all dependencies
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -142,104 +148,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
 
   type FormValues = z.infer<typeof formSchema>;
 
-  const FormContent = memo(function FormContent({ formInstance }: { formInstance: UseFormReturn<FormValues> }) {
-    return (
-      <div className="space-y-4 px-1">
-         <FormField
-            control={formInstance.control}
-            name="title"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Event Title</FormLabel>
-                <FormControl><Input placeholder="e.g. Neighborhood Block Party" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        <FormField
-          control={formInstance.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-               <FormLabel>Description</FormLabel>
-              <FormControl><Textarea placeholder="Tell everyone about your event..." className="resize-none min-h-[100px]" {...field} /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={formInstance.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-                <FormLabel>Location</FormLabel>
-                <FormControl>
-                    <LocationInput
-                        name={field.name}
-                        control={formInstance.control}
-                        defaultValue={field.value}
-                    />
-                </FormControl>
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-2 gap-4">
-            <FormField
-                control={formInstance.control}
-                name="eventDate"
-                render={({ field }) => (
-                  <FormItem>
-                     <FormLabel>Date</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
-                     <FormMessage />
-                  </FormItem>
-                )}
-              />
-             <FormField
-                control={formInstance.control}
-                name="eventTime"
-                render={({ field }) => (
-                  <FormItem>
-                     <FormLabel>Time</FormLabel>
-                    <FormControl><Input type="time" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-        </div>
-        <FormField
-            control={formInstance.control}
-            name="eventLink"
-            render={({ field }) => (
-                <FormItem>
-                     <FormLabel>Event Link</FormLabel>
-                    <FormControl><Input placeholder="Link to tickets or more info" {...field} /></FormControl>
-                </FormItem>
-            )}
-        />
-        <FormField
-          control={formInstance.control}
-          name="image"
-          render={({ field: { onChange, value, ...rest }}) => (
-            <FormItem>
-              <FormLabel>Event Image</FormLabel>
-              <FormControl>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => onChange(e.target.files)}
-                  {...rest}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-    )
-  });
-  FormContent.displayName = "FormContent";
+
 
   const Trigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
     const { userDetails } = useAuth();
@@ -268,7 +177,99 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
                     <div className="py-4 flex-1 overflow-y-auto">
-                        <FormContent formInstance={form} />
+                        <div className="space-y-4 px-1">
+                            <FormField
+                                control={form.control}
+                                name="title"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Event Title</FormLabel>
+                                    <FormControl><Input placeholder="e.g. Neighborhood Block Party" {...field} /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            <FormField
+                              control={form.control}
+                              name="description"
+                              render={({ field }) => (
+                                <FormItem>
+                                   <FormLabel>Description</FormLabel>
+                                  <FormControl><Textarea placeholder="Tell everyone about your event..." className="resize-none min-h-[100px]" {...field} /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="location"
+                              render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Location</FormLabel>
+                                    <FormControl>
+                                        <LocationInput
+                                            name={field.name}
+                                            control={form.control}
+                                            defaultValue={field.value}
+                                        />
+                                    </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="eventDate"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                         <FormLabel>Date</FormLabel>
+                                        <FormControl><Input type="date" {...field} /></FormControl>
+                                         <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                                 <FormField
+                                    control={form.control}
+                                    name="eventTime"
+                                    render={({ field }) => (
+                                      <FormItem>
+                                         <FormLabel>Time</FormLabel>
+                                        <FormControl><Input type="time" {...field} /></FormControl>
+                                        <FormMessage />
+                                      </FormItem>
+                                    )}
+                                  />
+                            </div>
+                            <FormField
+                                control={form.control}
+                                name="eventLink"
+                                render={({ field }) => (
+                                    <FormItem>
+                                         <FormLabel>Event Link</FormLabel>
+                                        <FormControl><Input placeholder="Link to tickets or more info" {...field} /></FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="image"
+                              render={({ field: { onChange, value, ...rest }}) => (
+                                <FormItem>
+                                  <FormLabel>Event Image</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="file"
+                                      accept="image/*"
+                                      multiple
+                                      onChange={(e) => onChange(e.target.files)}
+                                      {...rest}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                        </div>
                     </div>
                     <SheetFooter className="px-4 pb-4">
                         <Button type="submit" className="w-full" variant="default" disabled={loading}>
@@ -293,7 +294,99 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <div className="py-4">
-                <FormContent formInstance={form} />
+                <div className="space-y-4 px-1">
+                    <FormField
+                        control={form.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Event Title</FormLabel>
+                            <FormControl><Input placeholder="e.g. Neighborhood Block Party" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                           <FormLabel>Description</FormLabel>
+                          <FormControl><Textarea placeholder="Tell everyone about your event..." className="resize-none min-h-[100px]" {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Location</FormLabel>
+                            <FormControl>
+                                <LocationInput
+                                    name={field.name}
+                                    control={form.control}
+                                    defaultValue={field.value}
+                                />
+                            </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="eventDate"
+                            render={({ field }) => (
+                              <FormItem>
+                                 <FormLabel>Date</FormLabel>
+                                <FormControl><Input type="date" {...field} /></FormControl>
+                                 <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                         <FormField
+                            control={form.control}
+                            name="eventTime"
+                            render={({ field }) => (
+                              <FormItem>
+                                 <FormLabel>Time</FormLabel>
+                                <FormControl><Input type="time" {...field} /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                    </div>
+                    <FormField
+                        control={form.control}
+                        name="eventLink"
+                        render={({ field }) => (
+                            <FormItem>
+                                 <FormLabel>Event Link</FormLabel>
+                                <FormControl><Input placeholder="Link to tickets or more info" {...field} /></FormControl>
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="image"
+                      render={({ field: { onChange, value, ...rest }}) => (
+                        <FormItem>
+                          <FormLabel>Event Image</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={(e) => onChange(e.target.files)}
+                              {...rest}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                </div>
             </div>
             <DialogFooter>
               <Button type="submit" className="w-full" variant="default" disabled={loading}>

@@ -206,24 +206,9 @@ export function MarketplaceChatLayout({
       console.error("Error sending message: ", error);
       setUploadProgress(null);
     }
-  }, [newMessage, imageFile, selectedChat, user]);
+  }, [newMessage, imageFile, selectedChat, user]); // Include all dependencies
 
-  // Memoize the chat input to prevent unnecessary re-renders
-  const ChatInput = useMemo(() => (
-    <Textarea
-      placeholder="Type a message..."
-      value={newMessage}
-      onChange={handleTyping}
-      className="flex-1 resize-none"
-      rows={1}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-          e.preventDefault();
-          handleSendMessage(e);
-        }
-      }}
-    />
-  ), [newMessage, handleTyping, handleSendMessage]);
+  // Chat input is now inlined to prevent focus loss
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -410,7 +395,19 @@ export function MarketplaceChatLayout({
             <Button type="button" variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()}>
               <ImagePlus className="h-5 w-5" />
             </Button>
-            {ChatInput}
+            <Textarea
+              placeholder="Type a message..."
+              value={newMessage}
+              onChange={handleTyping}
+              className="flex-1 resize-none"
+              rows={1}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage(e);
+                }
+              }}
+            />
             <Button type="submit" size="icon" disabled={(!newMessage.trim() && !imageFile) || uploadProgress !== null}>
               <SendHorizonal className="h-5 w-5" />
             </Button>
