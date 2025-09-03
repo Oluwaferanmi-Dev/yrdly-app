@@ -38,7 +38,7 @@ export function MessagesPageClient({ selectedConversationId }: { selectedConvers
         uid: user.uid,
         name: user.displayName || 'Anonymous',
         avatarUrl: user.photoURL || `https://placehold.co/100x100.png`,
-    } as User : null, [user]);
+    } as User : null, [user?.uid, user?.displayName, user?.photoURL]);
 
     // Simulate loading for a moment, as conversations are now fetched within ChatLayout
     useEffect(() => {

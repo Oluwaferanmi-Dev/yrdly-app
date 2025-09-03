@@ -357,7 +357,8 @@ export function ChatLayout({
       }
   }, []);
 
-  const ConversationList = () => (
+  // Memoize ConversationList to prevent re-creation on every render
+  const ConversationList = useMemo(() => (
     <div className="h-full flex flex-col">
         <div className="p-4 border-b">
             <h2 className="text-xl font-bold mb-4">Messages</h2>
@@ -410,9 +411,10 @@ export function ChatLayout({
             )}
         </ScrollArea>
     </div>
-  );
+  ), [conversations, selectedConversation, currentUser.uid, onlineStatuses, handleConversationSelect]);
 
-  const ChatView = () => {
+  // Memoize ChatView to prevent re-creation on every render
+  const ChatView = useMemo(() => {
     if (!selectedConversation) {
         return (
             <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground p-8">
@@ -532,7 +534,7 @@ export function ChatLayout({
             </div>
         </div>
     );
-  }
+  }, [selectedConversation, messages, currentUser.uid, onlineStatuses, handleBackToList, setProfileUser, imagePreview, uploadProgress, handleSendMessage, newMessage, imageFile, handleTyping, removeImagePreview, handleImageSelect, fileInputRef, scrollAreaRef]);
 
   return (
       <>
@@ -545,10 +547,10 @@ export function ChatLayout({
         )}
         <Card className="h-full w-full flex">
             <div className={cn("w-full md:w-1/3 border-r", { 'hidden md:flex': showChat })}>
-                <ConversationList />
+                {ConversationList}
             </div>
             <div className={cn("w-full md:w-2/3", { 'hidden md:flex': !showChat })}>
-                <ChatView />
+                {ChatView}
             </div>
         </Card>
     </>
