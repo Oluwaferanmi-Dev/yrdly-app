@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Activity
 } from 'lucide-react';
+import { Permission } from '@/types/user-roles';
 
 export function AdminDashboard() {
   const { adminUser, hasPermission } = useAdminAuth();
@@ -285,30 +286,30 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {hasPermission('view_users') && (
-                <Button variant="outline" className="h-20 flex flex-col">
-                  <Users className="h-6 w-6 mb-2" />
-                  Manage Users
-                </Button>
-              )}
-              {hasPermission('view_seller_accounts') && (
-                <Button variant="outline" className="h-20 flex flex-col">
-                  <UserCheck className="h-6 w-6 mb-2" />
-                  Verify Accounts
-                </Button>
-              )}
-              {hasPermission('view_transactions') && (
-                <Button variant="outline" className="h-20 flex flex-col">
-                  <CreditCard className="h-6 w-6 mb-2" />
-                  View Transactions
-                </Button>
-              )}
-              {hasPermission('view_analytics') && (
-                <Button variant="outline" className="h-20 flex flex-col">
-                  <TrendingUp className="h-6 w-6 mb-2" />
-                  View Analytics
-                </Button>
-              )}
+                             {hasPermission(Permission.VIEW_USERS) && (
+                 <Button variant="outline" className="h-20 flex flex-col">
+                   <Users className="h-6 w-6 mb-2" />
+                   Manage Users
+                 </Button>
+               )}
+               {hasPermission(Permission.VIEW_SELLER_ACCOUNTS) && (
+                 <Button variant="outline" className="h-20 flex flex-col">
+                   <UserCheck className="h-6 w-6 mb-2" />
+                   Verify Accounts
+                 </Button>
+               )}
+               {hasPermission(Permission.VIEW_TRANSACTIONS) && (
+                 <Button variant="outline" className="h-20 flex flex-col">
+                   <CreditCard className="h-6 w-6 mb-2" />
+                   View Transactions
+                 </Button>
+               )}
+               {hasPermission(Permission.VIEW_ANALYTICS) && (
+                 <Button variant="outline" className="h-20 flex flex-col">
+                   <TrendingUp className="h-6 w-6 mb-2" />
+                   View Analytics
+                 </Button>
+               )}
             </div>
           </CardContent>
         </Card>
