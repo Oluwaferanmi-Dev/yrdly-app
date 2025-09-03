@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useAdminAuth } from '@/hooks/use-admin-auth';
+import { useAdminAuth } from '@/hooks/use-admin-auth-simple';
 import { AdminService } from '@/lib/admin-service';
 import { UserRole } from '@/types/user-roles';
 import { useToast } from '@/components/ui/use-toast';

@@ -1,6 +1,6 @@
 "use client";
 
-import { useAdminAuth } from '@/hooks/use-admin-auth';
+import { useAdminAuth } from '@/hooks/use-admin-auth-simple';
 import { Button } from '@/components/ui/button';
 import { LogOut, Bell, User } from 'lucide-react';
 

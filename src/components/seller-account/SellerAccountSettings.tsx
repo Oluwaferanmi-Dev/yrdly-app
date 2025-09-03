@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { SellerAccountService } from '@/lib/seller-account-service';
 import { 
@@ -44,13 +44,7 @@ export function SellerAccountSettings() {
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<SellerAccount | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      loadData();
-    }
-  }, [user]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [accountsData, payoutsData] = await Promise.all([
@@ -69,7 +63,13 @@ export function SellerAccountSettings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toast]);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user, loadData]);
 
   const handleAddAccount = () => {
     setSelectedAccount(null);

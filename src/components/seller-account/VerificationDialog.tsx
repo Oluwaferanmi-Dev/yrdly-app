@@ -185,7 +185,7 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
                     <span>Step 1: Micro-deposit Verification</span>
                   </CardTitle>
                   <CardDescription>
-                    We'll send a small amount to your account to verify ownership
+                    We&apos;ll send a small amount to your account to verify ownership
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -193,7 +193,7 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
                     <div className="space-y-4">
                       <p className="text-sm text-muted-foreground">
                         Click the button below to send a micro-deposit (₦1-₦5) to your account. 
-                        You'll need to enter the exact amount to complete verification.
+                        You&apos;ll need to enter the exact amount to complete verification.
                       </p>
                       <Button 
                         onClick={handleInitiateMicroDeposit} 
@@ -215,7 +215,7 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
                           </span>
                         </div>
                         <p className="text-sm text-blue-700 mt-1">
-                          We've sent ₦{microDepositAmount} to your account. 
+                          We&apos;ve sent ₦{microDepositAmount} to your account. 
                           Please check your bank statement and enter the exact amount below.
                         </p>
                       </div>
@@ -314,7 +314,7 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
                 
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">
-                    Your account is currently under review. You'll receive a notification once verification is complete.
+                    Your account is currently under review. You&apos;ll receive a notification once verification is complete.
                   </p>
                 </div>
               </CardContent>
