@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useAdminAuth } from '@/hooks/use-admin-auth';
+import { useState, useEffect, useCallback } from 'react';
+import { useAdminAuth } from '@/hooks/use-admin-auth-simple';
 import { AdminService } from '@/lib/admin-service';
 import { AdminUser, UserRole } from '@/types/user-roles';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,11 +45,7 @@ export function AdminUserManagement() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  useEffect(() => {
-    fetchAdmins();
-  }, []);
-
-  const fetchAdmins = async () => {
+  const fetchAdmins = useCallback(async () => {
     try {
       setLoading(true);
       const adminUsers = await AdminService.getAdminUsers();
@@ -64,7 +60,11 @@ export function AdminUserManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchAdmins();
+  }, [fetchAdmins]);
 
   const filteredAdmins = admins.filter(admin => {
     const matchesSearch = admin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

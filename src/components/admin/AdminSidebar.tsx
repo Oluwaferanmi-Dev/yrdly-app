@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAdminAuth } from '@/hooks/use-admin-auth';
+import { useAdminAuth } from '@/hooks/use-admin-auth-simple';
 import { Permission } from '@/types/user-roles';
 import { cn } from '@/lib/utils';
 import {
@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 
 interface NavItem {
   name: string;
-  href: string;
+  href?: string;
   icon: React.ComponentType<{ className?: string }>;
   permission?: Permission;
   children?: NavItem[];
@@ -142,7 +142,7 @@ export function AdminSidebar() {
 
     return (
       <Link
-        href={item.href}
+        href={item.href || '#'}
         className={cn(
           "flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors",
           level > 0 && "ml-4",
