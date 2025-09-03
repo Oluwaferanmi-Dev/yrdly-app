@@ -34,9 +34,10 @@ export interface EscrowTransaction {
   itemId: string;
   buyerId: string;
   sellerId: string;
-  amount: number;
-  commission: number;
-  totalAmount: number;
+  amount: number; // Original item price
+  commission: number; // Commission deducted from seller
+  totalAmount: number; // Amount buyer pays (same as amount)
+  sellerAmount: number; // Amount seller receives (amount - commission)
   status: EscrowStatus;
   paymentMethod: PaymentMethod;
   deliveryDetails: DeliveryDetails;

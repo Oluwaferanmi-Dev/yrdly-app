@@ -173,7 +173,13 @@ export default function TransactionsPage() {
                           {formatPrice(transaction.amount)}
                         </div>
                         <div className="text-sm text-gray-500">
-                          +{formatPrice(transaction.commission)} commission
+                          {getRole(transaction) === 'Buyer' 
+                            ? `You paid ${formatPrice(transaction.amount)}`
+                            : `You receive ${formatPrice(transaction.sellerAmount || (transaction.amount - transaction.commission))}`
+                          }
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {getRole(transaction) === 'Seller' && `-${formatPrice(transaction.commission)} platform fee`}
                         </div>
                       </div>
                     </div>

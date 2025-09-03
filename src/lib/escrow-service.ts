@@ -21,7 +21,7 @@ import {
   EscrowStats 
 } from '@/types/escrow';
 
-const COMMISSION_RATE = 0.05; // 5% commission
+const COMMISSION_RATE = 0.02; // 2% commission
 
 export class EscrowService {
   // Create a new escrow transaction
@@ -34,7 +34,8 @@ export class EscrowService {
     deliveryDetails: DeliveryDetails
   ): Promise<string> {
     const commission = amount * COMMISSION_RATE;
-    const totalAmount = amount + commission;
+    const totalAmount = amount; // Buyer pays the full item price
+    const sellerAmount = amount - commission; // Seller receives amount minus commission
 
     const transactionData: Omit<EscrowTransaction, 'id' | 'createdAt' | 'updatedAt'> = {
       itemId,
@@ -43,6 +44,7 @@ export class EscrowService {
       amount,
       commission,
       totalAmount,
+      sellerAmount,
       status: EscrowStatus.PENDING,
       paymentMethod,
       deliveryDetails,

@@ -94,8 +94,9 @@ export function BuyButton({ itemId, itemTitle, price, sellerId, sellerName }: Bu
     setDeliveryDetails(prev => ({ ...prev, ...details }));
   };
 
-  const commission = price * 0.05; // 5% commission
-  const totalAmount = price + commission;
+  const commission = price * 0.02; // 2% commission
+  const totalAmount = price; // Buyer pays the full item price
+  const sellerAmount = price - commission; // Seller receives amount minus commission
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -115,15 +116,19 @@ export function BuyButton({ itemId, itemTitle, price, sellerId, sellerName }: Bu
           <div className="bg-gray-50 rounded-lg p-4">
             <h3 className="font-semibold text-gray-900">{itemTitle}</h3>
             <div className="flex justify-between items-center mt-2">
-              <span className="text-gray-600">Price:</span>
+              <span className="text-gray-600">Item Price:</span>
               <span className="font-semibold text-gray-900">₦{price.toLocaleString()}</span>
             </div>
             <div className="flex justify-between items-center mt-1">
-              <span className="text-gray-600">Commission (5%):</span>
+              <span className="text-gray-600">Platform Fee (2%):</span>
               <span className="text-gray-600">₦{commission.toLocaleString()}</span>
             </div>
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-gray-600">Seller Receives:</span>
+              <span className="text-gray-600">₦{sellerAmount.toLocaleString()}</span>
+            </div>
             <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-200">
-              <span className="font-semibold text-gray-900">Total:</span>
+              <span className="font-semibold text-gray-900">You Pay:</span>
               <span className="font-bold text-lg text-green-600">₦{totalAmount.toLocaleString()}</span>
             </div>
           </div>
