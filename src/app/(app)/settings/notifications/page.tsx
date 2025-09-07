@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -61,97 +67,119 @@ export default function NotificationSettingsPage() {
 
     if (loading) {
         return (
-            <Card className="max-w-2xl mx-auto">
-                <CardHeader>
-                    <CardTitle>Notification Settings</CardTitle>
-                    <CardDescription>Manage how you receive notifications.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {[...Array(5)].map((_, i) => (
-                        <div key={i} className="flex items-center justify-between">
-                            <Skeleton className="h-5 w-48" />
-                            <Skeleton className="h-6 w-12" />
-                        </div>
-                    ))}
-                </CardContent>
-            </Card>
+            <div className="pt-16">
+                <div className="max-w-2xl mx-auto space-y-4">
+                    <Link href="/settings">
+                        <Button variant="ghost" className="gap-2">
+                            <ArrowLeft className="h-4 w-4" />
+                            Back to Settings
+                        </Button>
+                    </Link>
+                    
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Notification Settings</CardTitle>
+                            <CardDescription>Manage how you receive notifications.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="flex items-center justify-between">
+                                    <Skeleton className="h-5 w-48" />
+                                    <Skeleton className="h-6 w-12" />
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         );
     }
 
     return (
-        <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-                <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>Manage how you receive notifications from Yrdly.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="friendRequests" className="flex flex-col space-y-1">
-                        <span>Friend Requests</span>
-                        <span className="text-sm text-muted-foreground">Notify me about new friend requests and acceptances.</span>
-                    </Label>
-                    <Switch
-                        id="friendRequests"
-                        checked={settings?.friendRequests ?? true}
-                        onCheckedChange={(value) => handleSettingChange('friendRequests', value)}
-                    />
-                </div>
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="messages" className="flex flex-col space-y-1">
-                        <span>New Messages</span>
-                        <span className="text-sm text-muted-foreground">Notify me when I receive a new message.</span>
-                    </Label>
-                    <Switch
-                        id="messages"
-                        checked={settings?.messages ?? true}
-                        onCheckedChange={(value) => handleSettingChange('messages', value)}
-                    />
-                </div>
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="postUpdates" className="flex flex-col space-y-1">
-                        <span>New Posts</span>
-                        <span className="text-sm text-muted-foreground">Notify me about new posts in my neighborhood.</span>
-                    </Label>
-                    <Switch
-                        id="postUpdates"
-                        checked={settings?.postUpdates ?? true}
-                        onCheckedChange={(value) => handleSettingChange('postUpdates', value)}
-                    />
-                </div>
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="comments" className="flex flex-col space-y-1">
-                        <span>Post Comments & Replies</span>
-                        <span className="text-sm text-muted-foreground">Notify me when someone comments on my posts.</span>
-                    </Label>
-                    <Switch
-                        id="comments"
-                        checked={settings?.comments ?? true}
-                        onCheckedChange={(value) => handleSettingChange('comments', value)}
-                    />
-                </div>
-                 <div className="flex items-center justify-between">
-                    <Label htmlFor="postLikes" className="flex flex-col space-y-1">
-                        <span>Post Likes</span>
-                        <span className="text-sm text-muted-foreground">Notify me when someone likes my post.</span>
-                    </Label>
-                    <Switch
-                        id="postLikes"
-                        checked={settings?.postLikes ?? true}
-                        onCheckedChange={(value) => handleSettingChange('postLikes', value)}
-                    />
-                </div>
-                <div className="flex items-center justify-between">
-                    <Label htmlFor="eventInvites" className="flex flex-col space-y-1">
-                        <span>Event Invitations</span>
-                        <span className="text-sm text-muted-foreground">Notify me when I&apos;m invited to an event.</span>
-                    </Label>
-                    <Switch
-                        id="eventInvites"
-                        checked={settings?.eventInvites ?? true}
-                        onCheckedChange={(value) => handleSettingChange('eventInvites', value)}
-                    />
-                </div>
-            </CardContent>
-        </Card>
+        <div className="pt-16">
+            <div className="max-w-2xl mx-auto space-y-4">
+                <Link href="/settings">
+                    <Button variant="ghost" className="gap-2">
+                        <ArrowLeft className="h-4 w-4" />
+                        Back to Settings
+                    </Button>
+                </Link>
+                
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Notification Settings</CardTitle>
+                        <CardDescription>Manage how you receive notifications from Yrdly.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="friendRequests" className="flex flex-col space-y-1">
+                                <span>Friend Requests</span>
+                                <span className="text-sm text-muted-foreground">Notify me about new friend requests and acceptances.</span>
+                            </Label>
+                            <Switch
+                                id="friendRequests"
+                                checked={settings?.friendRequests ?? true}
+                                onCheckedChange={(value) => handleSettingChange('friendRequests', value)}
+                            />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="messages" className="flex flex-col space-y-1">
+                                <span>New Messages</span>
+                                <span className="text-sm text-muted-foreground">Notify me when I receive a new message.</span>
+                            </Label>
+                            <Switch
+                                id="messages"
+                                checked={settings?.messages ?? true}
+                                onCheckedChange={(value) => handleSettingChange('messages', value)}
+                            />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="postUpdates" className="flex flex-col space-y-1">
+                                <span>New Posts</span>
+                                <span className="text-sm text-muted-foreground">Notify me about new posts in my neighborhood.</span>
+                            </Label>
+                            <Switch
+                                id="postUpdates"
+                                checked={settings?.postUpdates ?? true}
+                                onCheckedChange={(value) => handleSettingChange('postUpdates', value)}
+                            />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="comments" className="flex flex-col space-y-1">
+                                <span>Post Comments & Replies</span>
+                                <span className="text-sm text-muted-foreground">Notify me when someone comments on my posts.</span>
+                            </Label>
+                            <Switch
+                                id="comments"
+                                checked={settings?.comments ?? true}
+                                onCheckedChange={(value) => handleSettingChange('comments', value)}
+                            />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="postLikes" className="flex flex-col space-y-1">
+                                <span>Post Likes</span>
+                                <span className="text-sm text-muted-foreground">Notify me when someone likes my post.</span>
+                            </Label>
+                            <Switch
+                                id="postLikes"
+                                checked={settings?.postLikes ?? true}
+                                onCheckedChange={(value) => handleSettingChange('postLikes', value)}
+                            />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <Label htmlFor="eventInvites" className="flex flex-col space-y-1">
+                                <span>Event Invitations</span>
+                                <span className="text-sm text-muted-foreground">Notify me when I&apos;m invited to an event.</span>
+                            </Label>
+                            <Switch
+                                id="eventInvites"
+                                checked={settings?.eventInvites ?? true}
+                                onCheckedChange={(value) => handleSettingChange('eventInvites', value)}
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
     );
 }

@@ -75,6 +75,9 @@ export interface User {
   blockedUsers?: string[];
   notificationSettings?: NotificationSettings;
   timestamp?: Timestamp;
+  // Online status fields
+  isOnline?: boolean;
+  lastSeen?: Timestamp;
 }
 
 export interface FriendRequest {
@@ -110,6 +113,7 @@ export interface Message {
     text?: string; // Make text optional
     imageUrl?: string; // Add imageUrl
     timestamp: string; // Should be string for display
+    originalTimestamp?: any; // Original Firestore timestamp for date comparison
     isRead: boolean;
 }
 

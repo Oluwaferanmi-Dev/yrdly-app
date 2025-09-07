@@ -2,6 +2,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,6 +24,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { allStates, lgasByState } from '@/lib/geo-data';
 import { Loader2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SellerAccountSettings } from '@/components/seller-account/SellerAccountSettings';
 
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
@@ -157,114 +162,128 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6">
             <h1 className="text-2xl md:text-3xl font-bold font-headline">My Profile</h1>
-            <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Personal Information</CardTitle>
-                            <CardDescription>Update your photo and personal details here.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                             <FormField
-                                control={form.control}
-                                name="avatar"
-                                render={({ field }) => (
-                                    <FormItem className="flex items-center gap-4">
-                                        <Avatar className="h-16 w-16">
-                                            <AvatarImage src={avatarPreview || userDetails?.avatarUrl} alt={userDetails?.name} />
-                                            <AvatarFallback>{userDetails?.name?.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="flex flex-col gap-2">
-                                            <FormLabel>Profile Picture</FormLabel>
-                                            <FormControl>
-                                                <Input 
-                                                    type="file" 
-                                                    accept="image/*"
-                                                    onChange={handleAvatarChange}
-                                                    disabled={!isEditMode}
-                                                    className="w-full md:w-auto"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </div>
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="name"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Name</FormLabel>
-                                        <FormControl><Input {...field} disabled={!isEditMode} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                             <FormField
-                                control={form.control}
-                                name="bio"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Bio</FormLabel>
-                                        <FormControl><Textarea {...field} disabled={!isEditMode} placeholder="Tell us a little about yourself" /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="locationState"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>State</FormLabel>
-                                             <Select onValueChange={handleStateChange} defaultValue={field.value} disabled={!isEditMode}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Select State" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {allStates.map((state) => (<SelectItem key={state} value={state}>{state}</SelectItem>))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
+            
+            <Tabs defaultValue="profile" className="space-y-6">
+                <TabsList>
+                    <TabsTrigger value="profile">Profile</TabsTrigger>
+                    <TabsTrigger value="seller-accounts">Seller Accounts</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="profile">
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)}>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Personal Information</CardTitle>
+                                    <CardDescription>Update your photo and personal details here.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                     <FormField
+                                        control={form.control}
+                                        name="avatar"
+                                        render={({ field }) => (
+                                            <FormItem className="flex items-center gap-4">
+                                                <Avatar className="h-16 w-16">
+                                                    <AvatarImage src={avatarPreview || userDetails?.avatarUrl} alt={userDetails?.name} />
+                                                    <AvatarFallback>{userDetails?.name?.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex flex-col gap-2">
+                                                    <FormLabel>Profile Picture</FormLabel>
+                                                    <FormControl>
+                                                        <Input 
+                                                            type="file" 
+                                                            accept="image/*"
+                                                            onChange={handleAvatarChange}
+                                                            disabled={!isEditMode}
+                                                            className="w-full md:w-auto"
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </div>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="name"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Name</FormLabel>
+                                                <FormControl><Input {...field} disabled={!isEditMode} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                     <FormField
+                                        control={form.control}
+                                        name="bio"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Bio</FormLabel>
+                                                <FormControl><Textarea {...field} disabled={!isEditMode} placeholder="Tell us a little about yourself" /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="locationState"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>State</FormLabel>
+                                                     <Select onValueChange={handleStateChange} defaultValue={field.value} disabled={!isEditMode}>
+                                                        <FormControl><SelectTrigger><SelectValue placeholder="Select State" /></SelectTrigger></FormControl>
+                                                        <SelectContent>
+                                                            {allStates.map((state) => (<SelectItem key={state} value={state}>{state}</SelectItem>))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="locationLga"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>LGA</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={field.value} disabled={!isEditMode || lgas.length === 0}>
+                                                        <FormControl><SelectTrigger><SelectValue placeholder="Select LGA" /></SelectTrigger></FormControl>
+                                                        <SelectContent>
+                                                            {lgas.map((lga) => (<SelectItem key={lga} value={lga}>{lga}</SelectItem>))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                </CardContent>
+                                <CardFooter className="flex justify-end gap-2">
+                                    {isEditMode ? (
+                                        <>
+                                            <Button type="button" variant="ghost" onClick={resetFormAndExitEditMode}>Cancel</Button>
+                                            <Button type="submit" disabled={formLoading}>
+                                                {formLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Save Changes
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <Button type="button" onClick={() => setIsEditMode(true)}>Edit Profile</Button>
                                     )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="locationLga"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>LGA</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value} disabled={!isEditMode || lgas.length === 0}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Select LGA" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {lgas.map((lga) => (<SelectItem key={lga} value={lga}>{lga}</SelectItem>))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                        </CardContent>
-                        <CardFooter className="flex justify-end gap-2">
-                            {isEditMode ? (
-                                <>
-                                    <Button type="button" variant="ghost" onClick={resetFormAndExitEditMode}>Cancel</Button>
-                                    <Button type="submit" disabled={formLoading}>
-                                        {formLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Save Changes
-                                    </Button>
-                                </>
-                            ) : (
-                                <Button type="button" onClick={() => setIsEditMode(true)}>Edit Profile</Button>
-                            )}
-                        </CardFooter>
-                    </Card>
-                </form>
-            </Form>
+                                </CardFooter>
+                            </Card>
+                        </form>
+                    </Form>
+                </TabsContent>
+
+                <TabsContent value="seller-accounts">
+                    <SellerAccountSettings />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

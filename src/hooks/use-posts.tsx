@@ -68,14 +68,20 @@ export const usePosts = () => {
             imageUrls = postIdToUpdate ? [...imageUrls, ...uploadedUrls] : uploadedUrls;
         }
 
+        // Clean up the data to remove undefined values and exclude imageFiles
+        const cleanedPostData = Object.fromEntries(
+          Object.entries(postData).filter(([key, value]) => 
+            value !== undefined && key !== 'imageFiles'
+          )
+        );
+
         const finalPostData = {
-          ...postData,
+          ...cleanedPostData,
           userId: user.uid,
           authorName: userDetails.name || 'Anonymous',
           authorImage: userDetails.avatarUrl || '',
-          imageUrls,
-          imageUrl: imageUrls[0] || postData.imageUrl || "",
-          timestamp: postIdToUpdate ? postData.timestamp : serverTimestamp(),
+          imageUrls: imageUrls.length > 0 ? imageUrls : [],
+          timestamp: postIdToUpdate ? postData.timestamp : Timestamp.now(),
         };
 
         if (postIdToUpdate) {

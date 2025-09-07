@@ -2,15 +2,19 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import { Input } from "@/components/ui/input";
 import { Search, Plus, ShoppingCart } from "lucide-react";
 import { CreateItemDialog } from "@/components/CreateItemDialog";
 import { useState, useEffect, useMemo } from "react";
 import type { Post as PostType } from "@/types";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, query, where, onSnapshot, orderBy, deleteDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { MarketplaceItemCard } from "@/components/MarketplaceItemCard";
+import { EnhancedItemCard } from "@/components/marketplace/EnhancedItemCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 function EmptyMarketplace() {
     return (
@@ -28,6 +32,9 @@ export default function MarketplacePage() {
     const [items, setItems] = useState<PostType[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
+    const [editingItem, setEditingItem] = useState<PostType | null>(null);
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         const q = query(
@@ -52,12 +59,41 @@ export default function MarketplacePage() {
             return items;
         }
         return items.filter(item =>
-            item.text.toLowerCase().includes(searchTerm.toLowerCase())
+            (item.text?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (item.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+            (item.description?.toLowerCase() || '').includes(searchTerm.toLowerCase())
         );
     }, [items, searchTerm]);
 
+    const handleEditItem = (item: PostType) => {
+        setEditingItem(item);
+        setIsEditDialogOpen(true);
+    };
+
+    const handleDeleteItem = async (itemId: string) => {
+        try {
+            await deleteDoc(doc(db, "posts", itemId));
+            toast({
+                title: "Success",
+                description: "Item deleted successfully",
+            });
+        } catch (error) {
+            console.error("Failed to delete item:", error);
+            toast({
+                title: "Error",
+                description: "Failed to delete item. Please try again.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleEditDialogClose = () => {
+        setEditingItem(null);
+        setIsEditDialogOpen(false);
+    };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pt-16">
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 className="text-2xl md:text-3xl font-bold font-headline">For Sale & Free</h1>
@@ -82,7 +118,12 @@ export default function MarketplacePage() {
         ) : filteredItems.length > 0 ? (
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {filteredItems.map(item => (
-                    <MarketplaceItemCard key={item.id} item={item} />
+                    <EnhancedItemCard 
+                        key={item.id} 
+                        item={item}
+                        onEditItem={handleEditItem}
+                        onDeleteItem={handleDeleteItem}
+                    />
                 ))}
             </div>
         ) : (
@@ -106,6 +147,14 @@ export default function MarketplacePage() {
                 </Button>
              </CreateItemDialog>
         </div>
+
+        {/* Edit Item Dialog */}
+        {editingItem && (
+            <CreateItemDialog 
+                postToEdit={editingItem}
+                onOpenChange={setIsEditDialogOpen}
+            />
+        )}
     </div>
   );
 }

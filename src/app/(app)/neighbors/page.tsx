@@ -2,6 +2,9 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import {
     collection,
     query,
@@ -47,6 +50,9 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
+import { OnlineStatusService } from "@/lib/online-status";
+import { AvatarOnlineIndicator } from "@/components/ui/online-indicator";
+import { cn } from "@/lib/utils";
 
 const NeighborSkeleton = () => (
     <Card>
@@ -74,6 +80,50 @@ export default function NeighborsPage() {
     const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
     const [activeTab, setActiveTab] = useState("all");
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [onlineStatuses, setOnlineStatuses] = useState<{ [userId: string]: boolean }>({});
+
+    // Initialize online status tracking for current user
+    useEffect(() => {
+        if (currentUser?.uid) {
+            OnlineStatusService.getInstance().initialize(currentUser.uid);
+            
+            return () => {
+                OnlineStatusService.getInstance().cleanup();
+            };
+        }
+    }, [currentUser?.uid]);
+
+    // Track online status of friends
+    useEffect(() => {
+        if (!currentUser?.uid) return;
+
+        console.log('🔵 NeighborsPage: Setting up online status tracking for friends');
+        const friends = allNeighbors.filter(neighbor => 
+            neighbor.friends?.includes(currentUser.uid) || 
+            userDetails?.friends?.includes(neighbor.uid)
+        );
+
+        console.log('🔵 NeighborsPage: Found friends:', friends.map(f => f.name));
+
+        const unsubscribeFunctions: (() => void)[] = [];
+
+        friends.forEach(friend => {
+            console.log('🔵 NeighborsPage: Setting up listener for friend:', friend.name, 'with uid:', friend.uid);
+            const unsubscribe = OnlineStatusService.listenToUserOnlineStatus(friend.uid, (status) => {
+                console.log('🔵 NeighborsPage: Status update for', friend.name, ':', status);
+                setOnlineStatuses(prev => ({
+                    ...prev,
+                    [friend.uid]: status.isOnline
+                }));
+            });
+            unsubscribeFunctions.push(unsubscribe);
+        });
+
+        return () => {
+            console.log('🔵 NeighborsPage: Cleaning up online status listeners');
+            unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
+        };
+    }, [currentUser?.uid, allNeighbors, userDetails?.friends]);
 
     useEffect(() => {
         if (!currentUser) return;
@@ -259,7 +309,7 @@ export default function NeighborsPage() {
     }, [selectedUser]);
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-6 pb-8 first-content-safe">
             {selectedUser && <UserProfileDialog user={selectedUser} open={!!selectedUser} onOpenChange={handleProfileDialogClose} />}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -360,17 +410,45 @@ export default function NeighborsPage() {
                          <div className="space-y-4"><NeighborSkeleton /><NeighborSkeleton /><NeighborSkeleton /></div>
                     ) : friends.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pb-20">
-                            {friends.map((friend) => (
-                                <Card key={friend.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(friend)}>
-                                    <CardContent className="p-4 flex items-center gap-4">
-                                        <Avatar className="h-12 w-12 border"><AvatarImage src={friend.avatarUrl} alt={friend.name} /><AvatarFallback>{friend.name.charAt(0)}</AvatarFallback></Avatar>
-                                        <div className="flex-1 space-y-1">
-                                            <h3 className="font-semibold text-base">{friend.name}</h3>
-                                            {friend.location && (<div className="flex items-center text-xs text-muted-foreground"><MapPin className="h-3 w-3 mr-1" /><span>{displayLocation(friend.location)}</span></div>)}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
+                            {friends.map((friend) => {
+                                const isOnline = onlineStatuses[friend.uid] || false;
+                                console.log('🔵 NeighborsPage: Rendering friend', friend.name, 'with online status:', isOnline);
+                                
+                                return (
+                                    <Card key={friend.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(friend)}>
+                                        <CardContent className="p-4 flex items-center gap-4">
+                                            <div className="relative">
+                                                <Avatar className="h-12 w-12 border">
+                                                    <AvatarImage src={friend.avatarUrl} alt={friend.name} />
+                                                    <AvatarFallback>{friend.name.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <AvatarOnlineIndicator 
+                                                    isOnline={isOnline} 
+                                                />
+                                            </div>
+                                            <div className="flex-1 space-y-1">
+                                                <h3 className="font-semibold text-base">{friend.name}</h3>
+                                                {friend.location && (
+                                                    <div className="flex items-center text-xs text-muted-foreground">
+                                                        <MapPin className="h-3 w-3 mr-1" />
+                                                        <span>{displayLocation(friend.location)}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <Button 
+                                                size="sm" 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleMessage(e, friend.uid);
+                                                }}
+                                            >
+                                                <MessageSquare className="mr-2 h-4 w-4" /> 
+                                                Message
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                );
+                            })}
                         </div>
                     ) : (
                         <Card className="text-center p-16 mt-4"><div className="flex justify-center mb-4"><UserPlus className="h-12 w-12 text-muted-foreground" /></div><h2 className="text-2xl font-bold mb-2">No friends yet</h2><p className="text-muted-foreground">Your friends list is empty. Find neighbors to connect with.</p></Card>

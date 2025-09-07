@@ -2,6 +2,9 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import { Bell, Palette, ChevronRight } from "lucide-react";
 import Link from 'next/link';
 

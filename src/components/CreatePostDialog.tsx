@@ -43,7 +43,7 @@ import type { Post } from "@/types";
 
 const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
   text: z.string().min(1, "Text can't be empty.").max(500),
-  image: z.any().optional(),
+  imageFiles: z.any().optional(),
 });
 
 type CreatePostDialogProps = {
@@ -60,35 +60,50 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
   const isMobile = useIsMobile();
   const isEditMode = !!postToEdit;
 
+  // Create form schema once and stabilize it
   const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
 
+  // Create form once and stabilize it - don't recreate on every render
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       text: "",
-      image: undefined,
+      imageFiles: undefined,
     },
   });
 
+  // Stabilize form.reset function to prevent dependency issues
+  const stableFormReset = useCallback((values: any) => {
+    form.reset(values);
+  }, [form]);
+
+  // Fix useEffect dependencies - only reset when dialog opens, not on every change
   useEffect(() => {
     if (open) {
-      if (isEditMode && postToEdit) {
-        form.reset({
-          text: postToEdit.text,
-          image: postToEdit.imageUrls || [],
-        });
-      } else if (!isEditMode) {
-        form.reset({
-          text: "",
-          image: undefined,
-        });
-      }
+      // Use setTimeout to ensure this runs after the dialog is fully opened
+      const timer = setTimeout(() => {
+        if (isEditMode && postToEdit) {
+          stableFormReset({
+            text: postToEdit.text,
+            imageFiles: postToEdit.imageUrls || [],
+          });
+        } else if (!isEditMode) {
+          stableFormReset({
+            text: "",
+            imageFiles: undefined,
+          });
+        }
+      }, 0);
+      
+      return () => clearTimeout(timer);
     }
-  }, [open, isEditMode, postToEdit, form.reset]);
+  }, [open, isEditMode, postToEdit, stableFormReset]); // Include all dependencies
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
-    await createPost(values, postToEdit?.id);
+    // Only pass imageFiles if images are actually selected
+    const imageFiles = values.imageFiles && values.imageFiles.length > 0 ? values.imageFiles : undefined;
+    await createPost(values, postToEdit?.id, imageFiles);
     setLoading(false);
     handleOpenChange(false);
   }
@@ -103,54 +118,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
   const finalTitle = isEditMode ? "Edit Post" : "Create Post";
   const finalDescription = isEditMode ? "Make changes to your post here." : "Share something with your neighborhood.";
 
-  const FormContent = memo(function FormContent({ formInstance }: { formInstance: UseFormReturn<z.infer<typeof formSchema>> }) {
-    return (
-        <div className="space-y-4 px-1">
-            <FormField
-                control={formInstance.control}
-                name="text"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Post</FormLabel>
-                    <FormControl>
-                    <Textarea
-                        placeholder="What's happening in the neighborhood?"
-                        className="resize-none min-h-[120px]"
-                        {...field}
-                    />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={formInstance.control}
-                name="image"
-                render={({ field: { onChange, value, ...rest } }) => (
-                <FormItem>
-                    <FormLabel>Add images</FormLabel>
-                    <FormControl>
-                        <Input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            onChange={(e) => onChange(e.target.files)}
-                            {...rest}
-                        />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
-                <div className="text-sm text-muted-foreground">
-                    Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
-                </div>
-            )}
-        </div>
-    );
-  });
-  FormContent.displayName = "FormContent";
+
 
   const Trigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
     const { userDetails } = useAuth();
@@ -185,7 +153,49 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
                     <div className="p-4 flex-1 overflow-y-auto">
-                        <FormContent formInstance={form} />
+                        <div className="space-y-4 px-1">
+                            <FormField
+                                control={form.control}
+                                name="text"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Post</FormLabel>
+                                    <FormControl>
+                                    <Textarea
+                                        placeholder="What's happening in the neighborhood?"
+                                        className="resize-none min-h-[120px]"
+                                        {...field}
+                                    />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="imageFiles"
+                                render={({ field: { onChange, value, ...rest } }) => (
+                                <FormItem>
+                                    <FormLabel>Add images</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            onChange={(e) => onChange(e.target.files)}
+                                            {...rest}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                                <div className="text-sm text-muted-foreground">
+                                    Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <SheetFooter className="p-4 border-t mt-auto">
                         <Button type="submit" className="w-full" variant="default" disabled={loading}>
@@ -214,7 +224,49 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-[70vh] overflow-y-auto p-6">
-                <FormContent formInstance={form} />
+                <div className="space-y-4 px-1">
+                    <FormField
+                        control={form.control}
+                        name="text"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Post</FormLabel>
+                            <FormControl>
+                            <Textarea
+                                placeholder="What's happening in the neighborhood?"
+                                className="resize-none min-h-[120px]"
+                                {...field}
+                            />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="imageFiles"
+                        render={({ field: { onChange, value, ...rest } }) => (
+                        <FormItem>
+                            <FormLabel>Add images</FormLabel>
+                            <FormControl>
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={(e) => onChange(e.target.files)}
+                                    {...rest}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                        <div className="text-sm text-muted-foreground">
+                            Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
+                        </div>
+                    )}
+                </div>
             </div>
             <DialogFooter className="p-6 pt-0 border-t">
                 <Button type="submit" className="w-full" variant="default" disabled={loading}>

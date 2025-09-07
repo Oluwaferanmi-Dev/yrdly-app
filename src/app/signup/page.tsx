@@ -2,10 +2,13 @@
 "use client";
 
 import { useState } from 'react';
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, getAdditionalUserInfo, AuthProvider, OAuthProvider } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, getAdditionalUserInfo, AuthProvider, OAuthProvider, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider, appleProvider } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
@@ -31,6 +34,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
+import { BrevoEmailService } from '@/lib/brevo-service';
 
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -119,9 +123,34 @@ export default function SignupPage() {
         avatarUrl: `https://placehold.co/100x100.png?text=${values.name.charAt(0)}`,
         bio: "",
         termsAccepted: true,
+        emailVerified: false, // Track verification status
       });
 
-      router.push('/home');
+      // Try to send verification email via Brevo, fallback to Firebase
+      try {
+        // Create verification link with user ID as token
+        const verificationLink = `${window.location.origin}/verify-email?token=${user.uid}&email=${encodeURIComponent(values.email)}`;
+        
+        // Send verification email via Brevo
+        await BrevoEmailService.sendVerificationEmail(values.email, verificationLink, values.name);
+        
+        console.log('Verification email sent via Brevo');
+      } catch (error: any) {
+        if (error.message === 'BREVO_NOT_CONFIGURED' || error.message === 'BREVO_SEND_FAILED') {
+          console.log('Falling back to Firebase email verification');
+          
+          // Fallback to Firebase email verification
+          await sendEmailVerification(user, {
+            url: `${window.location.origin}/verify-email?email=${encodeURIComponent(values.email)}`,
+            handleCodeInApp: true
+          });
+        } else {
+          throw error; // Re-throw other errors
+        }
+      }
+
+      // Redirect to verification page instead of home
+      router.push(`/verify-email?email=${encodeURIComponent(values.email)}`);
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         setError(errorMessage);

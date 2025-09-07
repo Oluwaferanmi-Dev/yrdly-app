@@ -2,6 +2,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Briefcase } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -180,7 +183,7 @@ export default function BusinessesPage() {
     }, []);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto pt-16 pb-20">
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 className="text-2xl md:text-3xl font-bold font-headline">Local businesses</h1>

@@ -2,6 +2,14 @@
 "use client";
 
 import { PostCard } from "@/components/PostCard";
+import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
+import { useHaptics } from "@/hooks/use-haptics";
+import useSWR from 'swr';
+import { firestoreFetcher, createSWRKey } from "@/hooks/use-swr-fetcher";
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
+
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
@@ -15,29 +23,70 @@ import { SuggestedNeighbors } from "@/components/SuggestedNeighbors";
 import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
 
 export default function Home() {
+  const { triggerHaptic } = useHaptics();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
-    
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const postsData = querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-        } as PostType;
-      });
-      setPosts(postsData);
-      setLoading(false);
-    });
+  // SWR data fetching for posts
+  const { data: swrPosts, error, mutate } = useSWR(
+    createSWRKey.posts({ limit: 50 }),
+    firestoreFetcher,
+    {
+      refreshInterval: 30000, // Refresh every 30 seconds
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+    }
+  );
 
-    return () => unsubscribe();
-  }, []);
+  // Pull-to-refresh functionality
+  const { containerRef, isRefreshing } = usePullToRefresh({
+    onRefresh: async () => {
+      // Trigger haptic feedback
+      triggerHaptic('medium');
+      
+      // Refresh data
+      await mutate();
+      
+      // Show success feedback
+      triggerHaptic('success');
+    },
+    threshold: 80,
+    enabled: true
+  });
+
+  // Update local state when SWR data changes
+  useEffect(() => {
+    if (swrPosts) {
+      setPosts(swrPosts as PostType[]);
+      setLoading(false);
+    }
+  }, [swrPosts]);
+
+  // Fallback to real-time listener if SWR fails
+  useEffect(() => {
+    if (error) {
+      console.log('SWR failed, falling back to real-time listener');
+      
+      const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+      
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const postsData = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+          } as PostType;
+        });
+        setPosts(postsData);
+        setLoading(false);
+      });
+
+      return () => unsubscribe();
+    }
+  }, [error]);
 
   return (
-    <div className="space-y-6 pt-4">
+    <div ref={containerRef} className="space-y-6 pt-12 pb-20">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         {/* Main Content - 2 columns on large screens */}
         <div className="lg:col-span-2 space-y-6">

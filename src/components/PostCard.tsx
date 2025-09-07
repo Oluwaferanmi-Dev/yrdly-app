@@ -41,6 +41,7 @@ import { CommentSection } from "./CommentSection";
 import { timeAgo, formatPrice } from "@/lib/utils";
 import { UserProfileDialog } from "./UserProfileDialog";
 import { useRouter } from "next/navigation";
+import { useHaptics } from "@/hooks/use-haptics";
 
 
 interface PostCardProps {
@@ -51,6 +52,7 @@ export function PostCard({ post }: PostCardProps) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const { triggerHaptic } = useHaptics();
   const [author, setAuthor] = useState<User | null>(null);
   const [loadingAuthor, setLoadingAuthor] = useState(true);
   const [likes, setLikes] = useState(post.likedBy?.length || 0);
@@ -116,6 +118,10 @@ export function PostCard({ post }: PostCardProps) {
 
   const handleLike = async () => {
     if (!currentUser || !post.id) return;
+    
+    // Trigger haptic feedback
+    triggerHaptic('light');
+    
     const postRef = doc(db, "posts", post.id);
 
     await runTransaction(db, async (transaction) => {
@@ -162,6 +168,9 @@ export function PostCard({ post }: PostCardProps) {
   }
 
   const handleShare = async () => {
+    // Trigger haptic feedback
+    triggerHaptic('light');
+    
     const postUrl = `${window.location.origin}/posts/${post.id}`;
     const shareData = {
       title: `Post by ${author?.name || 'a user'} on Yrdly`,
@@ -188,6 +197,9 @@ export function PostCard({ post }: PostCardProps) {
   
     const handleMessageSeller = async () => {
         if (!currentUser || !author || currentUser.uid === author.uid) return;
+
+        // Trigger haptic feedback
+        triggerHaptic('medium');
 
         const sortedParticipantIds = [currentUser.uid, author.uid].sort();
         
@@ -372,6 +384,7 @@ export function PostCard({ post }: PostCardProps) {
                 alt="Post image"
                 fill
                 className="object-cover"
+                priority
                 data-ai-hint="neighborhood street"
             />
             </div>

@@ -37,7 +37,15 @@ const config: CapacitorConfig = {
       overlaysWebView: false,
       contentStyle: "dark-content"
     }
-  }
+  },
+  
+  // Exclude unnecessary files from sync
+  includePlugins: [
+    '@capacitor/app',
+    '@capacitor/haptics',
+    '@capacitor/splash-screen',
+    '@capacitor/status-bar'
+  ]
 };
 
 export default config;

@@ -1,0 +1,10 @@
+[33m69d2326d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mV2[m[33m)[m added moderation feature and better marketplace UI
+[33m002ad6dc[m[33m ([m[1;31morigin/V2[m[33m)[m feat: implement comprehensive offline functionality
+[33mcefc222c[m V2: Update online indicators to show only when online (no offline indicator)
+[33mc6da242f[m V2: Fix duplicate online indicators and clean up debugging logs
+[33me0556137[m V2: Fix online status indicators and add debugging
+[33mcca0640a[m V2: Add online status indicators for friends
+[33m5682c298[m V2: CRITICAL FIX - Resolve input field focus loss across all pages
+[33mc631d2de[m V2: Move ESLint and Capacitor CLI to main dependencies for Vercel deployment
+[33m14391507[m V2: Move TypeScript types to main dependencies for Vercel deployment
+[33m5371093e[m V2: Move build dependencies to main dependencies for Vercel deployment

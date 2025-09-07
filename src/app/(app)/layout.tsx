@@ -13,11 +13,18 @@ import Image from 'next/image';
 import { APIProvider } from '@vis.gl/react-google-maps';
 import { UserProfileDialog } from '@/components/UserProfileDialog';
 import type { User } from '@/types';
+import { useDeepLinking } from '@/hooks/use-deep-linking';
+import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration';
+import { OfflineStatus } from '@/components/OfflineStatus';
+import { EmailVerificationGuard } from '@/components/EmailVerificationGuard';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, userDetails, loading } = useAuth();
   const router = useRouter();
   const [profileUser, setProfileUser] = useState<User | null>(null);
+  
+  // Initialize deep linking
+  useDeepLinking();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -33,7 +40,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
             alt="Yrdly Logo" 
             width={96} 
             height={96} 
-            className="animate-pulse"
+            className="animate-pulse w-24 h-24"
             priority
         />
       </div>
@@ -45,7 +52,8 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <>
+    <EmailVerificationGuard>
+      <ServiceWorkerRegistration />
       {profileUser && (
         <UserProfileDialog 
           user={profileUser}
@@ -61,13 +69,15 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
               <AppHeader />
           </div>
           {/* Enhanced spacing for mobile layout with proper header and bottom nav clearance */}
-          <main className="mobile-layout p-4 sm:p-6 lg:p-8 md:pt-6 md:pb-8 safe-area-inset">
+          <main className="pt-40 pb-32 p-4 sm:p-6 lg:p-8 md:pt-6 md:pb-8 safe-area-inset">
             {children}
           </main>
           <AppBottomNav />
+          {/* Offline Status Component */}
+          <OfflineStatus />
         </SidebarInset>
       </SidebarProvider>
-    </>
+    </EmailVerificationGuard>
   );
 }
 

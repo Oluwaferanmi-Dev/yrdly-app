@@ -6,6 +6,7 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import type { User } from '@/types';
+import { onlineStatusService } from '@/lib/online-status';
 
 interface AuthContextType {
   user: FirebaseUser | null;
@@ -50,9 +51,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setPendingRequestCount(snapshot.size);
         });
 
+        // Initialize online status tracking
+        onlineStatusService.initialize(user.uid);
+
         return () => {
           unsubscribeSnapshot();
           unsubscribeRequests();
+          onlineStatusService.cleanup();
         };
       } else {
         setUserDetails(null);

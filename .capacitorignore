@@ -1,0 +1,31 @@
+# Type files that cause build conflicts
+**/types/**
+**/*.ts
+**/*.tsx
+
+# Development files
+**/cache/**
+**/diagnostics/**
+**/*.nft.json
+
+# Source maps and development artifacts
+**/*.map
+**/*.map.js
+
+# Node modules (if any get copied)
+**/node_modules/**
+
+# Git files
+**/.git/**
+**/.gitignore
+
+# IDE files
+**/.vscode/**
+**/.idea/**
+**/*.swp
+**/*.swo
+
+# OS files
+**/.DS_Store
+**/Thumbs.db
+

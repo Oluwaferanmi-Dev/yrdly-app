@@ -64,8 +64,10 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
   const isMobile = useIsMobile();
   const isEditMode = !!postToEdit;
 
+  // Create form schema once and stabilize it
   const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
 
+  // Create form once and stabilize it - don't recreate on every render
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -76,25 +78,36 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     },
   });
 
-  useEffect(() => { // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Stabilize form.reset function to prevent dependency issues
+  const stableFormReset = useCallback((values: any) => {
+    form.reset(values);
+  }, [form]);
+
+  // Fix useEffect dependencies - only reset when dialog opens, not on every change
+  useEffect(() => {
     if (open) {
-      if (isEditMode && postToEdit) {
-        form.reset({
-          text: postToEdit.text,
-          description: postToEdit.description,
-          price: postToEdit.price,
-          image: postToEdit.imageUrls || [],
-        });
-      } else if (!isEditMode) {
-        form.reset({
-          text: "",
-          description: "",
-          price: undefined,
-          image: undefined,
-        });
-      }
+      // Use setTimeout to ensure this runs after the dialog is fully opened
+      const timer = setTimeout(() => {
+        if (isEditMode && postToEdit) {
+          stableFormReset({
+            text: postToEdit.text,
+            description: postToEdit.description,
+            price: postToEdit.price,
+            image: postToEdit.imageUrls || [],
+          });
+        } else if (!isEditMode) {
+          stableFormReset({
+            text: "",
+            description: "",
+            price: undefined,
+            image: undefined,
+          });
+        }
+      }, 0);
+      
+      return () => clearTimeout(timer);
     }
-  }, [open, isEditMode, postToEdit, form.reset]);
+  }, [open, isEditMode, postToEdit, stableFormReset]); // Include all dependencies
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -121,84 +134,7 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
 
   const imageField = form.register('image');
 
-  const FormContent = memo(function FormContent({ formInstance }: { formInstance: UseFormReturn<z.infer<typeof formSchema>> }) {
-    return (
-        <div className="space-y-4 px-1">
-            <FormField
-                control={formInstance.control}
-                name="text"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Item Title</FormLabel>
-                    <FormControl>
-                    <Input placeholder="e.g. Slightly used armchair" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={formInstance.control}
-                name="description"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Description (Optional)</FormLabel>
-                    <FormControl>
-                    <Textarea
-                        placeholder="Add more details about the item, its condition, etc."
-                        className="resize-none min-h-[100px]"
-                        {...field}
-                    />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={formInstance.control}
-                name="price"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Price (Optional)</FormLabel>
-                    <FormControl>
-                    <div className="relative">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₦</span>
-                        <Input type="number" placeholder="Leave blank for Free" className="pl-7" {...field} />
-                    </div>
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            <FormField
-                control={formInstance.control}
-                name="image"
-                render={() => (
-                <FormItem>
-                    <FormLabel>
-                        Add images <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                        <Input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            {...imageField}
-                        />
-                    </FormControl>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
-            {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
-                <div className="text-sm text-muted-foreground">
-                    Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
-                </div>
-            )}
-        </div>
-    );
-  });
-  FormContent.displayName = "FormContent";
+
 
   const Trigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
     const { userDetails } = useAuth();
@@ -233,7 +169,79 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
                     <div className="p-4 flex-1 overflow-y-auto">
-                        <FormContent formInstance={form} />
+                        <div className="space-y-4 px-1">
+                            <FormField
+                                control={form.control}
+                                name="text"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Item Title</FormLabel>
+                                    <FormControl>
+                                    <Input placeholder="e.g. Slightly used armchair" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Description (Optional)</FormLabel>
+                                    <FormControl>
+                                    <Textarea
+                                        placeholder="Add more details about the item, its condition, etc."
+                                        className="resize-none min-h-[100px]"
+                                        {...field}
+                                    />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="price"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Price (Optional)</FormLabel>
+                                    <FormControl>
+                                    <div className="relative">
+                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₦</span>
+                                        <Input type="number" placeholder="Leave blank for Free" className="pl-7" {...field} />
+                                    </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="image"
+                                render={() => (
+                                <FormItem>
+                                    <FormLabel>
+                                        Add images <span className="text-destructive">*</span>
+                                    </FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            {...imageField}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                                <div className="text-sm text-muted-foreground">
+                                    Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <SheetFooter className="p-4 border-t mt-auto">
                         <Button type="submit" className="w-full" variant="default" disabled={loading}>
@@ -262,7 +270,79 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
               </DialogDescription>
             </DialogHeader>
             <div className="max-h-[70vh] overflow-y-auto p-6">
-                <FormContent formInstance={form} />
+                <div className="space-y-4 px-1">
+                    <FormField
+                        control={form.control}
+                        name="text"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Item Title</FormLabel>
+                            <FormControl>
+                            <Input placeholder="e.g. Slightly used armchair" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Description (Optional)</FormLabel>
+                            <FormControl>
+                            <Textarea
+                                placeholder="Add more details about the item, its condition, etc."
+                                className="resize-none min-h-[100px]"
+                                {...field}
+                            />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="price"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Price (Optional)</FormLabel>
+                            <FormControl>
+                            <div className="relative">
+                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₦</span>
+                                <Input type="number" placeholder="Leave blank for Free" className="pl-7" {...field} />
+                            </div>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="image"
+                        render={() => (
+                        <FormItem>
+                            <FormLabel>
+                                Add images <span className="text-destructive">*</span>
+                            </FormLabel>
+                            <FormControl>
+                                <Input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    {...imageField}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    {postToEdit?.imageUrls && postToEdit.imageUrls.length > 0 && (
+                        <div className="text-sm text-muted-foreground">
+                            Current images: {postToEdit.imageUrls.length}. Upload more to add to the list.
+                        </div>
+                    )}
+                </div>
             </div>
             <DialogFooter className="p-6 pt-0 border-t">
                 <Button type="submit" className="w-full" variant="default" disabled={loading}>

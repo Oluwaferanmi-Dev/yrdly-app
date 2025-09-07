@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/use-auth';
 import { PT_Sans } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -14,19 +15,16 @@ const ptSans = PT_Sans({
   variable: '--font-pt-sans',
 });
 
-
 export const metadata: Metadata = {
   title: 'Yrdly - Your Neighborhood Network',
   description: 'Connect with your neighbors, share updates, and build a stronger community with Yrdly.',
 };
 
-import { ThemeProvider } from '@/components/ThemeProvider';
-
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>

@@ -2,6 +2,10 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
+
 import { Plus, CalendarDays } from "lucide-react";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { useState, useEffect } from "react";
@@ -47,7 +51,7 @@ export default function EventsPage() {
     }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-16 pb-20">
        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
             <h1 className="text-2xl md:text-3xl font-bold font-headline">Events</h1>
