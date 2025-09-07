@@ -8,6 +8,7 @@ import {
   query, 
   where, 
   orderBy, 
+  limit,
   serverTimestamp,
   Timestamp,
   onSnapshot 
@@ -126,16 +127,39 @@ export class ChatService {
     const querySnapshot = await getDocs(q);
     const chats: ItemChat[] = [];
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
+    for (const docSnapshot of querySnapshot.docs) {
+      const data = docSnapshot.data();
+      
+      // Get the last message for this chat
+      const messagesQuery = query(
+        collection(db, 'chat_messages'),
+        where('chatId', '==', docSnapshot.id),
+        orderBy('timestamp', 'desc'),
+        limit(1)
+      );
+      
+      const messagesSnapshot = await getDocs(messagesQuery);
+      let lastMessage: ChatMessage | undefined;
+      
+      if (!messagesSnapshot.empty) {
+        const messageDoc = messagesSnapshot.docs[0];
+        const messageData = messageDoc.data();
+        lastMessage = {
+          id: messageDoc.id,
+          ...messageData,
+          timestamp: messageData.timestamp ? (messageData.timestamp as Timestamp).toDate() : new Date()
+        } as ChatMessage;
+      }
+
       chats.push({
-        id: doc.id,
+        id: docSnapshot.id,
         ...data,
+        lastMessage,
         lastActivity: data.lastActivity ? (data.lastActivity as Timestamp).toDate() : new Date(),
         createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date(),
         updatedAt: data.updatedAt ? (data.updatedAt as Timestamp).toDate() : new Date()
       } as ItemChat);
-    });
+    }
 
     return chats;
   }
@@ -151,16 +175,39 @@ export class ChatService {
     const querySnapshot = await getDocs(q);
     const chats: ItemChat[] = [];
 
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
+    for (const docSnapshot of querySnapshot.docs) {
+      const data = docSnapshot.data();
+      
+      // Get the last message for this chat
+      const messagesQuery = query(
+        collection(db, 'chat_messages'),
+        where('chatId', '==', docSnapshot.id),
+        orderBy('timestamp', 'desc'),
+        limit(1)
+      );
+      
+      const messagesSnapshot = await getDocs(messagesQuery);
+      let lastMessage: ChatMessage | undefined;
+      
+      if (!messagesSnapshot.empty) {
+        const messageDoc = messagesSnapshot.docs[0];
+        const messageData = messageDoc.data();
+        lastMessage = {
+          id: messageDoc.id,
+          ...messageData,
+          timestamp: messageData.timestamp ? (messageData.timestamp as Timestamp).toDate() : new Date()
+        } as ChatMessage;
+      }
+
       chats.push({
-        id: doc.id,
+        id: docSnapshot.id,
         ...data,
+        lastMessage,
         lastActivity: data.lastActivity ? (data.lastActivity as Timestamp).toDate() : new Date(),
         createdAt: data.createdAt ? (data.createdAt as Timestamp).toDate() : new Date(),
         updatedAt: data.updatedAt ? (data.updatedAt as Timestamp).toDate() : new Date()
       } as ItemChat);
-    });
+    }
 
     return chats;
   }

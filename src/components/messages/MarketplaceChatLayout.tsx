@@ -24,7 +24,13 @@ import type { User } from "@/types";
 
 // Utility function to get chat wallpaper based on theme
 const getChatWallpaper = (isDark: boolean) => {
-  return isDark ? '/chatwallpaper2.jpg' : '/chatwallpaper1.jpg';
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? process.env.NEXT_PUBLIC_BASE_URL || '' 
+    : '';
+  
+  return isDark 
+    ? `${baseUrl}/chatwallpaper2.jpg` 
+    : `${baseUrl}/chatwallpaper1.jpg`;
 };
 
 // Helper function to format date for display
@@ -381,14 +387,18 @@ export function MarketplaceChatLayout({
         <ScrollArea 
           ref={scrollAreaRef} 
           className="flex-1 p-4 min-h-0 relative"
-          style={{
-            backgroundImage: `url(${getChatWallpaper(theme === 'dark')})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            backgroundAttachment: 'fixed'
-          }}
         >
+          {/* Background wallpaper */}
+          <div 
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage: `url(${getChatWallpaper(theme === 'dark')})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              backgroundAttachment: 'fixed'
+            }}
+          />
           {/* Semi-transparent overlay for text readability */}
           <div className="absolute inset-0 bg-black/10 dark:bg-black/20 pointer-events-none" />
           <div className="space-y-4 relative z-10">
