@@ -61,7 +61,7 @@ export function MarketplaceChatPageClient({ chatId }: { chatId: string }) {
     }
 
     return (
-        <div className="h-[calc(100vh_-_8rem)] md:h-auto pt-16">
+        <div className="h-[calc(100vh_-_4rem)] md:h-auto pt-16">
             <MarketplaceChatLayout currentUser={currentUser} selectedChatId={chatId} />
         </div>
     );

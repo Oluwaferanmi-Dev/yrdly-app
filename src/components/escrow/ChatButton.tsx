@@ -44,7 +44,7 @@ export function ChatButton({ itemId, itemTitle, itemImageUrl, sellerId, sellerNa
     setIsLoading(true);
 
     try {
-      // Get or create chat
+      // Get or create chat with the specific seller
       const chatId = await ChatService.getOrCreateChat(
         itemId,
         user.uid,
@@ -53,7 +53,7 @@ export function ChatButton({ itemId, itemTitle, itemImageUrl, sellerId, sellerNa
         itemImageUrl
       );
 
-      // Redirect to marketplace chat
+      // Redirect to the specific chat
       router.push(`/messages/marketplace/${chatId}`);
     } catch (error) {
       console.error('Failed to open chat:', error);

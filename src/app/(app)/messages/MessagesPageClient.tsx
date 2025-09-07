@@ -8,6 +8,7 @@ import type { User } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageCircle, ShoppingBag } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 
 const MessagesLoading = () => (
     <div className="p-4 space-y-4">
@@ -32,6 +33,8 @@ const MessagesLoading = () => (
 export function MessagesPageClient({ selectedConversationId }: { selectedConversationId?: string }) {
     const { user, userDetails } = useAuth();
     const [loading, setLoading] = useState(true);
+    const searchParams = useSearchParams();
+    const tab = searchParams.get('tab');
 
     const currentUser = useMemo(() => user ? {
         id: user.uid,
@@ -62,8 +65,8 @@ export function MessagesPageClient({ selectedConversationId }: { selectedConvers
     // No need for conversations.length === 0 check here, ChatLayout handles it
 
     return (
-        <div className="h-[calc(100vh_-_8rem)] md:h-auto pt-16">
-            <Tabs defaultValue="neighbors" className="h-full">
+        <div className="h-[calc(100vh_-_4rem)] md:h-auto pt-16">
+            <Tabs defaultValue={tab === 'marketplace' ? 'marketplace' : 'neighbors'} className="h-full">
                 <div className="p-4 border-b">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="neighbors" className="flex items-center gap-2">
@@ -76,10 +79,10 @@ export function MessagesPageClient({ selectedConversationId }: { selectedConvers
                         </TabsTrigger>
                     </TabsList>
                 </div>
-                <TabsContent value="neighbors" className="h-[calc(100%-4rem)] mt-0">
+                <TabsContent value="neighbors" className="h-[calc(100%-3rem)] mt-0">
                     <ChatLayout currentUser={currentUser} selectedConversationId={selectedConversationId} />
                 </TabsContent>
-                <TabsContent value="marketplace" className="h-[calc(100%-4rem)] mt-0">
+                <TabsContent value="marketplace" className="h-[calc(100%-3rem)] mt-0">
                     <MarketplaceChatLayout currentUser={currentUser} selectedChatId={selectedConversationId} />
                 </TabsContent>
             </Tabs>

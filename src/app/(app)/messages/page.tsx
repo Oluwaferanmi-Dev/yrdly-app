@@ -3,7 +3,7 @@
 
 import { ChatLayout, NoFriendsEmptyState } from '@/components/messages/ChatLayout';
 import { MessagesPageClient } from './MessagesPageClient';
-import { use } from 'react';
+import { use, Suspense } from 'react';
 
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
@@ -16,5 +16,9 @@ export default function MessagesPage({ params }: { params?: Promise<{ convId?: s
     
     console.log("MessagesPage rendered. Params:", resolvedParams);
     
-    return <MessagesPageClient selectedConversationId={selectedConversationId} />;
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <MessagesPageClient selectedConversationId={selectedConversationId} />
+        </Suspense>
+    );
 }

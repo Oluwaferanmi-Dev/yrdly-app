@@ -122,33 +122,49 @@ export function MarketplaceChatLayout({
     };
   }, [currentUser?.uid, chats]);
 
-  // Load seller chats and buyer information
+  // Load marketplace chats (both as buyer and seller) and participant information
   useEffect(() => {
     if (!currentUser?.uid) return;
 
     const loadChats = async () => {
       try {
-        const sellerChats = await ChatService.getSellerChats(currentUser.uid);
-        setChats(sellerChats);
+        // Load both buyer and seller chats
+        const [buyerChats, sellerChats] = await Promise.all([
+          ChatService.getUserChats(currentUser.uid),
+          ChatService.getSellerChats(currentUser.uid)
+        ]);
         
-        // Load buyer information for all chats
-        const buyerIds = [...new Set(sellerChats.map(chat => chat.buyerId))];
-        const buyersData: { [buyerId: string]: User } = {};
+        // Combine and deduplicate chats
+        const allChats = [...buyerChats, ...sellerChats];
+        const uniqueChats = allChats.filter((chat, index, self) => 
+          index === self.findIndex(c => c.id === chat.id)
+        );
         
-        for (const buyerId of buyerIds) {
+        setChats(uniqueChats);
+        
+        // Load participant information for all chats
+        const participantIds = new Set<string>();
+        uniqueChats.forEach(chat => {
+          participantIds.add(chat.buyerId);
+          participantIds.add(chat.sellerId);
+        });
+        
+        const participantsData: { [userId: string]: User } = {};
+        
+        for (const userId of participantIds) {
           try {
-            const buyerDoc = await getDoc(doc(db, 'users', buyerId));
-            if (buyerDoc.exists()) {
-              buyersData[buyerId] = { id: buyerDoc.id, ...buyerDoc.data() } as User;
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            if (userDoc.exists()) {
+              participantsData[userId] = { id: userDoc.id, ...userDoc.data() } as User;
             }
           } catch (error) {
-            console.error(`Error loading buyer ${buyerId}:`, error);
+            console.error(`Error loading user ${userId}:`, error);
           }
         }
         
-        setBuyers(buyersData);
+        setBuyers(participantsData);
       } catch (error) {
-        console.error("Error loading seller chats:", error);
+        console.error("Error loading marketplace chats:", error);
       }
     };
 
@@ -176,23 +192,27 @@ export function MarketplaceChatLayout({
     setShowChat(false);
   }, []);
 
-  // Load buyer information when chat is selected
+  // Load other participant information when chat is selected
   useEffect(() => {
-    if (!selectedChat?.buyerId) return;
+    if (!selectedChat || !currentUser?.uid) return;
 
-    const loadBuyer = async () => {
+    const loadOtherParticipant = async () => {
       try {
-        const buyerDoc = await getDoc(doc(db, 'users', selectedChat.buyerId));
-        if (buyerDoc.exists()) {
-          setBuyer({ id: buyerDoc.id, ...buyerDoc.data() } as User);
+        // Determine the other participant (the one the current user is chatting with)
+        const isCurrentUserBuyer = selectedChat.buyerId === currentUser.uid;
+        const otherParticipantId = isCurrentUserBuyer ? selectedChat.sellerId : selectedChat.buyerId;
+        
+        const otherParticipantDoc = await getDoc(doc(db, 'users', otherParticipantId));
+        if (otherParticipantDoc.exists()) {
+          setBuyer({ id: otherParticipantDoc.id, ...otherParticipantDoc.data() } as User);
         }
       } catch (error) {
-        console.error("Error loading buyer:", error);
+        console.error("Error loading other participant:", error);
       }
     };
 
-    loadBuyer();
-  }, [selectedChat?.buyerId]);
+    loadOtherParticipant();
+  }, [selectedChat, currentUser?.uid]);
 
   // Listen for messages in the selected chat
   useEffect(() => {
@@ -270,7 +290,13 @@ export function MarketplaceChatLayout({
         {chats.length > 0 ? (
           chats.map((chat) => {
             const isUnread = chat.lastMessage?.senderId !== currentUser.uid && !chat.lastMessage?.isRead;
-            const buyer = buyers[chat.buyerId];
+            
+            // Determine the other participant (the one the current user is chatting with)
+            const isCurrentUserBuyer = chat.buyerId === currentUser.uid;
+            const otherParticipantId = isCurrentUserBuyer ? chat.sellerId : chat.buyerId;
+            const otherParticipant = buyers[otherParticipantId];
+            const participantRole = isCurrentUserBuyer ? 'Seller' : 'Buyer';
+            
             return (
               <div
                 key={chat.id}
@@ -282,17 +308,17 @@ export function MarketplaceChatLayout({
               >
                 <div className="relative">
                   <Avatar>
-                    <AvatarImage src={buyer?.avatarUrl} alt={buyer?.name || 'Buyer'} />
+                    <AvatarImage src={otherParticipant?.avatarUrl} alt={otherParticipant?.name || participantRole} />
                     <AvatarFallback>
-                      {buyer?.name?.charAt(0) || 'B'}
+                      {otherParticipant?.name?.charAt(0) || participantRole.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <AvatarOnlineIndicator 
-                    isOnline={onlineStatuses[chat.buyerId] || false} 
+                    isOnline={onlineStatuses[otherParticipantId] || false} 
                   />
                 </div>
                 <div className="flex-1 truncate">
-                  <p className="font-semibold">{buyer?.name || 'Unknown Buyer'}</p>
+                  <p className="font-semibold">{otherParticipant?.name || `Unknown ${participantRole}`}</p>
                   <p className={cn("text-sm truncate", isUnread ? "text-foreground font-medium" : "text-muted-foreground")}>
                     {chat.lastMessage?.content || "No messages yet"}
                   </p>
@@ -363,7 +389,9 @@ export function MarketplaceChatLayout({
               </div>
               <div>
                 <p className="font-semibold">{buyer.name}</p>
-                <p className="text-sm text-muted-foreground">Buyer</p>
+                <p className="text-sm text-muted-foreground">
+                  {selectedChat.buyerId === currentUser.uid ? 'Seller' : 'Buyer'}
+                </p>
               </div>
             </div>
           </div>
