@@ -12,7 +12,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { BrevoEmailService } from '@/lib/brevo-service';
 import { useToast } from '@/hooks/use-toast';
-import Image from 'next/image';
+import { YrdlyLogo } from '@/components/ui/yrdly-logo';
 
 function VerifyEmailContent() {
   const { user } = useAuth();
@@ -138,104 +138,119 @@ function VerifyEmailContent() {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <Card className="w-full max-w-md mx-4">
-          <CardHeader className="text-center">
-            <CardTitle>Please Sign In</CardTitle>
-            <CardDescription>You need to be signed in to verify your email.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => router.push('/login')} className="w-full">
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="space-y-6 text-center pb-8">
+              <div className="flex justify-center">
+                <YrdlyLogo />
+              </div>
+              <div className="space-y-2">
+                <CardTitle className="text-2xl font-semibold text-balance">Please Sign In</CardTitle>
+                <CardDescription className="text-muted-foreground">You need to be signed in to verify your email.</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => router.push('/login')} className="w-full h-11 font-medium">
+                Go to Login
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <Card className="w-full max-w-md mx-4">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-            <Mail className="w-8 h-8 text-blue-600" />
-          </div>
-          <CardTitle className="text-2xl">Verify Your Email</CardTitle>
-          <CardDescription>
-            We&apos;ve sent a verification link to <strong>{email}</strong>
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent className="space-y-6">
-          <Alert>
-            <CheckCircle className="h-4 w-4" />
-            <AlertDescription>
-              <strong>Next steps:</strong>
-              <ol className="mt-2 space-y-1 text-sm">
-                <li>1. Check your email inbox</li>
-                <li>2. Look for an email from Yrdly</li>
-                <li>3. Click the verification link</li>
-                <li>4. Return here and click &quot;I&apos;ve verified my email&quot;</li>
-              </ol>
-            </AlertDescription>
-          </Alert>
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="space-y-6 text-center pb-8">
+            <div className="flex justify-center">
+              <YrdlyLogo />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-center mb-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                  <Mail className="w-6 h-6 text-primary" />
+                </div>
+              </div>
+              <CardTitle className="text-2xl font-semibold text-balance">Verify Your Email</CardTitle>
+              <CardDescription className="text-muted-foreground">
+                We&apos;ve sent a verification link to <strong>{email}</strong>
+              </CardDescription>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="space-y-6">
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Next steps:</strong>
+                <ol className="mt-2 space-y-1 text-sm">
+                  <li>1. Check your email inbox</li>
+                  <li>2. Look for an email from Yrdly</li>
+                  <li>3. Click the verification link</li>
+                  <li>4. Return here and click &quot;I&apos;ve verified my email&quot;</li>
+                </ol>
+              </AlertDescription>
+            </Alert>
 
-          <div className="space-y-3">
-            <Button 
-              onClick={handleCheckVerification}
-              className="w-full"
-              size="lg"
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              I&apos;ve verified my email
-            </Button>
+            <div className="space-y-3">
+              <Button 
+                onClick={handleCheckVerification}
+                className="w-full h-11 font-medium"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                I&apos;ve verified my email
+              </Button>
 
-            <Button 
-              onClick={handleResendVerification}
-              disabled={isResending || cooldownTime > 0}
-              variant="outline"
-              className="w-full"
-            >
-              {isResending ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : cooldownTime > 0 ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Resend in {cooldownTime}s
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Resend verification email
-                </>
-              )}
-            </Button>
-          </div>
+              <Button 
+                onClick={handleResendVerification}
+                disabled={isResending || cooldownTime > 0}
+                variant="outline"
+                className="w-full h-11"
+              >
+                {isResending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : cooldownTime > 0 ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Resend in {cooldownTime}s
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Resend verification email
+                  </>
+                )}
+              </Button>
+            </div>
 
-          <div className="text-center text-sm text-gray-600">
-            <p>Didn&apos;t receive the email?</p>
-            <ul className="mt-1 space-y-1">
-              <li>• Check your spam/junk folder</li>
-              <li>• Make sure {email} is correct</li>
-              <li>• Wait a few minutes and try again</li>
-            </ul>
-          </div>
+            <div className="text-center text-sm text-muted-foreground">
+              <p>Didn&apos;t receive the email?</p>
+              <ul className="mt-1 space-y-1">
+                <li>• Check your spam/junk folder</li>
+                <li>• Make sure {email} is correct</li>
+                <li>• Wait a few minutes and try again</li>
+              </ul>
+            </div>
 
-          <div className="pt-4 border-t">
-            <Button 
-              variant="ghost" 
-              onClick={() => router.push('/login')}
-              className="w-full text-sm"
-            >
-              Sign in with a different account
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="pt-4 border-t">
+              <Button 
+                variant="ghost" 
+                onClick={() => router.push('/login')}
+                className="w-full text-sm h-11"
+              >
+                Sign in with a different account
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -243,8 +258,14 @@ function VerifyEmailContent() {
 export default function VerifyEmailPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Card className="border-0 shadow-lg">
+            <CardContent className="flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     }>
       <VerifyEmailContent />
