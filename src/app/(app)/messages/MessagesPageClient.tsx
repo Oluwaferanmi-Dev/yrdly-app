@@ -1,6 +1,6 @@
 "use client";
 
-import { ChatLayoutSimple } from '@/components/messages/ChatLayoutSimple';
+import { NeighborChatLayout } from '@/components/messages/NeighborChatLayout';
 import { MarketplaceChatLayout } from '@/components/messages/MarketplaceChatLayout';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { useState, useEffect, useMemo } from 'react';
@@ -82,7 +82,7 @@ export function MessagesPageClient({ selectedConversationId }: { selectedConvers
                     </TabsList>
                 </div>
                 <TabsContent value="neighbors" className="h-[calc(100%-3rem)] mt-0">
-                    <ChatLayoutSimple selectedConversationId={selectedConversationId} />
+                    <NeighborChatLayout selectedConversationId={selectedConversationId} />
                 </TabsContent>
                 <TabsContent value="marketplace" className="h-[calc(100%-3rem)] mt-0">
                     <MarketplaceChatLayout selectedChatId={selectedConversationId} />

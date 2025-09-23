@@ -5,22 +5,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
-import {
-    collection,
-    query,
-    where,
-    onSnapshot,
-    addDoc,
-    serverTimestamp,
-    doc,
-    updateDoc,
-    runTransaction,
-    arrayRemove,
-    getDocs,
-} from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { db, functions } from "@/lib/firebase";
-import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
 import type { User, FriendRequest } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -71,7 +57,7 @@ const NeighborSkeleton = () => (
 type FriendshipStatus = 'friends' | 'request_sent' | 'request_received' | 'none';
 
 export default function NeighborsPage() {
-    const { user: currentUser, userDetails } = useAuth();
+    const { user: currentUser, profile } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
     const [allNeighbors, setAllNeighbors] = useState<User[]>([]);
@@ -84,23 +70,23 @@ export default function NeighborsPage() {
 
     // Initialize online status tracking for current user
     useEffect(() => {
-        if (currentUser?.uid) {
-            OnlineStatusService.getInstance().initialize(currentUser.uid);
+        if (currentUser?.id) {
+            OnlineStatusService.getInstance().initialize(currentUser.id);
             
             return () => {
                 OnlineStatusService.getInstance().cleanup();
             };
         }
-    }, [currentUser?.uid]);
+    }, [currentUser?.id]);
 
     // Track online status of friends
     useEffect(() => {
-        if (!currentUser?.uid) return;
+        if (!currentUser?.id) return;
 
         console.log('🔵 NeighborsPage: Setting up online status tracking for friends');
         const friends = allNeighbors.filter(neighbor => 
-            neighbor.friends?.includes(currentUser.uid) || 
-            userDetails?.friends?.includes(neighbor.uid)
+            neighbor.friends?.includes(currentUser.id) || 
+            profile?.friends?.includes(neighbor.id)
         );
 
         console.log('🔵 NeighborsPage: Found friends:', friends.map(f => f.name));
@@ -108,12 +94,12 @@ export default function NeighborsPage() {
         const unsubscribeFunctions: (() => void)[] = [];
 
         friends.forEach(friend => {
-            console.log('🔵 NeighborsPage: Setting up listener for friend:', friend.name, 'with uid:', friend.uid);
-            const unsubscribe = OnlineStatusService.listenToUserOnlineStatus(friend.uid, (status) => {
+            console.log('🔵 NeighborsPage: Setting up listener for friend:', friend.name, 'with id:', friend.id);
+            const unsubscribe = OnlineStatusService.listenToUserOnlineStatus(friend.id, (status) => {
                 console.log('🔵 NeighborsPage: Status update for', friend.name, ':', status);
                 setOnlineStatuses(prev => ({
                     ...prev,
-                    [friend.uid]: status.isOnline
+                    [friend.id]: status.isOnline
                 }));
             });
             unsubscribeFunctions.push(unsubscribe);
@@ -123,37 +109,105 @@ export default function NeighborsPage() {
             console.log('🔵 NeighborsPage: Cleaning up online status listeners');
             unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
         };
-    }, [currentUser?.uid, allNeighbors, userDetails?.friends]);
+    }, [currentUser?.id, allNeighbors, profile?.friends]);
 
     useEffect(() => {
         if (!currentUser) return;
 
-        // Base query for users, excluding self
-        const usersQuery = query(
-            collection(db, "users"),
-            where('uid', '!=', currentUser.uid)
-        );
+        const loadUsers = async () => {
+            try {
+                const { data: usersData, error: usersError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .neq('id', currentUser.id);
 
-        const unsubscribeUsers = onSnapshot(usersQuery, (querySnapshot) => {
-            const usersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
-            setAllNeighbors(usersData);
-            setLoading(false);
-        });
+                if (usersError) {
+                    console.error('Error loading users:', usersError);
+                    return;
+                }
 
-        // Query for friend requests involving the current user
-        const requestsQuery = query(
-            collection(db, "friend_requests"),
-            where("participantIds", "array-contains", currentUser.uid)
-        );
+                const users = (usersData || []).map(user => ({
+                    id: user.id,
+                    uid: user.id,
+                    name: user.name,
+                    avatarUrl: user.avatar_url || 'https://placehold.co/100x100.png',
+                    email: user.email || '',
+                    bio: user.bio || '',
+                    location: user.location || { state: '', lga: '' },
+                    friends: user.friends || [],
+                    blockedUsers: user.blocked_users || [],
+                    notificationSettings: user.notification_settings || {},
+                    isOnline: user.is_online || false,
+                    lastSeen: user.last_seen ? new Date(user.last_seen) as any : null,
+                    timestamp: user.created_at ? new Date(user.created_at) as any : null,
+                } as User));
 
-        const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
-            const requests = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest));
-            setFriendRequests(requests);
-        });
+                setAllNeighbors(users);
+                setLoading(false);
+            } catch (error) {
+                console.error('Error loading users:', error);
+                setLoading(false);
+            }
+        };
+
+        const loadFriendRequests = async () => {
+            try {
+                const { data: requestsData, error: requestsError } = await supabase
+                    .from('friend_requests')
+                    .select('*')
+                    .contains('participant_ids', [currentUser.id]);
+
+                if (requestsError) {
+                    console.error('Error loading friend requests:', requestsError);
+                    return;
+                }
+
+                const requests = (requestsData || []).map(req => ({
+                    id: req.id,
+                    fromUserId: req.from_user_id,
+                    toUserId: req.to_user_id,
+                    participantIds: req.participant_ids,
+                    status: req.status,
+                    timestamp: req.created_at ? new Date(req.created_at) as any : null,
+                } as FriendRequest));
+
+                setFriendRequests(requests);
+            } catch (error) {
+                console.error('Error loading friend requests:', error);
+            }
+        };
+
+        loadUsers();
+        loadFriendRequests();
+
+        // Set up real-time subscriptions
+        const usersChannel = supabase
+            .channel('users')
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'users',
+                filter: `id=neq.${currentUser.id}`
+            }, () => {
+                loadUsers();
+            })
+            .subscribe();
+
+        const requestsChannel = supabase
+            .channel('friend_requests')
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'friend_requests',
+                filter: `participant_ids.cs.{${currentUser.id}}`
+            }, () => {
+                loadFriendRequests();
+            })
+            .subscribe();
 
         return () => {
-            unsubscribeUsers();
-            unsubscribeRequests();
+            supabase.removeChannel(usersChannel);
+            supabase.removeChannel(requestsChannel);
         };
     }, [currentUser]);
 
@@ -166,30 +220,30 @@ export default function NeighborsPage() {
     };
 
     const getFriendshipStatus = useCallback((neighborId: string): FriendshipStatus => {
-        if (userDetails?.friends?.includes(neighborId)) return "friends";
+        if (profile?.friends?.includes(neighborId)) return "friends";
 
         const request = friendRequests.find(req =>
             req.status === 'pending' &&
-            ((req.fromUserId === currentUser?.uid && req.toUserId === neighborId) ||
-             (req.fromUserId === neighborId && req.toUserId === currentUser?.uid))
+            ((req.fromUserId === currentUser?.id && req.toUserId === neighborId) ||
+             (req.fromUserId === neighborId && req.toUserId === currentUser?.id))
         );
 
         if (request) {
-            return request.fromUserId === currentUser?.uid ? 'request_sent' : 'request_received';
+            return request.fromUserId === currentUser?.id ? 'request_sent' : 'request_received';
         }
 
         return "none";
-    }, [userDetails, friendRequests, currentUser]);
+    }, [profile, friendRequests, currentUser]);
 
     const filteredAndSortedNeighbors = useMemo(() => {
         if (!currentUser) return [];
-        const blockedByMe = userDetails?.blockedUsers || [];
+        const blockedByMe = profile?.blocked_users || [];
 
         return allNeighbors.filter((neighbor) => {
             // Basic filters
-            if (neighbor.uid === currentUser.uid) return false;
-            if (blockedByMe.includes(neighbor.uid)) return false; // Filter out blocked users
-            if (neighbor.blockedUsers?.includes(currentUser.uid)) return false; // Filter out users who blocked me
+            if (neighbor.id === currentUser.id) return false;
+            if (blockedByMe.includes(neighbor.id)) return false; // Filter out blocked users
+            if (neighbor.blockedUsers?.includes(currentUser.id)) return false; // Filter out users who blocked me
 
             // Location filters
             const stateMatch = filters.state === "all" || neighbor.location?.state === filters.state;
@@ -197,22 +251,31 @@ export default function NeighborsPage() {
 
             return stateMatch && lgaMatch;
         });
-    }, [allNeighbors, filters, userDetails, currentUser]);
+    }, [allNeighbors, filters, profile, currentUser]);
 
     const handleAddFriend = async (e: React.MouseEvent, neighbor: User) => {
         e.stopPropagation();
         if (!currentUser) return;
         try {
-            await addDoc(collection(db, "friend_requests"), {
-                fromUserId: currentUser.uid,
-                toUserId: neighbor.uid,
-                participantIds: [currentUser.uid, neighbor.uid].sort(),
-                status: "pending",
-                timestamp: serverTimestamp(),
-            });
+            const { error } = await supabase
+                .from('friend_requests')
+                .insert({
+                    from_user_id: currentUser.id,
+                    to_user_id: neighbor.id,
+                    participant_ids: [currentUser.id, neighbor.id].sort(),
+                    status: "pending",
+                    created_at: new Date().toISOString(),
+                });
+
+            if (error) {
+                console.error("Error sending friend request:", error);
+                toast({ variant: "destructive", title: "Error", description: "Could not send friend request." });
+                return;
+            }
+
             toast({ title: "Friend request sent!" });
         } catch (error) {
-            console.error("Error sending friend request: ", error);
+            console.error("Error sending friend request:", error);
             toast({ variant: "destructive", title: "Error", description: "Could not send friend request." });
         }
     };
@@ -221,48 +284,113 @@ export default function NeighborsPage() {
         e.stopPropagation();
         if (!currentUser) return;
         try {
-            const acceptFriendRequest = httpsCallable(functions, 'acceptfriendrequest');
-            await acceptFriendRequest({ friendRequestId: request.id });
+            // Update friend request status
+            const { error: updateError } = await supabase
+                .from('friend_requests')
+                .update({ status: 'accepted' })
+                .eq('id', request.id);
+
+            if (updateError) {
+                console.error("Error updating friend request:", updateError);
+                toast({ variant: "destructive", title: "Error", description: "Could not accept friend request." });
+                return;
+            }
+
+            // Add friend to both users' friends list
+            const { error: addFriendError } = await supabase
+                .from('users')
+                .update({ 
+                    friends: [...(profile?.friends || []), request.fromUserId]
+                })
+                .eq('id', currentUser.id);
+
+            if (addFriendError) {
+                console.error("Error adding friend:", addFriendError);
+            }
+
+            // Add current user to the other user's friends list
+            const { error: addFriendToOtherError } = await supabase
+                .from('users')
+                .update({ 
+                    friends: [...(allNeighbors.find(n => n.id === request.fromUserId)?.friends || []), currentUser.id]
+                })
+                .eq('id', request.fromUserId);
+
+            if (addFriendToOtherError) {
+                console.error("Error adding friend to other user:", addFriendToOtherError);
+            }
+
             toast({ title: "Friend request accepted!" });
         } catch (error) {
-            console.error("Error accepting friend request: ", error);
+            console.error("Error accepting friend request:", error);
             toast({ variant: "destructive", title: "Error", description: "Could not accept friend request." });
         }
     };
 
     const handleDeclineRequest = async (e: React.MouseEvent, request: FriendRequest) => {
         e.stopPropagation();
-        const requestRef = doc(db, "friend_requests", request.id);
-        await updateDoc(requestRef, { status: "declined" });
-        toast({ title: "Friend request declined." });
+        try {
+            const { error } = await supabase
+                .from('friend_requests')
+                .update({ status: "declined" })
+                .eq('id', request.id);
+
+            if (error) {
+                console.error("Error declining friend request:", error);
+                toast({ variant: "destructive", title: "Error", description: "Could not decline friend request." });
+                return;
+            }
+
+            toast({ title: "Friend request declined." });
+        } catch (error) {
+            console.error("Error declining friend request:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not decline friend request." });
+        }
     };
 
      const handleMessage = async (e: React.MouseEvent, friendId: string) => {
         e.stopPropagation();
         if (!currentUser) return;
 
-        const sortedParticipantIds = [currentUser.uid, friendId].sort();
-
-        const q = query(
-            collection(db, "conversations"),
-            where("participantIds", "==", sortedParticipantIds)
-        );
+        const sortedParticipantIds = [currentUser.id, friendId].sort();
 
         try {
-            const querySnapshot = await getDocs(q);
+            // Check if conversation already exists
+            const { data: existingConversations, error: fetchError } = await supabase
+                .from('conversations')
+                .select('id')
+                .eq('participant_ids', sortedParticipantIds)
+                .limit(1);
+
+            if (fetchError) {
+                console.error("Error fetching conversations:", fetchError);
+                toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
+                return;
+            }
+
             let conversationId: string;
 
-            if (querySnapshot.empty) {
-                // Conversation doesn't exist, create it
-                const newConvRef = await addDoc(collection(db, "conversations"), {
-                    participantIds: sortedParticipantIds,
-                    lastMessage: null,
-                    timestamp: serverTimestamp(),
-                });
-                conversationId = newConvRef.id;
+            if (existingConversations && existingConversations.length > 0) {
+                conversationId = existingConversations[0].id;
             } else {
-                // Conversation exists
-                conversationId = querySnapshot.docs[0].id;
+                // Create new conversation
+                const { data: newConversation, error: createError } = await supabase
+                    .from('conversations')
+                    .insert({
+                        participant_ids: sortedParticipantIds,
+                        last_message: null,
+                        created_at: new Date().toISOString(),
+                    })
+                    .select('id')
+                    .single();
+
+                if (createError) {
+                    console.error("Error creating conversation:", createError);
+                    toast({ variant: "destructive", title: "Error", description: "Could not create conversation." });
+                    return;
+                }
+
+                conversationId = newConversation.id;
             }
 
             router.push(`/messages/${conversationId}`);
@@ -284,26 +412,26 @@ export default function NeighborsPage() {
     }, [filters.state]);
 
     const incomingRequests = useMemo(() => {
-        const blockedByMe = userDetails?.blockedUsers || [];
+        const blockedByMe = profile?.blocked_users || [];
         return friendRequests.filter(req =>
-            req.toUserId === currentUser?.uid &&
+            req.toUserId === currentUser?.id &&
             req.status === 'pending' &&
             !blockedByMe.includes(req.fromUserId)
         );
-    }, [friendRequests, currentUser, userDetails]);
+    }, [friendRequests, currentUser, profile]);
 
     const friends = useMemo(() => {
-        const blockedByMe = userDetails?.blockedUsers || [];
+        const blockedByMe = profile?.blocked_users || [];
         return allNeighbors.filter(n =>
-            userDetails?.friends?.includes(n.uid) &&
-            !blockedByMe.includes(n.uid)
+            profile?.friends?.includes(n.id) &&
+            !blockedByMe.includes(n.id)
         );
-    }, [allNeighbors, userDetails]);
+    }, [allNeighbors, profile]);
 
     const handleProfileDialogClose = useCallback((wasChanged: boolean) => {
         if (wasChanged && selectedUser) {
-            const blockedId = selectedUser.uid;
-             setAllNeighbors(prev => prev.filter(n => n.uid !== blockedId));
+            const blockedId = selectedUser.id;
+             setAllNeighbors(prev => prev.filter(n => n.id !== blockedId));
         }
         setSelectedUser(null)
     }, [selectedUser]);
@@ -380,7 +508,7 @@ export default function NeighborsPage() {
                     ) : filteredAndSortedNeighbors.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-20">
                             {filteredAndSortedNeighbors.map((neighbor) => {
-                                const status = getFriendshipStatus(neighbor.uid);
+                                const status = getFriendshipStatus(neighbor.id);
                                 return (
                                     <Card key={neighbor.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedUser(neighbor)}>
                                         <CardContent className="p-4 flex flex-col items-center text-center">
@@ -389,7 +517,7 @@ export default function NeighborsPage() {
                                             {neighbor.location && (<div className="flex items-center text-xs text-muted-foreground"><MapPin className="h-3 w-3 mr-1" /><span>{displayLocation(neighbor.location)}</span></div>)}
                                             <div className="mt-4">
                                                 {status === "friends" ? (
-                                                    <Button size="sm" onClick={(e) => handleMessage(e, neighbor.uid)}><MessageSquare className="mr-2 h-4 w-4" /> Message</Button>
+                                                    <Button size="sm" onClick={(e) => handleMessage(e, neighbor.id)}><MessageSquare className="mr-2 h-4 w-4" /> Message</Button>
                                                 ) : status === "request_sent" ? (
                                                     <Button size="sm" disabled onClick={(e) => e.stopPropagation()}>Request Sent</Button>
                                                 ) : (
@@ -411,7 +539,7 @@ export default function NeighborsPage() {
                     ) : friends.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pb-20">
                             {friends.map((friend) => {
-                                const isOnline = onlineStatuses[friend.uid] || false;
+                                const isOnline = onlineStatuses[friend.id] || false;
                                 console.log('🔵 NeighborsPage: Rendering friend', friend.name, 'with online status:', isOnline);
                                 
                                 return (
@@ -439,7 +567,7 @@ export default function NeighborsPage() {
                                                 size="sm" 
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    handleMessage(e, friend.uid);
+                                                    handleMessage(e, friend.id);
                                                 }}
                                             >
                                                 <MessageSquare className="mr-2 h-4 w-4" /> 
