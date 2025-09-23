@@ -4,39 +4,50 @@
 import { PostCard } from "@/components/PostCard";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { useHaptics } from "@/hooks/use-haptics";
-import useSWR from 'swr';
-import { firestoreFetcher, createSWRKey } from "@/hooks/use-swr-fetcher";
-
-// Force dynamic rendering to avoid prerender issues
-export const dynamic = 'force-dynamic';
-
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import type { Post as PostType } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyFeed } from "@/components/EmptyFeed";
 import { WelcomeBanner } from "@/components/WelcomeBanner";
 import { SuggestedNeighbors } from "@/components/SuggestedNeighbors";
 import { EmailVerificationBanner } from "@/components/EmailVerificationBanner";
+import { useAuth } from "@/hooks/use-supabase-auth";
+
+// Force dynamic rendering to avoid prerender issues
+export const dynamic = 'force-dynamic';
 
 export default function Home() {
   const { triggerHaptic } = useHaptics();
+  const { user } = useAuth();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // SWR data fetching for posts
-  const { data: swrPosts, error, mutate } = useSWR(
-    createSWRKey.posts({ limit: 50 }),
-    firestoreFetcher,
-    {
-      refreshInterval: 30000, // Refresh every 30 seconds
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
+  // Fetch posts from Supabase
+  const fetchPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.error('Error fetching posts:', error);
+        return;
+      }
+
+      if (data) {
+        setPosts(data as PostType[]);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      setLoading(false);
     }
-  );
+  };
 
   // Pull-to-refresh functionality
   const { containerRef, isRefreshing } = usePullToRefresh({
@@ -45,7 +56,7 @@ export default function Home() {
       triggerHaptic('medium');
       
       // Refresh data
-      await mutate();
+      await fetchPosts();
       
       // Show success feedback
       triggerHaptic('success');
@@ -54,36 +65,34 @@ export default function Home() {
     enabled: true
   });
 
-  // Update local state when SWR data changes
+  // Initial data fetch
   useEffect(() => {
-    if (swrPosts) {
-      setPosts(swrPosts as PostType[]);
-      setLoading(false);
+    if (user) {
+      fetchPosts();
     }
-  }, [swrPosts]);
+  }, [user]);
 
-  // Fallback to real-time listener if SWR fails
+  // Real-time subscription for live updates
   useEffect(() => {
-    if (error) {
-      console.log('SWR failed, falling back to real-time listener');
-      
-      const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
-      
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const postsData = querySnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-          } as PostType;
-        });
-        setPosts(postsData);
-        setLoading(false);
-      });
+    if (!user) return;
 
-      return () => unsubscribe();
-    }
-  }, [error]);
+    const channel = supabase
+      .channel('posts')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'posts' 
+      }, (payload) => {
+        console.log('Realtime change received!', payload);
+        // Refresh posts when changes occur
+        fetchPosts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   return (
     <div ref={containerRef} className="space-y-6 pt-12 pb-20">

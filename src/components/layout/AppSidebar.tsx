@@ -12,8 +12,8 @@ import {
 import { Home, ShoppingCart, Calendar, Briefcase, MessageSquare, Settings, Users, Map, User as UserIcon, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/hooks/use-supabase-auth';
+import { AuthService } from '@/lib/auth-service';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 
@@ -23,8 +23,10 @@ export function AppSidebar({ onProfileClick }: { onProfileClick: () => void }) {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await auth.signOut();
-    router.push('/login');
+    const { error } = await AuthService.signOut();
+    if (!error) {
+      router.push('/login');
+    }
   };
 
   const menuItems = [

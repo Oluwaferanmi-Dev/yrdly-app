@@ -7,7 +7,7 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { AppBottomNav } from '@/components/layout/AppBottomNav';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth, AuthProvider } from '@/hooks/use-supabase-auth';
 import { PushNotificationManager } from '@/components/PushNotificationManager';
 import Image from 'next/image';
 import { APIProvider } from '@vis.gl/react-google-maps';
@@ -19,7 +19,7 @@ import { OfflineStatus } from '@/components/OfflineStatus';
 import { EmailVerificationGuard } from '@/components/EmailVerificationGuard';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  const { user, userDetails, loading } = useAuth();
+  const { user, profile, loading } = useAuth(); // Using Supabase auth
   const router = useRouter();
   const [profileUser, setProfileUser] = useState<User | null>(null);
   
@@ -32,7 +32,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, router]);
 
-  if (loading || !user || !userDetails) {
+  if (loading || !user || !profile) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Image 
@@ -48,7 +48,7 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
   }
 
   const handleProfileClick = () => {
-    setProfileUser(userDetails);
+    setProfileUser(profile as User);
   };
 
   return (
@@ -88,10 +88,12 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} libraries={['places']}>
-      <ProtectedLayout>
-        {children}
-      </ProtectedLayout>
-    </APIProvider>
+    <AuthProvider>
+      <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} libraries={['places']}>
+        <ProtectedLayout>
+          {children}
+        </ProtectedLayout>
+      </APIProvider>
+    </AuthProvider>
   );
 }

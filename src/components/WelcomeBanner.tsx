@@ -2,21 +2,21 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Heart, Users, Building, X, UserCheck } from 'lucide-react';
 import Link from 'next/link';
 
 export function WelcomeBanner() {
-    const { user, userDetails } = useAuth();
+    const { user, profile } = useAuth();
     const [isVisible, setIsVisible] = useState(false);
     const [bannerType, setBannerType] = useState<'welcome' | 'completeProfile'>('welcome');
 
     useEffect(() => {
         const hasDismissedProfileReminder = localStorage.getItem('hasDismissedProfileReminder');
         
-        if (userDetails && (!userDetails.bio || !userDetails.location)) {
+        if (profile && (!profile.bio || !profile.location)) {
             if (!hasDismissedProfileReminder) {
                 setIsVisible(true);
                 setBannerType('completeProfile');
@@ -40,7 +40,7 @@ export function WelcomeBanner() {
                 setBannerType('welcome');
             }
         }
-    }, [user, userDetails]);
+    }, [user, profile]);
 
     const handleDismiss = () => {
         if (bannerType === 'welcome') {

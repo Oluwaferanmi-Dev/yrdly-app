@@ -8,13 +8,14 @@ const config: CapacitorConfig = {
   appName: 'Yrdly',
   webDir: 'out',
   
-  // Development server configuration (only for dev builds)
-  ...(isDevelopment && {
-    server: { 
-      url: 'http://10.0.2.2:9002', 
-      cleartext: true 
-    }
-  }),
+  // Development server configuration (only for live reload)
+  // Comment out for testing with built files
+  // ...(isDevelopment && {
+  //   server: { 
+  //     url: 'http://192.168.1.11:9002', 
+  //     cleartext: true 
+  //   }
+  // }),
   
   // Production-ready configuration
   plugins: {

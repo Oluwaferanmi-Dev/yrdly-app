@@ -14,8 +14,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/use-auth';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/hooks/use-supabase-auth';
+import { AuthService } from '@/lib/auth-service';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { NotificationsPanel } from './NotificationsPanel';
@@ -24,18 +24,20 @@ import { useUnreadMessages } from '@/hooks/use-unread-messages';
 import { cn } from '@/lib/utils';
 
 export function AppHeader() {
-  const { user, userDetails } = useAuth();
+  const { user, profile } = useAuth();
   const router = useRouter();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const unreadMessagesCount = useUnreadMessages();
 
   const handleLogout = async () => {
-    await auth.signOut();
-    router.push('/login');
+    const { error } = await AuthService.signOut();
+    if (!error) {
+      router.push('/login');
+    }
   };
 
-  const avatarUrl = userDetails?.avatarUrl || user?.photoURL || `https://placehold.co/100x100.png`;
-  const displayName = userDetails?.name || user?.displayName || 'User';
+  const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url || `https://placehold.co/100x100.png`;
+  const displayName = profile?.name || user?.user_metadata?.name || 'User';
 
   return (
     <>
