@@ -85,7 +85,7 @@ export function MessagesPageClient({ selectedConversationId }: { selectedConvers
                     <ChatLayoutSimple selectedConversationId={selectedConversationId} />
                 </TabsContent>
                 <TabsContent value="marketplace" className="h-[calc(100%-3rem)] mt-0">
-                    <MarketplaceChatLayout currentUser={currentUser} selectedChatId={selectedConversationId} />
+                    <MarketplaceChatLayout selectedChatId={selectedConversationId} />
                 </TabsContent>
             </Tabs>
         </div>

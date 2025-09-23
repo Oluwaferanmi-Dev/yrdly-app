@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { SendHorizonal, Search, ArrowLeft, ShoppingBag, ImagePlus, X } from "lucide-react";
 import { Textarea } from "../ui/textarea";
-import { ChatService } from "@/lib/chat-service";
+import { SupabaseChatService } from "@/lib/supabase-chat-service";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -19,6 +19,7 @@ import { Progress } from "../ui/progress";
 import { OnlineStatusService } from "@/lib/online-status";
 import { AvatarOnlineIndicator } from "../ui/online-indicator";
 import { supabase } from "@/lib/supabase";
+import { StorageService } from "@/lib/storage-service";
 import type { User } from "@/types";
 
 // Utility function to get chat wallpaper based on theme
@@ -63,16 +64,14 @@ const isDifferentDate = (timestamp1: Date, timestamp2: Date) => {
 };
 
 interface MarketplaceChatLayoutProps {
-  currentUser: User;
   selectedChatId?: string;
 }
 
 export function MarketplaceChatLayout({
-  currentUser,
   selectedChatId,
 }: MarketplaceChatLayoutProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { theme } = useTheme();
   const [chats, setChats] = useState<ItemChat[]>([]);
   const [selectedChat, setSelectedChat] = useState<ItemChat | null>(null);
@@ -90,18 +89,18 @@ export function MarketplaceChatLayout({
 
   // Initialize online status tracking for current user
   useEffect(() => {
-    if (currentUser?.uid) {
-      OnlineStatusService.getInstance().initialize(currentUser.uid);
+    if (user?.id) {
+      OnlineStatusService.getInstance().initialize(user.id);
       
       return () => {
         OnlineStatusService.getInstance().cleanup();
       };
     }
-  }, [currentUser?.uid]);
+  }, [user?.uid]);
 
   // Track online status of chat participants
   useEffect(() => {
-    if (!currentUser?.uid) return;
+    if (!user?.uid) return;
 
     const participants = chats.map(chat => ({ uid: chat.buyerId }));
     const unsubscribeFunctions: (() => void)[] = [];
@@ -119,18 +118,18 @@ export function MarketplaceChatLayout({
     return () => {
       unsubscribeFunctions.forEach(unsubscribe => unsubscribe());
     };
-  }, [currentUser?.uid, chats]);
+  }, [user?.uid, chats]);
 
   // Load marketplace chats (both as buyer and seller) and participant information
   useEffect(() => {
-    if (!currentUser?.uid) return;
+    if (!user?.uid) return;
 
     const loadChats = async () => {
       try {
         // Load both buyer and seller chats
         const [buyerChats, sellerChats] = await Promise.all([
-          ChatService.getUserChats(currentUser.uid),
-          ChatService.getSellerChats(currentUser.uid)
+          SupabaseChatService.getUserChats(user.id),
+          SupabaseChatService.getSellerChats(user.id)
         ]);
         
         // Combine and deduplicate chats
@@ -187,7 +186,7 @@ export function MarketplaceChatLayout({
     };
 
     loadChats();
-  }, [currentUser?.uid]);
+  }, [user?.uid]);
 
   // Pre-select a chat if an ID is passed
   useEffect(() => {
@@ -212,12 +211,12 @@ export function MarketplaceChatLayout({
 
   // Load other participant information when chat is selected
   useEffect(() => {
-    if (!selectedChat || !currentUser?.uid) return;
+    if (!selectedChat || !user?.uid) return;
 
     const loadOtherParticipant = async () => {
       try {
         // Determine the other participant (the one the current user is chatting with)
-        const isCurrentUserBuyer = selectedChat.buyerId === currentUser.uid;
+        const isCurrentUserBuyer = selectedChat.buyerId === user.id;
         const otherParticipantId = isCurrentUserBuyer ? selectedChat.sellerId : selectedChat.buyerId;
         
         const { data: userData, error } = await supabase
@@ -249,18 +248,18 @@ export function MarketplaceChatLayout({
     };
 
     loadOtherParticipant();
-  }, [selectedChat, currentUser?.uid]);
+  }, [selectedChat, user?.uid]);
 
   // Listen for messages in the selected chat
   useEffect(() => {
-    if (!selectedChat?.id || !currentUser?.uid) return;
+    if (!selectedChat?.id || !user?.uid) return;
 
-    const unsubscribe = ChatService.subscribeToChat(selectedChat.id, (messages) => {
+    const unsubscribe = SupabaseChatService.subscribeToChat(selectedChat.id, (messages) => {
       setMessages(messages);
     });
 
     return () => unsubscribe();
-  }, [selectedChat, currentUser.uid]);
+  }, [selectedChat, user.id]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -278,12 +277,24 @@ export function MarketplaceChatLayout({
     if ((newMessage.trim() === "" && !imageFile) || !selectedChat || !user) return;
 
     try {
-      await ChatService.sendMessage(
+      let imageUrl: string | undefined;
+      
+      // Upload image if one is selected
+      if (imageFile) {
+        const { url, error: uploadError } = await StorageService.uploadChatImage(user.id, imageFile);
+        if (uploadError) {
+          console.error('Image upload error:', uploadError);
+          throw uploadError;
+        }
+        imageUrl = url;
+      }
+
+      await SupabaseChatService.sendMessage(
         selectedChat.id,
-        user.uid,
-        user.displayName || 'Anonymous',
+        user.id,
+        profile?.name || user.user_metadata?.name || 'Anonymous',
         newMessage.trim(),
-        'text'
+        imageUrl
       );
       
       setNewMessage("");
@@ -326,10 +337,10 @@ export function MarketplaceChatLayout({
       <ScrollArea className="flex-1">
         {chats.length > 0 ? (
           chats.map((chat) => {
-            const isUnread = chat.lastMessage?.senderId !== currentUser.uid && !chat.lastMessage?.isRead;
+            const isUnread = chat.lastMessage?.senderId !== user.id && !chat.lastMessage?.isRead;
             
             // Determine the other participant (the one the current user is chatting with)
-            const isCurrentUserBuyer = chat.buyerId === currentUser.uid;
+            const isCurrentUserBuyer = chat.buyerId === user.id;
             const otherParticipantId = isCurrentUserBuyer ? chat.sellerId : chat.buyerId;
             const otherParticipant = buyers[otherParticipantId];
             const participantRole = isCurrentUserBuyer ? 'Seller' : 'Buyer';
@@ -381,7 +392,7 @@ export function MarketplaceChatLayout({
         )}
       </ScrollArea>
     </div>
-  ), [chats, selectedChat, currentUser.uid, handleChatSelect, buyers, onlineStatuses]);
+  ), [chats, selectedChat, user.id, handleChatSelect, buyers, onlineStatuses]);
 
   const ChatView = useMemo(() => {
     if (!selectedChat || !buyer) {
@@ -427,7 +438,7 @@ export function MarketplaceChatLayout({
               <div>
                 <p className="font-semibold">{buyer.name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {selectedChat.buyerId === currentUser.uid ? 'Seller' : 'Buyer'}
+                  {selectedChat.buyerId === user.id ? 'Seller' : 'Buyer'}
                 </p>
               </div>
             </div>
@@ -485,22 +496,22 @@ export function MarketplaceChatLayout({
                     </div>
                   )}
                   <div
-                    className={cn("flex gap-3", msg.senderId === currentUser.uid ? "justify-end" : "justify-start")}
+                    className={cn("flex gap-3", msg.senderId === user.id ? "justify-end" : "justify-start")}
                   >
-                    {msg.senderId !== currentUser.uid && (
+                    {msg.senderId !== user.id && (
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={buyer.avatarUrl} />
                         <AvatarFallback>{buyer.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                     )}
-                    <div className={cn("rounded-lg px-3 py-2 max-w-xs lg:max-w-md break-words", msg.senderId === currentUser.uid ? "bg-primary text-primary-foreground" : "bg-card border")}>
+                    <div className={cn("rounded-lg px-3 py-2 max-w-xs lg:max-w-md break-words", msg.senderId === user.id ? "bg-primary text-primary-foreground" : "bg-card border")}>
                       {msg.metadata?.imageUrl && (
                         <div className="relative w-48 h-48 mb-2">
                           <Image src={msg.metadata.imageUrl} alt="Chat image" layout="fill" className="rounded-md object-cover" />
                         </div>
                       )}
                       {msg.content && <p>{msg.content}</p>}
-                      <p className={cn("text-xs opacity-70 mt-1", msg.senderId === currentUser.uid ? "text-right" : "text-left")}>
+                      <p className={cn("text-xs opacity-70 mt-1", msg.senderId === user.id ? "text-right" : "text-left")}>
                         {msg.timestamp.toLocaleTimeString([], {
                           hour: "2-digit",
                           minute: "2-digit",
@@ -548,7 +559,7 @@ export function MarketplaceChatLayout({
         </div>
       </div>
     );
-  }, [selectedChat, buyer, handleBackToList, onlineStatuses, messages, currentUser.uid, theme, imagePreview, uploadProgress, handleSendMessage, newMessage, imageFile, handleTyping, removeImagePreview, handleImageSelect, fileInputRef, scrollAreaRef]);
+  }, [selectedChat, buyer, handleBackToList, onlineStatuses, messages, user.id, theme, imagePreview, uploadProgress, handleSendMessage, newMessage, imageFile, handleTyping, removeImagePreview, handleImageSelect, fileInputRef, scrollAreaRef]);
 
   return (
     <Card className="h-full w-full flex">
