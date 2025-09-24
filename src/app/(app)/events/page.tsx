@@ -63,8 +63,28 @@ export default function EventsPage() {
                 schema: 'public', 
                 table: 'posts',
                 filter: 'category=eq.Event'
-            }, () => {
-                fetchEvents();
+            }, (payload) => {
+                console.log('Events realtime change received!', payload);
+                
+                if (payload.eventType === 'INSERT') {
+                    // Add new event to the beginning of the list
+                    const newEvent = payload.new as PostType;
+                    setPosts(prevPosts => [newEvent, ...prevPosts]);
+                } else if (payload.eventType === 'UPDATE') {
+                    // Update existing event in the list
+                    const updatedEvent = payload.new as PostType;
+                    setPosts(prevPosts => 
+                        prevPosts.map(post => 
+                            post.id === updatedEvent.id ? updatedEvent : post
+                        )
+                    );
+                } else if (payload.eventType === 'DELETE') {
+                    // Remove deleted event from the list
+                    const deletedId = payload.old.id;
+                    setPosts(prevPosts => 
+                        prevPosts.filter(post => post.id !== deletedId)
+                    );
+                }
             })
             .subscribe();
 

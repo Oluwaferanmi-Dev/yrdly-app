@@ -46,6 +46,7 @@ export interface Post {
 
   // For Sale specific fields
   price?: number;
+  condition?: string;
 
   liked_by: string[];
   

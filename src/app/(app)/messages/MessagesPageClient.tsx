@@ -67,27 +67,39 @@ export function MessagesPageClient({ selectedConversationId }: { selectedConvers
     // No need for conversations.length === 0 check here, ChatLayout handles it
 
     return (
-        <div className="h-[calc(100vh_-_4rem)] md:h-auto pt-16">
-            <Tabs defaultValue={tab === 'marketplace' ? 'marketplace' : 'neighbors'} className="h-full">
-                <div className="p-4 border-b">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="neighbors" className="flex items-center gap-2">
-                            <MessageCircle className="h-4 w-4" />
-                            Neighbor Chats
-                        </TabsTrigger>
-                        <TabsTrigger value="marketplace" className="flex items-center gap-2">
-                            <ShoppingBag className="h-4 w-4" />
-                            Marketplace Chats
-                        </TabsTrigger>
-                    </TabsList>
-                </div>
-                <TabsContent value="neighbors" className="h-[calc(100%-3rem)] mt-0">
-                    <NeighborChatLayout selectedConversationId={selectedConversationId} />
-                </TabsContent>
-                <TabsContent value="marketplace" className="h-[calc(100%-3rem)] mt-0">
-                    <MarketplaceChatLayout selectedChatId={selectedConversationId} />
-                </TabsContent>
-            </Tabs>
+        <div className="h-[calc(100vh_-_4rem)] md:h-[calc(100vh_-_5rem)] pt-16 md:pt-20">
+            <div className="h-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+                <Tabs defaultValue={tab === 'marketplace' ? 'marketplace' : 'neighbors'} className="h-full">
+                    <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-b border-slate-200 dark:border-slate-700">
+                        <div className="max-w-7xl mx-auto px-4 py-3">
+                            <TabsList className="grid w-full max-w-md grid-cols-2 bg-slate-100 dark:bg-slate-700">
+                                <TabsTrigger 
+                                    value="neighbors" 
+                                    className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-600 data-[state=active]:shadow-sm"
+                                >
+                                    <MessageCircle className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Neighbor Chats</span>
+                                    <span className="sm:hidden">Neighbors</span>
+                                </TabsTrigger>
+                                <TabsTrigger 
+                                    value="marketplace" 
+                                    className="flex items-center gap-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-600 data-[state=active]:shadow-sm"
+                                >
+                                    <ShoppingBag className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Marketplace Chats</span>
+                                    <span className="sm:hidden">Marketplace</span>
+                                </TabsTrigger>
+                            </TabsList>
+                        </div>
+                    </div>
+                    <TabsContent value="neighbors" className="h-[calc(100%-4rem)] mt-0">
+                        <NeighborChatLayout selectedConversationId={selectedConversationId} />
+                    </TabsContent>
+                    <TabsContent value="marketplace" className="h-[calc(100%-4rem)] mt-0">
+                        <MarketplaceChatLayout selectedChatId={selectedConversationId} />
+                    </TabsContent>
+                </Tabs>
+            </div>
         </div>
     );
 }

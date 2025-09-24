@@ -43,8 +43,28 @@ export const usePosts = () => {
         event: '*', 
         schema: 'public', 
         table: 'posts' 
-      }, () => {
-        fetchPosts();
+      }, (payload) => {
+        console.log('usePosts realtime change received!', payload);
+        
+        if (payload.eventType === 'INSERT') {
+          // Add new post to the beginning of the list
+          const newPost = payload.new as Post;
+          setPosts(prevPosts => [newPost, ...prevPosts]);
+        } else if (payload.eventType === 'UPDATE') {
+          // Update existing post in the list
+          const updatedPost = payload.new as Post;
+          setPosts(prevPosts => 
+            prevPosts.map(post => 
+              post.id === updatedPost.id ? updatedPost : post
+            )
+          );
+        } else if (payload.eventType === 'DELETE') {
+          // Remove deleted post from the list
+          const deletedId = payload.old.id;
+          setPosts(prevPosts => 
+            prevPosts.filter(post => post.id !== deletedId)
+          );
+        }
       })
       .subscribe();
 

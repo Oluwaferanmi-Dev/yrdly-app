@@ -13,6 +13,7 @@ import { timeAgo } from '@/lib/utils';
 import { CreateEventDialog } from '../CreateEventDialog';
 import { useToast } from '@/hooks/use-toast';
 import { sendEventConfirmationEmail } from '@/lib/email-actions';
+import { supabase } from '@/lib/supabase';
 
 interface EventDetailProps {
   event: Post;
@@ -127,10 +128,12 @@ export function EventDetail({
   };
 
   const nextImage = () => {
+    if (!images || images.length === 0) return;
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
   };
 
   const prevImage = () => {
+    if (!images || images.length === 0) return;
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
 
@@ -174,7 +177,7 @@ export function EventDetail({
               <div className="relative">
                 <div className="relative aspect-video w-full max-w-2xl mx-auto rounded-lg overflow-hidden">
                   <Image
-                    src={images[currentImageIndex]}
+                    src={images?.[currentImageIndex] || ''}
                     alt={event.title || 'Event image'}
                     fill
                     className="object-cover"
@@ -182,7 +185,7 @@ export function EventDetail({
                   />
                   
                   {/* Navigation arrows for multiple images */}
-                  {images.length > 1 && (
+                  {images && images.length > 1 && (
                     <>
                       <Button
                         variant="secondary"
@@ -204,7 +207,7 @@ export function EventDetail({
                   )}
 
                   {/* Image counter */}
-                  {images.length > 1 && (
+                  {images && images.length > 1 && (
                     <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
                       {currentImageIndex + 1} / {images.length}
                     </div>
@@ -212,7 +215,7 @@ export function EventDetail({
                 </div>
 
                 {/* Thumbnail strip */}
-                {images.length > 1 && (
+                {images && images.length > 1 && (
                   <div className="flex gap-2 mt-4 overflow-x-auto">
                     {images.map((image, index) => (
                       <button

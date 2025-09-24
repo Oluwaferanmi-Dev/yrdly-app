@@ -76,6 +76,8 @@ export default function Home() {
   useEffect(() => {
     if (!user) return;
 
+    console.log('Setting up real-time subscription for posts...');
+    
     const channel = supabase
       .channel('posts')
       .on('postgres_changes', { 
@@ -83,16 +85,43 @@ export default function Home() {
         schema: 'public', 
         table: 'posts' 
       }, (payload) => {
-        console.log('Realtime change received!', payload);
-        // Refresh posts when changes occur
-        fetchPosts();
+        console.log('Home page realtime change received!', payload);
+        console.log('Event type:', payload.eventType);
+        console.log('New data:', payload.new);
+        console.log('Old data:', payload.old);
+        
+        if (payload.eventType === 'INSERT') {
+          // Add new post to the beginning of the list
+          const newPost = payload.new as PostType;
+          console.log('Adding new post to home feed:', newPost);
+          setPosts(prevPosts => [newPost, ...prevPosts]);
+        } else if (payload.eventType === 'UPDATE') {
+          // Update existing post in the list
+          const updatedPost = payload.new as PostType;
+          console.log('Updating post in home feed:', updatedPost);
+          setPosts(prevPosts => 
+            prevPosts.map(post => 
+              post.id === updatedPost.id ? updatedPost : post
+            )
+          );
+        } else if (payload.eventType === 'DELETE') {
+          // Remove deleted post from the list
+          const deletedId = payload.old.id;
+          console.log('Removing post from home feed:', deletedId);
+          setPosts(prevPosts => 
+            prevPosts.filter(post => post.id !== deletedId)
+          );
+        }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Real-time subscription status:', status);
+      });
 
     return () => {
+      console.log('Cleaning up real-time subscription...');
       supabase.removeChannel(channel);
     };
-  }, [user, fetchPosts]);
+  }, [user]);
 
   return (
     <div ref={containerRef} className="space-y-6 pt-12 pb-20">

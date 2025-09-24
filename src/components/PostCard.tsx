@@ -41,6 +41,7 @@ import { timeAgo, formatPrice } from "@/lib/utils";
 import { UserProfileDialog } from "./UserProfileDialog";
 import { useRouter } from "next/navigation";
 import { useHaptics } from "@/hooks/use-haptics";
+import { ImageSwiper } from "./ImageSwiper";
 
 
 interface PostCardProps {
@@ -59,6 +60,8 @@ export function PostCard({ post }: PostCardProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isImageSwiperOpen, setIsImageSwiperOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     // Since we're using Supabase, the post already contains author information
@@ -155,6 +158,11 @@ export function PostCard({ post }: PostCardProps) {
     } catch (error) {
       console.error('Error handling like:', error);
     }
+  };
+
+  const handleImageClick = (index: number) => {
+    setSelectedImageIndex(index);
+    setIsImageSwiperOpen(true);
   };
 
   const handleDelete = async () => {
@@ -344,6 +352,7 @@ export function PostCard({ post }: PostCardProps) {
   };
 
   return (
+    <>
     <Card className="overflow-hidden mb-4">
        <div onClick={handleCardClick} className="cursor-pointer">
       {selectedUser && (
@@ -427,7 +436,10 @@ export function PostCard({ post }: PostCardProps) {
         {post.image_urls && post.image_urls.length > 0 && (
             <div className="px-3 pb-2">
               {post.image_urls.length === 1 ? (
-                <div className="relative w-full aspect-video rounded-lg overflow-hidden">
+                <div 
+                  className="relative w-full aspect-video rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => handleImageClick(0)}
+                >
                   <Image
                     src={post.image_urls[0]}
                     alt="Post image"
@@ -441,7 +453,11 @@ export function PostCard({ post }: PostCardProps) {
                   gridTemplateRows: post.image_urls.length > 2 ? '1fr 1fr' : '1fr' 
                 }}>
                   {post.image_urls.slice(0, 4).map((imageUrl, index) => (
-                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
+                    <div 
+                      key={index} 
+                      className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => handleImageClick(index)}
+                    >
                       <Image
                         src={imageUrl}
                         alt={`Post image ${index + 1}`}
@@ -490,5 +506,16 @@ export function PostCard({ post }: PostCardProps) {
       </Collapsible>
     </div>
     </Card>
+    
+    {/* Image Swiper Modal */}
+    {post.image_urls && post.image_urls.length > 0 && (
+      <ImageSwiper
+        images={post.image_urls}
+        isOpen={isImageSwiperOpen}
+        onClose={() => setIsImageSwiperOpen(false)}
+        initialIndex={selectedImageIndex}
+      />
+    )}
+    </>
   );
 }

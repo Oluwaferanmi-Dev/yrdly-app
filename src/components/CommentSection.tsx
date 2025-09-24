@@ -1,10 +1,10 @@
 
 "use client";
 
-import { useState, useMemo, FormEvent, useCallback } from 'react';
+import { useState, useMemo, FormEvent, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Comment, User } from '@/types';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,15 +28,38 @@ type CommentWithReplies = Comment & {
 const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😡'];
 
 export function CommentSection({ postId }: CommentSectionProps) {
-    const { user: currentUser, userDetails, loading } = useAuth();
+    const { user: currentUser, profile: userDetails, loading } = useAuth();
     const { toast } = useToast();
     
     // Debug authentication state
-    console.log('CommentSection auth state:', { currentUser, userDetails, loading });
+    console.log('CommentSection auth state:', { 
+        currentUser: currentUser?.id, 
+        userDetails: userDetails?.id, 
+        loading,
+        hasUser: !!currentUser,
+        hasUserDetails: !!userDetails
+    });
+    
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [authTimeout, setAuthTimeout] = useState(false);
+    
+    // Add timeout to prevent infinite loading
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (loading) {
+                console.log('Auth loading timeout - forcing loading to false');
+                setAuthTimeout(true);
+            }
+        }, 10000); // 10 second timeout
+        
+        return () => clearTimeout(timer);
+    }, [loading]);
+    
+    // Use timeout state if auth is stuck loading
+    const isAuthLoading = loading && !authTimeout;
 
     useMemo(() => {
         if (!postId) return;
@@ -108,9 +131,9 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
     const handlePostComment = useCallback(async (e: FormEvent) => {
         e.preventDefault();
-        console.log('Comment submission attempt:', { currentUser, userDetails, newComment, loading });
+        console.log('Comment submission attempt:', { currentUser, userDetails, newComment, loading, authTimeout });
         
-        if (loading) {
+        if (isAuthLoading) {
             console.log('Comment submission blocked: Auth still loading');
             return;
         }
@@ -312,18 +335,18 @@ export function CommentSection({ postId }: CommentSectionProps) {
                 </Avatar>
                 <div className="flex-1 relative">
                     <Textarea
-                        placeholder={loading ? "Loading..." : (replyingTo ? "Write a reply..." : "Add a comment...")}
+                        placeholder={isAuthLoading ? "Loading..." : (replyingTo ? "Write a reply..." : "Add a comment...")}
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
                         className="pr-20"
-                        disabled={loading}
+                        disabled={isAuthLoading}
                     />
                     <div className="absolute top-2 right-2 flex gap-1">
                         <Button 
                             type="submit" 
                             size="icon" 
                             className="h-8 w-8"
-                            disabled={loading || !newComment.trim()}
+                            disabled={isAuthLoading || !newComment.trim()}
                         >
                             <Send className="h-4 w-4" />
                         </Button>

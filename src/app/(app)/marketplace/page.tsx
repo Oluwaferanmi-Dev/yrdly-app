@@ -67,8 +67,28 @@ export default function MarketplacePage() {
                 schema: 'public', 
                 table: 'posts',
                 filter: 'category=eq.For Sale'
-            }, () => {
-                fetchItems();
+            }, (payload) => {
+                console.log('Marketplace realtime change received!', payload);
+                
+                if (payload.eventType === 'INSERT') {
+                    // Add new item to the beginning of the list
+                    const newItem = payload.new as PostType;
+                    setItems(prevItems => [newItem, ...prevItems]);
+                } else if (payload.eventType === 'UPDATE') {
+                    // Update existing item in the list
+                    const updatedItem = payload.new as PostType;
+                    setItems(prevItems => 
+                        prevItems.map(item => 
+                            item.id === updatedItem.id ? updatedItem : item
+                        )
+                    );
+                } else if (payload.eventType === 'DELETE') {
+                    // Remove deleted item from the list
+                    const deletedId = payload.old.id;
+                    setItems(prevItems => 
+                        prevItems.filter(item => item.id !== deletedId)
+                    );
+                }
             })
             .subscribe();
 

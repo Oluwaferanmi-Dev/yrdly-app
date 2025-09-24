@@ -61,10 +61,12 @@ export function MarketplaceItemDetail({
   };
 
   const nextImage = () => {
+    if (!images || images.length === 0) return;
     setCurrentImageIndex((prev) => (prev + 1) % images.length);
   };
 
   const prevImage = () => {
+    if (!images || images.length === 0) return;
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
 
@@ -86,7 +88,7 @@ export function MarketplaceItemDetail({
             <div className="relative">
               <div className="relative aspect-square w-full max-w-md mx-auto rounded-lg overflow-hidden">
                 <Image
-                  src={images[currentImageIndex]}
+                  src={images?.[currentImageIndex] || ''}
                   alt={item.title || 'Item image'}
                   fill
                   className="object-cover"
@@ -94,7 +96,7 @@ export function MarketplaceItemDetail({
                 />
                 
                 {/* Navigation arrows for multiple images */}
-                {images.length > 1 && (
+                {images && images.length > 1 && (
                   <>
                     <Button
                       variant="secondary"
@@ -116,7 +118,7 @@ export function MarketplaceItemDetail({
                 )}
 
                 {/* Image counter */}
-                {images.length > 1 && (
+                {images && images.length > 1 && (
                   <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
                     {currentImageIndex + 1} / {images.length}
                   </div>
@@ -124,7 +126,7 @@ export function MarketplaceItemDetail({
               </div>
 
               {/* Thumbnail strip */}
-              {images.length > 1 && (
+              {images && images.length > 1 && (
                 <div className="flex gap-2 mt-4 overflow-x-auto">
                   {images.map((image, index) => (
                     <button
@@ -266,17 +268,15 @@ export function MarketplaceItemDetail({
                         price={item.price}
                         sellerId={item.user_id}
                         sellerName={item.author_name || 'Unknown Seller'}
-                        className="w-full"
                       />
                     )}
 
                     <ChatButton
                       itemId={item.id}
                       itemTitle={item.title || item.text || 'Unknown Item'}
-                      itemImageUrl={images[0]}
+                      itemImageUrl={images?.[0] || ''}
                       sellerId={item.user_id}
                       sellerName={item.author_name || 'Unknown Seller'}
-                      className="w-full"
                     />
                   </div>
                 )}
