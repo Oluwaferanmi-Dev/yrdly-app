@@ -353,3 +353,24 @@ CREATE TRIGGER update_escrow_transactions_updated_at BEFORE UPDATE ON public.esc
 CREATE TRIGGER update_seller_accounts_updated_at BEFORE UPDATE ON public.seller_accounts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_item_chats_updated_at BEFORE UPDATE ON public.item_chats FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_chat_messages_updated_at BEFORE UPDATE ON public.chat_messages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- RLS Policies for friend_requests table
+CREATE POLICY "Users can view friend requests" ON public.friend_requests 
+FOR SELECT USING (
+    auth.uid() = from_user_id OR auth.uid() = to_user_id
+);
+
+CREATE POLICY "Users can insert friend requests" ON public.friend_requests 
+FOR INSERT WITH CHECK (
+    auth.uid() = from_user_id
+);
+
+CREATE POLICY "Users can update friend requests" ON public.friend_requests 
+FOR UPDATE USING (
+    auth.uid() = from_user_id OR auth.uid() = to_user_id
+);
+
+CREATE POLICY "Users can delete friend requests" ON public.friend_requests 
+FOR DELETE USING (
+    auth.uid() = from_user_id OR auth.uid() = to_user_id
+);
