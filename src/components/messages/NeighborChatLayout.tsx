@@ -506,7 +506,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                 className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
                 onClick={removeImagePreview}
               >
-                ×
+                &times;
               </Button>
             </div>
           )}
@@ -571,7 +571,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
               onClick={() => setSelectedConversation(null)}
               className="p-2"
             >
-              ←
+              &larr;
             </Button>
             <div className="flex items-center gap-3 flex-1">
               <Avatar className="h-10 w-10">
@@ -675,7 +675,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                   className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
                   onClick={removeImagePreview}
                 >
-                  ×
+                  &times;
                 </Button>
               </div>
             )}

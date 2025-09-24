@@ -246,10 +246,10 @@ export default function OnboardingProfilePage() {
                   <p className="text-sm text-muted-foreground">Checking availability...</p>
                 )}
                 {usernameAvailable === true && (
-                  <p className="text-sm text-green-600">✓ Username is available</p>
+                  <p className="text-sm text-green-600">&check; Username is available</p>
                 )}
                 {usernameAvailable === false && (
-                  <p className="text-sm text-destructive">✗ Username is already taken</p>
+                  <p className="text-sm text-destructive">&times; Username is already taken</p>
                 )}
               </div>
 
