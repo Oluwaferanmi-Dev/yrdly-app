@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { Button } from '@/components/ui/button';
@@ -25,8 +25,29 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { user, signIn, signUp, signInWithGoogle, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  // Redirect already logged-in users to home
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/home');
+    }
+  }, [user, authLoading, router]);
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="h-16 w-16 mx-auto mb-4 animate-pulse">
+            <YrdlyLogo />
+          </div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
