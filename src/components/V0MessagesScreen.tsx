@@ -1,0 +1,361 @@
+"use client";
+
+import { useState, useEffect, useMemo } from "react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, MessageCircle, Store, Users, ShoppingBag } from "lucide-react";
+import { useAuth } from "@/hooks/use-supabase-auth";
+import { supabase } from "@/lib/supabase";
+import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
+import type { User } from "@/types";
+
+interface Conversation {
+  id: string;
+  type: "friend" | "marketplace" | "business";
+  participantId: string;
+  participantName: string;
+  participantAvatar: string;
+  lastMessage: string;
+  timestamp: string;
+  unreadCount: number;
+  isOnline: boolean;
+  context?: {
+    itemId?: string;
+    itemTitle?: string;
+    itemImage?: string;
+    itemPrice?: number;
+    businessId?: string;
+    businessName?: string;
+    businessLogo?: string;
+  };
+}
+
+interface V0MessagesScreenProps {
+  onOpenChat?: (conversation: Conversation) => void;
+}
+
+export function V0MessagesScreen({ onOpenChat }: V0MessagesScreenProps) {
+  const { user, profile } = useAuth();
+  const [activeTab, setActiveTab] = useState<"all" | "friends" | "marketplace" | "businesses">("friends");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch conversations from Supabase
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchConversations = async () => {
+      try {
+        // Fetch conversations from Supabase using the correct schema
+        const { data: conversationsData, error: conversationsError } = await supabase
+          .from('conversations')
+          .select(`
+            *,
+            messages(
+              id,
+              sender_id,
+              is_read,
+              read_by
+            )
+          `)
+          .contains('participant_ids', [user.id.toString()])
+          .order('updated_at', { ascending: false });
+
+        if (conversationsError) {
+          console.error('Error fetching conversations:', conversationsError);
+          return;
+        }
+
+        // Calculate unread count for each conversation
+        const conversationsWithUnreadCount = (conversationsData || []).map(conv => {
+          const unreadCount = conv.messages?.filter((msg: any) => 
+            msg.sender_id !== user.id && 
+            (!msg.is_read || !msg.read_by?.includes(user.id.toString()))
+          ).length || 0;
+          
+          return {
+            ...conv,
+            unread_count: unreadCount
+          };
+        });
+
+        // Transform data to match our interface
+        const transformedConversations: Conversation[] = conversationsWithUnreadCount.map(conv => {
+          // Get the other participant ID
+          const otherParticipantId = conv.participant_ids?.find((id: string) => id !== user.id.toString());
+          
+          return {
+            id: conv.id,
+            type: conv.type as "friend" | "marketplace" | "business",
+            participantId: otherParticipantId || conv.id,
+            participantName: "Unknown User", // We'll fetch this separately
+            participantAvatar: "/placeholder.svg",
+            lastMessage: conv.last_message || "No messages yet",
+            timestamp: new Date(conv.updated_at).toLocaleDateString(),
+            unreadCount: conv.unread_count || 0,
+            isOnline: false, // You can implement online status later
+            context: conv.context
+          };
+        });
+
+        setConversations(transformedConversations);
+        
+        // Fetch participant details for each conversation
+        const fetchParticipantDetails = async () => {
+          const participantIds = transformedConversations
+            .map(conv => conv.participantId)
+            .filter(id => id !== user.id);
+          
+          if (participantIds.length > 0) {
+            const { data: usersData, error: usersError } = await supabase
+              .from('users')
+              .select('id, name, avatar_url')
+              .in('id', participantIds);
+            
+            if (!usersError && usersData) {
+              // Update conversations with participant details
+              setConversations(prevConversations => 
+                prevConversations.map(conv => {
+                  const participant = usersData.find(user => user.id === conv.participantId);
+                  if (participant) {
+                    return {
+                      ...conv,
+                      participantName: participant.name || "Unknown User",
+                      participantAvatar: participant.avatar_url || "/placeholder.svg"
+                    };
+                  }
+                  return conv;
+                })
+              );
+            }
+          }
+        };
+        
+        fetchParticipantDetails();
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching conversations:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchConversations();
+
+    // Set up real-time subscription for conversations
+    const channel = supabase
+      .channel('conversations')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'conversations',
+        filter: `participant_ids.cs.{${user.id.toString()}}`
+      }, (payload) => {
+        console.log('Conversations realtime change received!', payload);
+        fetchConversations(); // Refresh conversations
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const filteredConversations = useMemo(() => {
+    const matchesTab = (conv: Conversation) => {
+      if (activeTab === "all") return true;
+      if (activeTab === "friends" && conv.type === "friend") return true;
+      if (activeTab === "marketplace" && conv.type === "marketplace") return true;
+      if (activeTab === "businesses" && conv.type === "business") return true;
+      return false;
+    };
+
+    const matchesSearch = (conv: Conversation) => {
+      if (!searchQuery) return true;
+      return conv.participantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
+    };
+
+    return conversations.filter(conv => matchesTab(conv) && matchesSearch(conv));
+  }, [conversations, activeTab, searchQuery]);
+
+  const unreadCounts = useMemo(() => {
+    return {
+      all: conversations.reduce((sum, conv) => sum + conv.unreadCount, 0),
+      friends: conversations.filter(c => c.type === "friend").reduce((sum, conv) => sum + conv.unreadCount, 0),
+      marketplace: conversations.filter(c => c.type === "marketplace").reduce((sum, conv) => sum + conv.unreadCount, 0),
+      businesses: conversations.filter(c => c.type === "business").reduce((sum, conv) => sum + conv.unreadCount, 0),
+    };
+  }, [conversations]);
+
+  if (loading) {
+    return (
+      <div className="p-4 space-y-4">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="flex items-center gap-4">
+            <Skeleton className="h-12 w-12 rounded-full" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full bg-background">
+      {/* Header */}
+      <div className="p-4 space-y-4 border-b border-border bg-card">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Messages</h2>
+          <p className="text-sm text-muted-foreground">Stay connected with your community</p>
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search conversations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-background border-border focus:border-primary"
+          />
+        </div>
+
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+          <TabsList className="grid w-full grid-cols-4 bg-muted">
+            <TabsTrigger value="friends" className="text-xs relative">
+              <Users className="w-4 h-4 mr-1" />
+              Friends
+              {unreadCounts.friends > 0 && (
+                <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground text-xs">
+                  {unreadCounts.friends}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="marketplace" className="text-xs relative">
+              <ShoppingBag className="w-4 h-4 mr-1" />
+              Market
+              {unreadCounts.marketplace > 0 && (
+                <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground text-xs">
+                  {unreadCounts.marketplace}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="businesses" className="text-xs relative">
+              <Store className="w-4 h-4 mr-1" />
+              Business
+              {unreadCounts.businesses > 0 && (
+                <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground text-xs">
+                  {unreadCounts.businesses}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="all" className="text-xs relative">
+              All
+              {unreadCounts.all > 0 && (
+                <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground text-xs">
+                  {unreadCounts.all}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {filteredConversations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center p-8">
+            <MessageCircle className="w-16 h-16 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">No conversations yet</h3>
+            <p className="text-sm text-muted-foreground">
+              {searchQuery
+                ? "No conversations match your search"
+                : "Start chatting with neighbors, sellers, or businesses"}
+            </p>
+          </div>
+        ) : (
+          filteredConversations.map((conversation) => (
+            <Link key={conversation.id} href={`/messages/${conversation.id}`}>
+              <Card className="p-4 yrdly-shadow hover:shadow-lg transition-all cursor-pointer hover:border-primary/50">
+                <div className="flex items-start gap-3">
+                  {/* Avatar */}
+                  <div className="relative flex-shrink-0">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={conversation.participantAvatar || "/placeholder.svg"} />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {conversation.participantName.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {conversation.isOnline && (
+                      <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></div>
+                    )}
+                    <div className="absolute -top-1 -right-1">
+                      {conversation.type === "marketplace" && (
+                        <div className="w-5 h-5 bg-accent text-accent-foreground rounded-full flex items-center justify-center">
+                          <ShoppingBag className="w-3 h-3" />
+                        </div>
+                      )}
+                      {conversation.type === "business" && (
+                        <div className="w-5 h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
+                          <Store className="w-3 h-3" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h4 className="font-semibold text-foreground truncate">{conversation.participantName}</h4>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">{conversation.timestamp}</span>
+                    </div>
+
+                    {conversation.context &&
+                      (conversation.type === "marketplace" || conversation.type === "business") && (
+                        <div className="flex items-center gap-2 mb-2 p-2 bg-muted/50 rounded-lg">
+                          <img
+                            src={
+                              conversation.context.itemImage || conversation.context.businessLogo || "/placeholder.svg"
+                            }
+                            alt=""
+                            className="w-10 h-10 rounded object-cover flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-foreground truncate">
+                              {conversation.context.itemTitle || conversation.context.businessName}
+                            </p>
+                            {conversation.context.itemPrice && (
+                              <p className="text-xs font-semibold text-primary">
+                                ₦{conversation.context.itemPrice.toLocaleString()}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                    <p className="text-sm text-muted-foreground truncate">{conversation.lastMessage}</p>
+                  </div>
+
+                  {/* Unread badge */}
+                  {conversation.unreadCount > 0 && (
+                    <Badge className="bg-primary text-primary-foreground flex-shrink-0">
+                      {conversation.unreadCount}
+                    </Badge>
+                  )}
+                </div>
+              </Card>
+            </Link>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
