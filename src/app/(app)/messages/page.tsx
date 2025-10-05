@@ -1,8 +1,7 @@
 
 "use client";
 
-// Removed ChatLayout import - using MessagesPageClient instead
-import { MessagesPageClient } from './MessagesPageClient';
+import { V0MessagesScreen } from "@/components/V0MessagesScreen";
 import { use, Suspense } from 'react';
 
 // Force dynamic rendering to avoid prerender issues
@@ -18,7 +17,7 @@ export default function MessagesPage({ params }: { params?: Promise<{ convId?: s
     
     return (
         <Suspense fallback={<div>Loading...</div>}>
-            <MessagesPageClient selectedConversationId={selectedConversationId} />
+            <V0MessagesScreen />
         </Suspense>
     );
 }
