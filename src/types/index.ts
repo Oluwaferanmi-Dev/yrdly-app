@@ -19,6 +19,15 @@ export interface Business {
   location: Location;
   image_urls?: string[];
   created_at: string;
+  // Additional fields needed for v0 design
+  rating?: number;
+  review_count?: number;
+  hours?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  owner_name?: string;
+  owner_avatar?: string;
 }
 
 export type PostCategory = 'General' | 'Event' | 'For Sale' | 'Business';
@@ -53,6 +62,13 @@ export interface Post {
   // Additional Supabase fields
   created_at?: string;
   updated_at?: string;
+  
+  // Joined user data (when fetched with user relation)
+  user?: {
+    id: string;
+    name: string;
+    avatar_url?: string;
+  };
 }
 
 export interface Comment {

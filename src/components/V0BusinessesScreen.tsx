@@ -20,7 +20,8 @@ import {
   Star,
   MoreHorizontal,
   Edit,
-  Trash2
+  Trash2,
+  Clock
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
@@ -263,6 +264,12 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateBusinessDialogOpen, setIsCreateBusinessDialogOpen] = useState(false);
+  const [categoryStats, setCategoryStats] = useState<Array<{
+    name: string;
+    count: number;
+    icon: string;
+    color: string;
+  }>>([]);
 
   useEffect(() => {
     const fetchBusinesses = async () => {
@@ -278,6 +285,42 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
         }
 
         setBusinesses(data as Business[]);
+        
+        // Calculate category stats from real data
+        const categoryCounts = (data || []).reduce((acc, business) => {
+          acc[business.category] = (acc[business.category] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        // Map categories to display format
+        const categoryMap: Record<string, { icon: string; color: string }> = {
+          'Food & Dining': { icon: '🍽️', color: 'bg-primary/10' },
+          'Restaurant': { icon: '🍽️', color: 'bg-primary/10' },
+          'Food': { icon: '🍽️', color: 'bg-primary/10' },
+          'Retail': { icon: '🛍️', color: 'bg-accent/10' },
+          'Shopping': { icon: '🛍️', color: 'bg-accent/10' },
+          'Health & Fitness': { icon: '💪', color: 'bg-green-100' },
+          'Fitness': { icon: '💪', color: 'bg-green-100' },
+          'Gym': { icon: '💪', color: 'bg-green-100' },
+          'Beauty': { icon: '✂️', color: 'bg-purple-100' },
+          'Salon': { icon: '✂️', color: 'bg-purple-100' },
+          'Spa': { icon: '✂️', color: 'bg-purple-100' },
+          'Electronics': { icon: '📱', color: 'bg-blue-100' },
+          'Technology': { icon: '📱', color: 'bg-blue-100' },
+          'Services': { icon: '🔧', color: 'bg-orange-100' },
+          'Automotive': { icon: '🚗', color: 'bg-gray-100' },
+          'Education': { icon: '📚', color: 'bg-indigo-100' },
+          'Entertainment': { icon: '🎬', color: 'bg-pink-100' },
+        };
+
+        const stats = Object.entries(categoryCounts).map(([category, count]) => ({
+          name: category,
+          count: count as number,
+          icon: categoryMap[category]?.icon || '🏢',
+          color: categoryMap[category]?.color || 'bg-gray-100'
+        }));
+
+        setCategoryStats(stats);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching businesses:', error);
@@ -358,6 +401,86 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
             className="pl-10 bg-card border-border focus:border-primary"
           />
         </div>
+      </div>
+
+      {/* Featured Business */}
+      {filteredBusinesses.length > 0 && (
+        <Card className="p-0 overflow-hidden yrdly-shadow-lg border-0">
+          <div className="relative h-32 yrdly-gradient"></div>
+          <div className="p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h4 className="text-xl font-bold text-foreground">{filteredBusinesses[0].name}</h4>
+                <p className="text-muted-foreground">{filteredBusinesses[0].category}</p>
+              </div>
+              <Badge className="bg-primary text-primary-foreground">Featured</Badge>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {filteredBusinesses[0].rating && (
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  <span className="text-sm font-medium">{filteredBusinesses[0].rating}</span>
+                  <span className="text-sm text-muted-foreground">
+                    ({filteredBusinesses[0].review_count || 0} reviews)
+                  </span>
+                </div>
+              )}
+              {filteredBusinesses[0].hours && (
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-sm">{filteredBusinesses[0].hours}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <MapPin className="w-4 h-4 text-primary" />
+              <span className="text-sm">{filteredBusinesses[0].location.address}</span>
+            </div>
+
+            <p className="text-sm text-muted-foreground">{filteredBusinesses[0].description}</p>
+
+            <div className="flex gap-2">
+              <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">Visit Store</Button>
+              {filteredBusinesses[0].phone && (
+                <Button
+                  variant="outline"
+                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
+                  onClick={() => window.open(`tel:${filteredBusinesses[0].phone}`)}
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Call
+                </Button>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Business Categories */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold text-foreground">Categories</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {categoryStats.map((category) => (
+            <Card key={category.name} className="p-4 yrdly-shadow hover:shadow-lg transition-shadow cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg ${category.color} flex items-center justify-center`}>
+                  <span className="text-lg">{category.icon}</span>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-foreground">{category.name}</h4>
+                  <p className="text-sm text-muted-foreground">{category.count} businesses</p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Nearby Businesses */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-foreground">Nearby Businesses</h3>
       </div>
 
       {/* Businesses Grid */}

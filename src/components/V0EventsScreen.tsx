@@ -42,149 +42,60 @@ function EmptyEvents() {
 }
 
 function EventCard({ event }: { event: PostType }) {
-  const { user } = useAuth();
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(event.liked_by?.length || 0);
-
-  const handleLike = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!user) return;
-
-    const newLikes = isLiked
-      ? (event.liked_by || []).filter(id => id !== user.id)
-      : [...(event.liked_by || []), user.id];
-
-    try {
-      const { error } = await supabase
-        .from('posts')
-        .update({ liked_by: newLikes })
-        .eq('id', event.id);
-
-      if (error) throw error;
-
-      setIsLiked(!isLiked);
-      setLikeCount(newLikes.length);
-    } catch (error) {
-      console.error('Error updating like:', error);
-    }
+  const getEventBadge = (eventDate: string | undefined) => {
+    if (!eventDate) return { text: "TBD", variant: "outline" as const, className: "text-muted-foreground border-muted-foreground" };
+    
+    const eventDateTime = new Date(eventDate);
+    const now = new Date();
+    const diffDays = Math.ceil((eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return { text: "Today", variant: "outline" as const, className: "text-accent border-accent bg-accent/10" };
+    if (diffDays === 1) return { text: "Tomorrow", variant: "outline" as const, className: "text-accent border-accent bg-accent/10" };
+    if (diffDays <= 7) return { text: "This Week", variant: "outline" as const, className: "text-primary border-primary bg-primary/10" };
+    if (diffDays <= 14) return { text: "Next Week", variant: "outline" as const, className: "text-muted-foreground border-muted-foreground" };
+    return { text: "Upcoming", variant: "outline" as const, className: "text-muted-foreground border-muted-foreground" };
   };
 
-  const handleShare = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (navigator.share) {
-      navigator.share({
-        title: event.title || 'Event',
-        text: event.text || '',
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-    }
-  };
-
-  const eventDate = event.event_date ? new Date(event.event_date) : null;
-  const eventTime = event.event_time || '';
+  const badge = getEventBadge(event.event_date);
 
   return (
-    <Card className="yrdly-shadow hover:shadow-lg transition-all">
-      <CardContent className="p-4 space-y-4">
-        {/* Event Image */}
-        {event.image_urls && event.image_urls.length > 0 && (
-          <div className="relative h-48 w-full rounded-lg overflow-hidden">
-            <Image
-              src={event.image_urls[0]}
-              alt={event.title || 'Event'}
-              fill
-              className="object-cover"
-            />
-            <div className="absolute top-2 right-2">
-              <Badge className="bg-primary text-primary-foreground">
-                {event.category}
-              </Badge>
-            </div>
+    <Card className="p-4 yrdly-shadow">
+      <div className="flex items-start gap-4">
+        <Avatar className="w-10 h-10">
+          <AvatarImage src={event.author_image || "/placeholder.svg"} />
+          <AvatarFallback className="bg-accent text-accent-foreground">
+            {event.author_name?.slice(0, 2).toUpperCase() || "U"}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="font-semibold text-foreground">{event.title || "Event"}</h4>
+            <Badge variant={badge.variant} className={badge.className}>
+              {badge.text}
+            </Badge>
           </div>
-        )}
-
-        {/* Event Details */}
-        <div className="space-y-3">
-          <div>
-            <h3 className="text-xl font-bold text-foreground">{event.title}</h3>
-            <p className="text-muted-foreground line-clamp-2">{event.text}</p>
-          </div>
-
-          {/* Event Info */}
-          <div className="space-y-2">
-            {eventDate && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CalendarDays className="h-4 w-4" />
-                <span>{eventDate.toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}</span>
-              </div>
-            )}
-            
-            {eventTime && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
-                <span>{eventTime}</span>
-              </div>
-            )}
-
+          <p className="text-sm text-muted-foreground">{event.text || "No description available"}</p>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
             {event.event_location?.address && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="h-4 w-4" />
+              <div className="flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
                 <span>{event.event_location.address}</span>
               </div>
             )}
-
-            {event.attendees && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span>{event.attendees.length} attending</span>
-              </div>
-            )}
-          </div>
-
-          {/* Author */}
-          <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={event.author_image || "/placeholder.svg"} />
-              <AvatarFallback>{event.author_name?.charAt(0) || 'E'}</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="text-sm font-medium">{event.author_name}</p>
-              <p className="text-xs text-muted-foreground">
-                {event.timestamp ? formatDistanceToNowStrict(new Date(event.timestamp), { addSuffix: true }) : 'Unknown time'}
-              </p>
+            <div className="flex items-center gap-1">
+              <Users className="w-3 h-3" />
+              <span>{event.attendees?.length || 0} attending</span>
             </div>
           </div>
-
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-2 border-t border-border">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`flex items-center gap-1 ${isLiked ? 'text-red-500' : ''}`}
-                onClick={handleLike}
-              >
-                <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500' : ''}`} />
-                <span>{likeCount}</span>
-              </Button>
-              <Button variant="ghost" size="sm" className="flex items-center gap-1">
-                <MessageCircle className="h-4 w-4" />
-                <span>{event.comment_count || 0}</span>
-              </Button>
-            </div>
-            <Button variant="ghost" size="sm" onClick={handleShare}>
-              <Share className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
+          >
+            RSVP
+          </Button>
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }
@@ -317,6 +228,71 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
         </div>
       </div>
 
+      {/* Featured Event */}
+      {filteredEvents.length > 0 && (
+        <Card className="p-0 overflow-hidden yrdly-shadow-lg border-0">
+          <div className="yrdly-gradient p-6 text-white">
+            <div className="flex items-center gap-3 mb-4">
+              <Avatar className="w-12 h-12 border-2 border-white/20">
+                <AvatarImage src={filteredEvents[0].author_image || "/placeholder.svg"} />
+                <AvatarFallback className="bg-white/20 text-white">
+                  {filteredEvents[0].author_name?.slice(0, 2).toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="font-semibold">{filteredEvents[0].author_name || "Event Organizer"}</h3>
+                <p className="text-white/80 text-sm">
+                  {formatDistanceToNowStrict(new Date(filteredEvents[0].timestamp), { addSuffix: true })}
+                </p>
+              </div>
+              <Badge className="ml-auto bg-white/20 text-white border-white/20">Featured</Badge>
+            </div>
+            <h4 className="text-xl font-bold mb-2">{filteredEvents[0].title || "Featured Event"}</h4>
+            <p className="text-white/90 mb-4">
+              {filteredEvents[0].text || "Join us for this amazing event in your neighborhood!"}
+            </p>
+          </div>
+          <div className="p-6 bg-white space-y-4">
+            {filteredEvents[0].event_location?.address && (
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <MapPin className="w-4 h-4 text-primary" />
+                <span className="text-sm">{filteredEvents[0].event_location.address}</span>
+              </div>
+            )}
+            {filteredEvents[0].event_date && (
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <CalendarDays className="w-4 h-4 text-accent" />
+                <span className="text-sm">
+                  {new Date(filteredEvents[0].event_date).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                  {filteredEvents[0].event_time && ` at ${filteredEvents[0].event_time}`}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" />
+                <span className="text-sm text-muted-foreground">
+                  {filteredEvents[0].attendees?.length || 0} attending
+                </span>
+              </div>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">RSVP</Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Upcoming Events */}
+      {filteredEvents.length > 1 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-foreground">Upcoming Events</h3>
+        </div>
+      )}
+
       {/* Events List */}
       {loading ? (
         <div className="space-y-4">
@@ -326,7 +302,7 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
         </div>
       ) : filteredEvents.length > 0 ? (
         <div className="space-y-4">
-          {filteredEvents.map((event) => (
+          {filteredEvents.slice(1).map((event) => (
             <EventCard key={event.id} event={event} />
           ))}
         </div>

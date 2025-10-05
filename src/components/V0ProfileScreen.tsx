@@ -23,6 +23,7 @@ import {
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRouter } from "next/navigation";
 import type { User, Post } from "@/types";
 
 interface V0ProfileScreenProps {
@@ -32,6 +33,7 @@ interface V0ProfileScreenProps {
 }
 
 export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0ProfileScreenProps) {
+  const router = useRouter();
   const { user: currentUser, profile: currentProfile } = useAuth();
   const [profileData, setProfileData] = useState<User | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
@@ -167,7 +169,10 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0Profile
 
           {isOwnProfile && (
             <div className="flex items-center gap-4">
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button 
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => router.push("/settings/profile")}
+              >
                 <Edit className="w-4 h-4 mr-2" />
                 Edit Profile
               </Button>

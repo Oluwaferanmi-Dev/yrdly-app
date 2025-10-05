@@ -10,6 +10,7 @@ import { Search, MessageCircle, Store, Users, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NeighborChatLayout } from "@/components/messages/NeighborChatLayout";
 import Link from "next/link";
 import type { User } from "@/types";
 
@@ -36,14 +37,16 @@ interface Conversation {
 
 interface V0MessagesScreenProps {
   onOpenChat?: (conversation: Conversation) => void;
+  selectedConversationId?: string;
 }
 
-export function V0MessagesScreen({ onOpenChat }: V0MessagesScreenProps) {
+export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0MessagesScreenProps) {
   const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState<"all" | "friends" | "marketplace" | "businesses">("friends");
   const [searchQuery, setSearchQuery] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 
   // Fetch conversations from Supabase
   useEffect(() => {
@@ -95,7 +98,7 @@ export function V0MessagesScreen({ onOpenChat }: V0MessagesScreenProps) {
             participantId: otherParticipantId || conv.id,
             participantName: "Unknown User", // We'll fetch this separately
             participantAvatar: "/placeholder.svg",
-            lastMessage: conv.last_message || "No messages yet",
+            lastMessage: conv.last_message || "Start a conversation",
             timestamp: new Date(conv.updated_at).toLocaleDateString(),
             unreadCount: conv.unread_count || 0,
             isOnline: false, // You can implement online status later
@@ -103,6 +106,9 @@ export function V0MessagesScreen({ onOpenChat }: V0MessagesScreenProps) {
           };
         });
 
+        console.log('Fetched conversations:', transformedConversations);
+        console.log('Conversation types:', transformedConversations.map(c => ({ id: c.id, type: c.type, participantName: c.participantName })));
+        
         setConversations(transformedConversations);
         
         // Fetch participant details for each conversation
@@ -165,10 +171,27 @@ export function V0MessagesScreen({ onOpenChat }: V0MessagesScreenProps) {
     };
   }, [user]);
 
+  // Handle selected conversation ID
+  useEffect(() => {
+    if (selectedConversationId && conversations.length > 0) {
+      const conversation = conversations.find(conv => conv.id === selectedConversationId);
+      if (conversation) {
+        setSelectedConversation(conversation);
+      }
+    } else {
+      // Clear selected conversation when no selectedConversationId
+      setSelectedConversation(null);
+    }
+  }, [selectedConversationId, conversations]);
+
   const filteredConversations = useMemo(() => {
     const matchesTab = (conv: Conversation) => {
       if (activeTab === "all") return true;
-      if (activeTab === "friends" && conv.type === "friend") return true;
+      if (activeTab === "friends") {
+        // For friends tab, show conversations that are NOT marketplace or business
+        // This includes general friend conversations and any conversation without specific context
+        return conv.type !== "marketplace" && conv.type !== "business";
+      }
       if (activeTab === "marketplace" && conv.type === "marketplace") return true;
       if (activeTab === "businesses" && conv.type === "business") return true;
       return false;
@@ -180,17 +203,29 @@ export function V0MessagesScreen({ onOpenChat }: V0MessagesScreenProps) {
              conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
     };
 
-    return conversations.filter(conv => matchesTab(conv) && matchesSearch(conv));
+    const filtered = conversations.filter(conv => matchesTab(conv) && matchesSearch(conv));
+    console.log(`Filtering for tab "${activeTab}":`, {
+      totalConversations: conversations.length,
+      filteredCount: filtered.length,
+      conversations: conversations.map(c => ({ id: c.id, type: c.type, participantName: c.participantName })),
+      filtered: filtered.map(c => ({ id: c.id, type: c.type, participantName: c.participantName }))
+    });
+    return filtered;
   }, [conversations, activeTab, searchQuery]);
 
   const unreadCounts = useMemo(() => {
     return {
       all: conversations.reduce((sum, conv) => sum + conv.unreadCount, 0),
-      friends: conversations.filter(c => c.type === "friend").reduce((sum, conv) => sum + conv.unreadCount, 0),
+      friends: conversations.filter(c => c.type !== "marketplace" && c.type !== "business").reduce((sum, conv) => sum + conv.unreadCount, 0),
       marketplace: conversations.filter(c => c.type === "marketplace").reduce((sum, conv) => sum + conv.unreadCount, 0),
       businesses: conversations.filter(c => c.type === "business").reduce((sum, conv) => sum + conv.unreadCount, 0),
     };
   }, [conversations]);
+
+    // If a conversation is selected, show chat interface
+    if (selectedConversation) {
+      return <NeighborChatLayout selectedConversationId={selectedConversation.id} />;
+    }
 
   if (loading) {
     return (

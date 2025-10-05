@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ImagePlus, Send, MessageCircle, Users } from "lucide-react";
+import { ImagePlus, Send, MessageCircle, Users, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import type { User } from "@/types";
 
 interface Conversation {
@@ -42,6 +43,7 @@ interface NeighborChatLayoutProps {
 
 export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayoutProps) {
   const { user, profile } = useAuth();
+  const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -474,6 +476,14 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
         {/* Chat Header */}
         <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm">
           <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/messages")}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
             <div className="relative">
               <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600">
             <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />

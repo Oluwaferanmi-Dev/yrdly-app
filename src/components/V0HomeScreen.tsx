@@ -156,7 +156,105 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
           </div>
         ) : posts.length > 0 ? (
           posts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <Card key={post.id} className="p-4 yrdly-shadow">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <Avatar className="w-10 h-10 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary transition-all">
+                    <AvatarImage src={post.author_image || "/placeholder.svg"} />
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {post.author_name?.substring(0, 2).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-semibold text-foreground truncate cursor-pointer hover:text-primary">
+                      {post.author_name || "Unknown User"}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(post.timestamp).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                {post.category === "For Sale" && (
+                  <Badge className="bg-accent text-accent-foreground flex-shrink-0">For Sale</Badge>
+                )}
+                <Button variant="ghost" size="sm" className="flex-shrink-0">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="mb-3">
+                {(post.image_url || (post.image_urls && post.image_urls.length > 0)) && (
+                  <img
+                    src={post.image_url || post.image_urls?.[0] || "/placeholder.svg"}
+                    alt={post.title || "Post image"}
+                    className="w-full h-48 object-cover rounded-lg mb-3"
+                  />
+                )}
+
+                {post.category === "Event" && post.title && (
+                  <>
+                    <p className="text-foreground mb-2">{post.text}</p>
+                    <div className="bg-gradient-to-r from-primary/10 to-accent/10 p-4 rounded-lg border border-primary/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar className="w-4 h-4 text-primary flex-shrink-0" />
+                        <span className="font-semibold text-foreground">{post.title}</span>
+                      </div>
+                      {post.event_location?.address && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <span className="break-words">{post.event_location.address}</span>
+                        </div>
+                      )}
+                      {post.event_date && (
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(post.event_date).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                          {post.event_time && ` at ${post.event_time}`}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {post.category === "For Sale" && post.price && (
+                  <>
+                    <h4 className="font-semibold text-foreground mb-1">{post.title || "Item for Sale"}</h4>
+                    <p className="text-foreground mb-2">{post.text}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-accent text-lg">₦{post.price.toLocaleString()}</span>
+                    </div>
+                  </>
+                )}
+
+                {post.category === "General" && <p className="text-foreground break-words">{post.text}</p>}
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-border flex-wrap gap-2">
+                <div className="flex items-center gap-4">
+                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-500">
+                    <Heart className="w-4 h-4 mr-1" />
+                    <span className="text-sm">{post.liked_by?.length || 0}</span>
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-primary">
+                    <MessageCircle className="w-4 h-4 mr-1" />
+                    <span className="text-sm">{post.comment_count || 0}</span>
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-accent">
+                    <Share className="w-4 h-4 mr-1" />
+                    <span className="text-sm">Share</span>
+                  </Button>
+                </div>
+                {post.category === "For Sale" && (
+                  <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                    Contact Seller
+                  </Button>
+                )}
+              </div>
+            </Card>
           ))
         ) : (
           <EmptyFeed />

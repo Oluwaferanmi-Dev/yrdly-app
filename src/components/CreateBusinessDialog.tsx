@@ -80,6 +80,15 @@ const getFormSchema = (isEditMode: boolean, postToEdit?: Business) => z.object({
     message: "Location is required.",
   }),
   image: z.any().refine((files) => files && (files.length > 0 || (Array.isArray(files) && files.some(f => typeof f === 'string'))), "An image is required for the business."),
+  // New fields for v0 design
+  rating: z.number().min(0).max(5).optional(),
+  review_count: z.number().min(0).optional(),
+  hours: z.string().optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional().or(z.literal("")),
+  website: z.string().url().optional().or(z.literal("")),
+  owner_name: z.string().optional(),
+  owner_avatar: z.string().optional(),
 });
 
 type CreateBusinessDialogProps = {
@@ -127,6 +136,15 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
             description: postToEdit.description,
             location: postToEdit.location,
             image: postToEdit.image_urls || [],
+            // New fields for v0 design
+            rating: postToEdit.rating,
+            review_count: postToEdit.review_count,
+            hours: postToEdit.hours,
+            phone: postToEdit.phone,
+            email: postToEdit.email,
+            website: postToEdit.website,
+            owner_name: postToEdit.owner_name,
+            owner_avatar: postToEdit.owner_avatar,
           });
         } else if (!isEditMode) {
           stableFormReset({
@@ -135,6 +153,15 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
             description: "",
             location: { address: "" },
             image: undefined,
+            // New fields for v0 design
+            rating: undefined,
+            review_count: undefined,
+            hours: "",
+            phone: "",
+            email: "",
+            website: "",
+            owner_name: "",
+            owner_avatar: "",
           });
         }
       }, 0);
@@ -151,6 +178,15 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
         description: values.description || '',
         location: values.location,
         image_urls: [], // Will be handled in createBusiness
+        // New fields for v0 design
+        rating: values.rating,
+        review_count: values.review_count,
+        hours: values.hours,
+        phone: values.phone,
+        email: values.email,
+        website: values.website,
+        owner_name: values.owner_name,
+        owner_avatar: values.owner_avatar,
     };
     await createBusiness(businessData, postToEdit?.id, values.image);
     setLoading(false);
@@ -287,6 +323,107 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                                 </FormItem>
                                 )}
                             />
+                            
+                            {/* New fields for v0 design */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="phone"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Phone Number</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="+234 801 234 5678" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="email"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Email</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="business@example.com" type="email" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            </div>
+                            
+                            <FormField
+                                control={form.control}
+                                name="website"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Website</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="https://www.example.com" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            
+                            <FormField
+                                control={form.control}
+                                name="hours"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Operating Hours</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Mon-Fri: 9AM-6PM, Sat: 10AM-4PM" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="rating"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Rating (0-5)</FormLabel>
+                                        <FormControl>
+                                            <Input 
+                                                type="number" 
+                                                min="0" 
+                                                max="5" 
+                                                step="0.1" 
+                                                placeholder="4.5" 
+                                                {...field}
+                                                onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="review_count"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Review Count</FormLabel>
+                                        <FormControl>
+                                            <Input 
+                                                type="number" 
+                                                min="0" 
+                                                placeholder="124" 
+                                                {...field}
+                                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                            </div>
                             {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
                                 <div className="text-sm text-muted-foreground">
                                     Current images: {postToEdit.image_urls.length}. Upload more to add to the list.

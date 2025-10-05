@@ -33,7 +33,14 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
       try {
         const { data, error } = await supabase
           .from('posts')
-          .select('*')
+          .select(`
+            *,
+            user:users!posts_user_id_fkey(
+              id,
+              name,
+              avatar_url
+            )
+          `)
           .eq('category', 'For Sale')
           .order('timestamp', { ascending: false });
 
@@ -217,13 +224,13 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
                 </p>
                 <div className="flex items-center gap-2">
                   <Avatar className="w-5 h-5 flex-shrink-0">
-                    <AvatarImage src="/placeholder.svg" />
+                    <AvatarImage src={item.user?.avatar_url || "/placeholder.svg"} />
                     <AvatarFallback className={`text-xs ${getPriceColor(item.price || 0)}`}>
-                      {item.user_id?.slice(0, 2).toUpperCase() || "U"}
+                      {item.user?.name?.slice(0, 2).toUpperCase() || item.user_id?.slice(0, 2).toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-xs text-muted-foreground truncate">
-                    {item.user_id || "Unknown Seller"}
+                    {item.user?.name || "Unknown Seller"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
