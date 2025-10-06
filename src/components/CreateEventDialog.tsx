@@ -179,12 +179,15 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
     return (
         <Sheet open={open} onOpenChange={handleOpenChange}>
             <SheetTrigger asChild>{children ? children : <Trigger />}</SheetTrigger>
-            <SheetContent side="bottom" className="max-h-screen overflow-y-auto">
-                <SheetHeader className="px-4"><SheetTitle>{finalTitle}</SheetTitle></SheetHeader>
+            <SheetContent side="bottom" className="p-0 flex flex-col h-[90vh] max-h-screen">
+                <SheetHeader className="p-4 border-b flex-shrink-0">
+                    <SheetTitle>{finalTitle}</SheetTitle>
+                    <DialogDescription>{finalDescription}</DialogDescription>
+                </SheetHeader>
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
-                    <div className="py-4 flex-1 overflow-y-auto">
-                        <div className="space-y-4 px-1">
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 overflow-y-auto p-4">
+                        <div className="space-y-4 px-1 pb-4">
                             <FormField
                                 control={form.control}
                                 name="title"
@@ -271,7 +274,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
                             />
                         </div>
                     </div>
-                    <SheetFooter className="px-4 pb-4">
+                    <SheetFooter className="p-4 border-t flex-shrink-0">
                         <Button type="submit" className="w-full" variant="default" disabled={loading}>
                             {loading ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Event')}
                         </Button>
@@ -286,15 +289,15 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children ? children : <Trigger />}</DialogTrigger>
-      <DialogContent className="sm:max-w-[525px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[525px] p-0 flex flex-col max-h-[90vh]">
+        <DialogHeader className="p-6 pb-0 flex-shrink-0">
           <DialogTitle>{finalTitle}</DialogTitle>
           <DialogDescription>{finalDescription}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="py-4">
-                <div className="space-y-4 px-1">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+            <div className="flex-1 overflow-y-auto p-6 min-h-0">
+                <div className="space-y-4 px-1 pb-4">
                     <FormField
                         control={form.control}
                         name="title"
@@ -381,7 +384,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
                     />
                 </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="p-6 pt-0 border-t flex-shrink-0">
               <Button type="submit" className="w-full" variant="default" disabled={loading}>
                 {loading ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Event')}
               </Button>
