@@ -14,6 +14,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PushNotificationService } from '@/lib/push-notification-service';
 import type { NotificationSettings } from "../../../../types";
 
 export default function NotificationSettingsPage() {
@@ -214,6 +215,49 @@ export default function NotificationSettingsPage() {
                                 onCheckedChange={(value) => handleSettingChange('eventInvites', value)}
                             />
                         </div>
+                    </CardContent>
+                </Card>
+
+                {/* Test Push Notifications */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Test Push Notifications</CardTitle>
+                        <CardDescription>
+                            Test if push notifications are working properly.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button 
+                            onClick={async () => {
+                                if (!user) return;
+                                
+                                try {
+                                    const success = await PushNotificationService.testNotification(user.id);
+                                    if (success) {
+                                        toast({
+                                            title: "Test Notification Sent",
+                                            description: "Check your notifications to see the test message.",
+                                        });
+                                    } else {
+                                        toast({
+                                            variant: "destructive",
+                                            title: "Test Failed",
+                                            description: "Push notifications may not be enabled. Please check your browser settings.",
+                                        });
+                                    }
+                                } catch (error) {
+                                    console.error('Error testing push notification:', error);
+                                    toast({
+                                        variant: "destructive",
+                                        title: "Test Failed",
+                                        description: "An error occurred while testing push notifications.",
+                                    });
+                                }
+                            }}
+                            variant="outline"
+                        >
+                            Send Test Notification
+                        </Button>
                     </CardContent>
                 </Card>
             </div>

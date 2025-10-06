@@ -228,18 +228,44 @@ async function removeOfflineAction(actionId) {
 self.addEventListener('push', (event) => {
   console.log('Push notification received:', event);
   
-  const options = {
-    body: event.data ? event.data.text() : 'New notification from Yrdly',
+  let notificationData = {
+    title: 'Yrdly',
+    body: 'New notification from Yrdly',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
-    vibrate: [100, 50, 100],
     data: {
       dateOfArrival: Date.now(),
       primaryKey: 1
-    },
+    }
+  };
+
+  // Parse push data if available
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      notificationData = {
+        ...notificationData,
+        ...data,
+        data: {
+          ...notificationData.data,
+          ...data.data
+        }
+      };
+    } catch (e) {
+      // Fallback to text if JSON parsing fails
+      notificationData.body = event.data.text() || notificationData.body;
+    }
+  }
+
+  const options = {
+    body: notificationData.body,
+    icon: notificationData.icon,
+    badge: notificationData.badge,
+    vibrate: [100, 50, 100],
+    data: notificationData.data,
     actions: [
       {
-        action: 'explore',
+        action: 'view',
         title: 'View',
         icon: '/favicon.ico'
       },
@@ -252,8 +278,37 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('Yrdly', options)
+    self.registration.showNotification(notificationData.title, options)
   );
+});
+
+// Handle messages from the main thread
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const { payload } = event.data;
+    
+    const options = {
+      body: payload.body,
+      icon: payload.icon,
+      badge: payload.badge,
+      vibrate: [100, 50, 100],
+      data: payload.data,
+      actions: payload.actions || [
+        {
+          action: 'view',
+          title: 'View',
+          icon: '/favicon.ico'
+        },
+        {
+          action: 'close',
+          title: 'Close',
+          icon: '/favicon.ico'
+        }
+      ]
+    };
+
+    self.registration.showNotification(payload.title, options);
+  }
 });
 
 // Notification click handling

@@ -23,7 +23,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface V0SettingsScreenProps {
   onBack?: () => void;
@@ -209,6 +209,7 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
             <Switch
               checked={privacy.profileVisible}
               onCheckedChange={(checked) => setPrivacy({ ...privacy, profileVisible: checked })}
+              className="cursor-pointer"
             />
           </div>
 
@@ -220,6 +221,7 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
             <Switch
               checked={privacy.locationVisible}
               onCheckedChange={(checked) => setPrivacy({ ...privacy, locationVisible: checked })}
+              className="cursor-pointer"
             />
           </div>
 
@@ -231,6 +233,7 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
             <Switch
               checked={privacy.onlineStatus}
               onCheckedChange={(checked) => setPrivacy({ ...privacy, onlineStatus: checked })}
+              className="cursor-pointer"
             />
           </div>
         </Card>
@@ -248,7 +251,14 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
             </div>
             <Switch
               checked={theme === "dark"}
-              onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+              onCheckedChange={(checked) => {
+                setTheme(checked ? "dark" : "light");
+                // Force immediate theme update
+                const root = document.documentElement;
+                root.classList.remove("light", "dark");
+                root.classList.add(checked ? "dark" : "light");
+              }}
+              className="cursor-pointer"
             />
           </div>
         </Card>

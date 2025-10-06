@@ -235,9 +235,9 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
           <CreatePostDialog>
             <Button
               variant="outline"
-              className="flex-1 justify-start text-muted-foreground bg-transparent"
+              className="flex-1 justify-start text-muted-foreground bg-transparent text-left px-3 py-2 h-auto min-h-[40px]"
             >
-              What&apos;s happening in your neighborhood?
+              <span className="truncate text-sm">What&apos;s happening in your neighborhood?</span>
             </Button>
           </CreatePostDialog>
         </div>

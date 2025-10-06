@@ -39,9 +39,8 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0Profile
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    neighbors: 0,
+    friends: 0,
     events: 0,
-    rating: 0,
   });
 
   // Use provided user or current user
@@ -81,11 +80,19 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0Profile
           setUserPosts(postsData || []);
         }
 
-        // Calculate stats (you can implement these based on your data structure)
+        // Calculate stats with real data
+        const friendsCount = targetProfile?.friends?.length || 0;
+        
+        // Count events created by this user
+        const { data: eventsData } = await supabase
+          .from('posts')
+          .select('id')
+          .eq('user_id', targetUser?.id)
+          .eq('category', 'Event');
+        
         setStats({
-          neighbors: 24, // Implement neighbor count logic
-          events: 8,    // Implement event count logic
-          rating: 4.9,  // Implement rating logic
+          friends: friendsCount,
+          events: eventsData?.length || 0,
         });
 
         setLoading(false);
@@ -186,12 +193,12 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0Profile
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <Card className="p-4 text-center yrdly-shadow">
           <div className="space-y-2">
             <Users className="w-6 h-6 mx-auto text-primary" />
-            <p className="text-2xl font-bold text-foreground">{stats.neighbors}</p>
-            <p className="text-sm text-muted-foreground">Neighbors</p>
+            <p className="text-2xl font-bold text-foreground">{stats.friends}</p>
+            <p className="text-sm text-muted-foreground">Friends</p>
           </div>
         </Card>
 
@@ -200,14 +207,6 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0Profile
             <Calendar className="w-6 h-6 mx-auto text-accent" />
             <p className="text-2xl font-bold text-foreground">{stats.events}</p>
             <p className="text-sm text-muted-foreground">Events</p>
-          </div>
-        </Card>
-
-        <Card className="p-4 text-center yrdly-shadow">
-          <div className="space-y-2">
-            <Star className="w-6 h-6 mx-auto text-yellow-500" />
-            <p className="text-2xl font-bold text-foreground">{stats.rating}</p>
-            <p className="text-sm text-muted-foreground">Rating</p>
           </div>
         </Card>
       </div>

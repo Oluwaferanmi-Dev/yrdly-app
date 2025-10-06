@@ -344,6 +344,17 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
               </div>
 
               <div className="space-y-2 mb-3">
+                {/* Post Image */}
+                {(post.image_url || (post.image_urls && post.image_urls.length > 0)) && (
+                  <div className="mb-3">
+                    <img
+                      src={post.image_url || post.image_urls?.[0] || "/placeholder.svg"}
+                      alt={post.title || "Post image"}
+                      className="w-full h-48 object-cover rounded-lg"
+                    />
+                  </div>
+                )}
+                
                 {post.title && (
                   <h3 className="font-semibold text-foreground">{post.title}</h3>
                 )}

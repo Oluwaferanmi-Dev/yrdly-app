@@ -24,6 +24,9 @@ import type { Post as PostType } from "@/types";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { formatDistanceToNowStrict } from 'date-fns';
 import Image from "next/image";
+import { useToast } from "@/hooks/use-toast";
+import { useHaptics } from "@/hooks/use-haptics";
+import { useRouter } from "next/navigation";
 
 interface V0EventsScreenProps {
   className?: string;
@@ -41,7 +44,15 @@ function EmptyEvents() {
   );
 }
 
-function EventCard({ event }: { event: PostType }) {
+function EventCard({ event, onLike, onComment, onShare, onClick }: { 
+  event: PostType; 
+  onLike: (eventId: string) => void;
+  onComment: (eventId: string) => void;
+  onShare: (eventId: string) => void;
+  onClick: (eventId: string) => void;
+}) {
+  const { user } = useAuth();
+  
   const getEventBadge = (eventDate: string | undefined) => {
     if (!eventDate) return { text: "TBD", variant: "outline" as const, className: "text-muted-foreground border-muted-foreground" };
     
@@ -57,9 +68,21 @@ function EventCard({ event }: { event: PostType }) {
   };
 
   const badge = getEventBadge(event.event_date);
+  const isLiked = event.liked_by?.includes(user?.id || '') || false;
 
   return (
-    <Card className="p-4 yrdly-shadow">
+    <Card className="p-4 yrdly-shadow cursor-pointer hover:shadow-lg transition-shadow" onClick={() => onClick(event.id)}>
+      {/* Event Image */}
+      {(event.image_url || (event.image_urls && event.image_urls.length > 0)) && (
+        <div className="mb-4">
+          <img
+            src={event.image_url || event.image_urls?.[0] || "/placeholder.svg"}
+            alt={event.title || "Event image"}
+            className="w-full h-48 object-cover rounded-lg"
+          />
+        </div>
+      )}
+      
       <div className="flex items-start gap-4">
         <Avatar className="w-10 h-10">
           <AvatarImage src={event.author_image || "/placeholder.svg"} />
@@ -87,13 +110,55 @@ function EventCard({ event }: { event: PostType }) {
               <span>{event.attendees?.length || 0} attending</span>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
-          >
-            RSVP
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
+            >
+              RSVP
+            </Button>
+          </div>
+          
+          {/* Like, Comment, Share buttons */}
+          <div className="flex items-center gap-4 pt-2 border-t border-border">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={`text-muted-foreground hover:text-red-500 ${isLiked ? 'text-red-500' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onLike(event.id);
+              }}
+            >
+              <Heart className={`w-4 h-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
+              <span className="text-sm">{event.liked_by?.length || 0}</span>
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground hover:text-primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                onComment(event.id);
+              }}
+            >
+              <MessageCircle className="w-4 h-4 mr-1" />
+              <span className="text-sm">{event.comment_count || 0}</span>
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-muted-foreground hover:text-accent"
+              onClick={(e) => {
+                e.stopPropagation();
+                onShare(event.id);
+              }}
+            >
+              <Share className="w-4 h-4 mr-1" />
+              <span className="text-sm">Share</span>
+            </Button>
+          </div>
         </div>
       </div>
     </Card>
@@ -102,6 +167,9 @@ function EventCard({ event }: { event: PostType }) {
 
 export function V0EventsScreen({ className }: V0EventsScreenProps) {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const { triggerHaptic } = useHaptics();
+  const router = useRouter();
   const [events, setEvents] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -187,31 +255,126 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
     };
   }, []);
 
-  const filteredEvents = useMemo(() => {
-    if (!searchQuery) return events;
+  // Handle like functionality
+  const handleLike = async (eventId: string) => {
+    if (!user) return;
     
-    return events.filter(event =>
-      event.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      event.event_location?.address?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    triggerHaptic('light');
+    
+    try {
+      // Get current event data
+      const { data: eventData, error: fetchError } = await supabase
+        .from('posts')
+        .select('liked_by')
+        .eq('id', eventId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching event:', fetchError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to like event. Please try again.",
+        });
+        return;
+      }
+
+      const currentLikedBy = eventData.liked_by || [];
+      const userHasLiked = currentLikedBy.includes(user.id);
+
+      let newLikedBy;
+      if (userHasLiked) {
+        // Remove user from liked_by array
+        newLikedBy = currentLikedBy.filter((id: string) => id !== user.id);
+      } else {
+        // Add user to liked_by array
+        newLikedBy = [...currentLikedBy, user.id];
+      }
+
+      // Update the event
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update({ liked_by: newLikedBy })
+        .eq('id', eventId);
+
+      if (updateError) {
+        console.error('Error updating event:', updateError);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to like event. Please try again.",
+        });
+      }
+    } catch (error) {
+      console.error('Error handling like:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to like event. Please try again.",
+      });
+    }
+  };
+
+  // Handle comment functionality
+  const handleComment = (eventId: string) => {
+    // Navigate to event detail page for comments
+    router.push(`/posts/${eventId}`);
+  };
+
+  // Handle share functionality
+  const handleShare = async (eventId: string) => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Check out this event on Yrdly',
+          text: 'Check out this event on Yrdly',
+          url: window.location.origin + `/posts/${eventId}`
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(window.location.origin + `/posts/${eventId}`);
+        toast({
+          title: "Link copied",
+          description: "Event link has been copied to clipboard.",
+        });
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
+  // Handle event card click for detailed view
+  const handleEventClick = (eventId: string) => {
+    router.push(`/posts/${eventId}`);
+  };
+
+  const filteredEvents = useMemo(() => {
+    let filtered = events;
+    
+    if (searchQuery) {
+      filtered = events.filter(event =>
+        event.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.event_location?.address?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    // Sort by timestamp (most recent first)
+    return filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [events, searchQuery]);
+
+  // Get the most recent event for featured section
+  const featuredEvent = filteredEvents.length > 0 ? filteredEvents[0] : null;
+  // Get remaining events for the list
+  const remainingEvents = filteredEvents.slice(1);
 
   return (
     <div className={`p-4 space-y-6 ${className}`}>
       {/* Header */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Events</h2>
-            <p className="text-muted-foreground">Discover and create community events</p>
-          </div>
-          <CreateEventDialog>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Event
-            </Button>
-          </CreateEventDialog>
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Events</h2>
+          <p className="text-muted-foreground">Discover and create community events</p>
         </div>
 
         {/* Search */}
@@ -226,68 +389,17 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
         </div>
       </div>
 
-      {/* Featured Event */}
-      {filteredEvents.length > 0 && (
-        <Card className="p-0 overflow-hidden yrdly-shadow-lg border-0">
-          <div className="yrdly-gradient p-6 text-white">
-            <div className="flex items-center gap-3 mb-4">
-              <Avatar className="w-12 h-12 border-2 border-white/20">
-                <AvatarImage src={filteredEvents[0].author_image || "/placeholder.svg"} />
-                <AvatarFallback className="bg-white/20 text-white">
-                  {filteredEvents[0].author_name?.slice(0, 2).toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h3 className="font-semibold">{filteredEvents[0].author_name || "Event Organizer"}</h3>
-                <p className="text-white/80 text-sm">
-                  {formatDistanceToNowStrict(new Date(filteredEvents[0].timestamp), { addSuffix: true })}
-                </p>
-              </div>
-              <Badge className="ml-auto bg-white/20 text-white border-white/20">Featured</Badge>
-            </div>
-            <h4 className="text-xl font-bold mb-2">{filteredEvents[0].title || "Featured Event"}</h4>
-            <p className="text-white/90 mb-4">
-              {filteredEvents[0].text || "Join us for this amazing event in your neighborhood!"}
-            </p>
-          </div>
-          <div className="p-6 bg-white space-y-4">
-            {filteredEvents[0].event_location?.address && (
-              <div className="flex items-center gap-3 text-muted-foreground">
-                <MapPin className="w-4 h-4 text-primary" />
-                <span className="text-sm">{filteredEvents[0].event_location.address}</span>
-              </div>
-            )}
-            {filteredEvents[0].event_date && (
-              <div className="flex items-center gap-3 text-muted-foreground">
-                <CalendarDays className="w-4 h-4 text-accent" />
-                <span className="text-sm">
-                  {new Date(filteredEvents[0].event_date).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                  {filteredEvents[0].event_time && ` at ${filteredEvents[0].event_time}`}
-                </span>
-              </div>
-            )}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-primary" />
-                <span className="text-sm text-muted-foreground">
-                  {filteredEvents[0].attendees?.length || 0} attending
-                </span>
-              </div>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">RSVP</Button>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Upcoming Events */}
-      {filteredEvents.length > 1 && (
+      {/* Featured Event - Most Recent */}
+      {featuredEvent && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">Upcoming Events</h3>
+          <h3 className="text-lg font-semibold text-foreground">Featured Event</h3>
+          <EventCard 
+            event={featuredEvent} 
+            onLike={handleLike}
+            onComment={handleComment}
+            onShare={handleShare}
+            onClick={handleEventClick}
+          />
         </div>
       )}
 
@@ -298,16 +410,35 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
           <Skeleton className="h-48 w-full rounded-lg" />
           <Skeleton className="h-48 w-full rounded-lg" />
         </div>
-      ) : filteredEvents.length > 0 ? (
+      ) : remainingEvents.length > 0 ? (
         <div className="space-y-4">
-          {filteredEvents.slice(1).map((event) => (
-            <EventCard key={event.id} event={event} />
+          <h3 className="text-lg font-semibold text-foreground">More Events</h3>
+          {remainingEvents.map((event) => (
+            <EventCard 
+              key={event.id} 
+              event={event} 
+              onLike={handleLike}
+              onComment={handleComment}
+              onShare={handleShare}
+              onClick={handleEventClick}
+            />
           ))}
         </div>
-      ) : (
+      ) : filteredEvents.length === 0 ? (
         <EmptyEvents />
-      )}
+      ) : null}
 
+      {/* Floating Create Button */}
+      <div className="fixed bottom-20 right-4 z-50">
+        <CreateEventDialog>
+          <Button 
+            size="lg" 
+            className="rounded-full w-14 h-14 bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow-lg"
+          >
+            <Plus className="w-6 h-6" />
+          </Button>
+        </CreateEventDialog>
+      </div>
     </div>
   );
 }

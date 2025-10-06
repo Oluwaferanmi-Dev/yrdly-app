@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { PushNotificationService } from './push-notification-service';
 
 export interface NotificationData {
   id: string;
@@ -72,6 +73,19 @@ export class NotificationService {
         throw error;
       }
 
+      // Send push notification
+      try {
+        await PushNotificationService.sendToUser(params.userId, {
+          title: params.title,
+          body: params.message,
+          data: params.data,
+          url: getNotificationUrl(params.type, params.relatedId)
+        });
+      } catch (pushError) {
+        console.error('Error sending push notification:', pushError);
+        // Don't throw error - notification was created successfully
+      }
+
       return data;
     } catch (rpcError) {
       console.log('RPC function not available, using direct insert:', rpcError);
@@ -95,6 +109,19 @@ export class NotificationService {
       if (error) {
         console.error('Error creating notification via direct insert:', error);
         throw error;
+      }
+
+      // Send push notification
+      try {
+        await PushNotificationService.sendToUser(params.userId, {
+          title: params.title,
+          body: params.message,
+          data: params.data,
+          url: getNotificationUrl(params.type, params.relatedId)
+        });
+      } catch (pushError) {
+        console.error('Error sending push notification:', pushError);
+        // Don't throw error - notification was created successfully
       }
 
       return data.id;
@@ -455,5 +482,40 @@ export class NotificationService {
       message,
       data
     });
+  }
+}
+
+/**
+ * Get notification URL based on type and related ID
+ */
+function getNotificationUrl(type: NotificationType, relatedId?: string | null): string {
+  switch (type) {
+    case 'friend_request':
+    case 'friend_request_accepted':
+    case 'friend_request_declined':
+      return '/neighbors';
+    case 'message':
+    case 'message_reaction':
+      return relatedId ? `/messages/${relatedId}` : '/messages';
+    case 'post_like':
+    case 'post_comment':
+    case 'post_share':
+      return relatedId ? `/posts/${relatedId}` : '/home';
+    case 'event_invite':
+    case 'event_reminder':
+    case 'event_cancelled':
+    case 'event_updated':
+      return '/events';
+    case 'marketplace_item_sold':
+    case 'marketplace_item_interest':
+    case 'marketplace_message':
+      return '/marketplace';
+    case 'community_update':
+    case 'system_announcement':
+    case 'profile_view':
+    case 'mention':
+    case 'welcome':
+    default:
+      return '/home';
   }
 }

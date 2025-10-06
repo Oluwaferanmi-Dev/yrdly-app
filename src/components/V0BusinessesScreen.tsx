@@ -376,17 +376,9 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
     <div className={`p-4 space-y-6 ${className}`}>
       {/* Header */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">Local Businesses</h2>
-            <p className="text-muted-foreground">Discover and support businesses in your neighborhood</p>
-          </div>
-          <CreateBusinessDialog>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Your Business
-            </Button>
-          </CreateBusinessDialog>
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Local Businesses</h2>
+          <p className="text-muted-foreground">Discover and support businesses in your neighborhood</p>
         </div>
 
         {/* Search */}
@@ -499,6 +491,17 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
         <EmptyBusinesses />
       )}
 
+      {/* Floating Create Button */}
+      <div className="fixed bottom-20 right-4 z-50">
+        <CreateBusinessDialog>
+          <Button 
+            size="lg" 
+            className="rounded-full w-14 h-14 bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow-lg"
+          >
+            <Plus className="w-6 h-6" />
+          </Button>
+        </CreateBusinessDialog>
+      </div>
     </div>
   );
 }

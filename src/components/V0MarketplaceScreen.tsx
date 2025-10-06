@@ -166,17 +166,9 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
     <div className="p-4 space-y-6">
       {/* Page Header */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground">For Sale & Free</h2>
-            <p className="text-muted-foreground">Buy and sell items in your neighborhood</p>
-          </div>
-          <CreateItemDialog>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow">
-              <Plus className="w-4 h-4 mr-2" />
-              Sell Item
-            </Button>
-          </CreateItemDialog>
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">For Sale & Free</h2>
+          <p className="text-muted-foreground">Buy and sell items in your neighborhood</p>
         </div>
 
         {/* Search Bar */}
