@@ -40,12 +40,14 @@ export function V0BusinessDetailScreen({
           .order('created_at', { ascending: false });
 
         if (error) {
-          console.error('Error fetching catalog items:', error);
+          console.log('Catalog items table not found, using empty array:', error.message);
+          setCatalogItems([]);
         } else {
           setCatalogItems(data || []);
         }
       } catch (error) {
-        console.error('Error fetching catalog items:', error);
+        console.log('Error fetching catalog items:', error);
+        setCatalogItems([]);
       }
     };
 
@@ -64,12 +66,14 @@ export function V0BusinessDetailScreen({
           .order('created_at', { ascending: false });
 
         if (error) {
-          console.error('Error fetching reviews:', error);
+          console.log('Business reviews table not found, using empty array:', error.message);
+          setReviews([]);
         } else {
           setReviews(data || []);
         }
       } catch (error) {
-        console.error('Error fetching reviews:', error);
+        console.log('Error fetching reviews:', error);
+        setReviews([]);
       } finally {
         setLoading(false);
       }

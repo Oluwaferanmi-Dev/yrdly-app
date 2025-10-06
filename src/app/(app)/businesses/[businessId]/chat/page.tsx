@@ -4,6 +4,7 @@ import { V0BusinessChatScreen } from "@/components/V0BusinessChatScreen";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/use-supabase-auth";
 import type { Business } from "@/types";
 
 // Force dynamic rendering to avoid prerender issues
@@ -12,6 +13,7 @@ export const dynamic = 'force-dynamic';
 export default function BusinessChatPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const businessId = params.businessId as string;
   const [business, setBusiness] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,6 +78,55 @@ export default function BusinessChatPage() {
   const handleBack = () => {
     router.push(`/businesses/${businessId}`);
   };
+
+  // Create or get conversation entry for business chat
+  useEffect(() => {
+    if (!business || !user) return;
+
+    const createOrGetConversation = async () => {
+      try {
+        // Check if conversation already exists for this business
+        const { data: existingConversations, error: fetchError } = await supabase
+          .from('conversations')
+          .select('id, participant_ids')
+          .contains('participant_ids', [user.id])
+          .eq('type', 'business')
+          .eq('business_id', businessId);
+
+        if (fetchError) {
+          console.error('Error fetching business conversations:', fetchError);
+          return;
+        }
+
+        if (!existingConversations || existingConversations.length === 0) {
+          // Create new business conversation
+          const { data: newConv, error: createError } = await supabase
+            .from('conversations')
+            .insert({
+              participant_ids: [user.id, business.owner_id],
+              type: 'business',
+              business_id: businessId,
+              business_name: business.name,
+              business_logo: business.logo,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .select('id')
+            .single();
+
+          if (createError) {
+            console.error('Error creating business conversation:', createError);
+          } else {
+            console.log('Created business conversation:', newConv.id);
+          }
+        }
+      } catch (error) {
+        console.error('Error in createOrGetConversation:', error);
+      }
+    };
+
+    createOrGetConversation();
+  }, [business, user, businessId]);
 
   if (loading) {
     return (
