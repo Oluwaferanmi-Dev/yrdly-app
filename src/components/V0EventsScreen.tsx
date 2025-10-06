@@ -19,6 +19,7 @@ import {
   MessageCircle
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Post as PostType } from "@/types";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
@@ -26,7 +27,6 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { useHaptics } from "@/hooks/use-haptics";
-import { useRouter } from "next/navigation";
 
 interface V0EventsScreenProps {
   className?: string;
@@ -54,6 +54,7 @@ function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPL
   isRSVPLoading: boolean;
   currentUser: any;
 }) {
+  const router = useRouter();
   
   const getEventBadge = (eventDate: string | undefined) => {
     if (!eventDate) return { text: "TBD", variant: "outline" as const, className: "text-muted-foreground border-muted-foreground" };
@@ -85,29 +86,54 @@ function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPL
         </div>
       )}
       
-      <div className="flex items-start gap-4">
-        <Avatar className="w-10 h-10">
-          <AvatarImage src={event.author_image || "/placeholder.svg"} />
-          <AvatarFallback className="bg-accent text-accent-foreground">
-            {event.author_name?.slice(0, 2).toUpperCase() || "U"}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 space-y-2">
+      <div className="space-y-3">
+        {/* Author info */}
+        <div className="flex items-center gap-3">
+          <Avatar 
+            className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => {
+              if (event.user_id) {
+                router.push(`/profile/${event.user_id}`);
+              }
+            }}
+          >
+            <AvatarImage src={event.author_image || "/placeholder.svg"} />
+            <AvatarFallback className="bg-accent text-accent-foreground text-xs">
+              {event.author_name?.slice(0, 2).toUpperCase() || "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p 
+              className="text-sm font-medium text-foreground truncate cursor-pointer hover:underline"
+              onClick={() => {
+                if (event.user_id) {
+                  router.push(`/profile/${event.user_id}`);
+                }
+              }}
+            >
+              {event.author_name || "Unknown"}
+            </p>
+            <p className="text-xs text-muted-foreground">Event Organizer</p>
+          </div>
+        </div>
+
+        {/* Event details */}
+        <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
-            <h4 className="font-semibold text-foreground truncate flex-1">{event.title || "Event"}</h4>
+            <h4 className="font-semibold text-foreground text-base leading-tight">{event.title || "Event"}</h4>
             <Badge variant={badge.variant} className={badge.className}>
               {badge.text}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground line-clamp-3 mb-2">{event.text || "No description available"}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">{event.text || "No description available"}</p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             {event.event_location?.address && (
               <div className="flex items-center gap-1 min-w-0 flex-1">
                 <MapPin className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate max-w-[200px]">{event.event_location.address}</span>
+                <span className="truncate">{event.event_location.address}</span>
               </div>
             )}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 flex-shrink-0">
               <Users className="w-3 h-3" />
               <span>{event.attendees?.length || 0} attending</span>
             </div>
@@ -131,46 +157,46 @@ function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPL
                currentUser && event.attendees?.includes(currentUser.id) ? 'Attending' : 'RSVP'}
             </Button>
           </div>
-          
-          {/* Like, Comment, Share buttons */}
-          <div className="flex items-center gap-4 pt-2 border-t border-border">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className={`text-muted-foreground hover:text-red-500 ${isLiked ? 'text-red-500' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onLike(event.id);
-              }}
-            >
-              <Heart className={`w-4 h-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
-              <span className="text-sm">{event.liked_by?.length || 0}</span>
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-muted-foreground hover:text-primary"
-              onClick={(e) => {
-                e.stopPropagation();
-                onComment(event.id);
-              }}
-            >
-              <MessageCircle className="w-4 h-4 mr-1" />
-              <span className="text-sm">{event.comment_count || 0}</span>
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="text-muted-foreground hover:text-accent"
-              onClick={(e) => {
-                e.stopPropagation();
-                onShare(event.id);
-              }}
-            >
-              <Share className="w-4 h-4 mr-1" />
-              <span className="text-sm">Share</span>
-            </Button>
-          </div>
+        </div>
+        
+        {/* Like, Comment, Share buttons */}
+        <div className="flex items-center gap-4 pt-2 border-t border-border">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className={`text-muted-foreground hover:text-red-500 ${isLiked ? 'text-red-500' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onLike(event.id);
+            }}
+          >
+            <Heart className={`w-4 h-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
+            <span className="text-sm">{event.liked_by?.length || 0}</span>
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-muted-foreground hover:text-primary"
+            onClick={(e) => {
+              e.stopPropagation();
+              onComment(event.id);
+            }}
+          >
+            <MessageCircle className="w-4 h-4 mr-1" />
+            <span className="text-sm">{event.comment_count || 0}</span>
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-muted-foreground hover:text-accent"
+            onClick={(e) => {
+              e.stopPropagation();
+              onShare(event.id);
+            }}
+          >
+            <Share className="w-4 h-4 mr-1" />
+            <span className="text-sm">Share</span>
+          </Button>
         </div>
       </div>
     </Card>

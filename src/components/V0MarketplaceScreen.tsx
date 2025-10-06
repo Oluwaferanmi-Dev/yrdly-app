@@ -237,8 +237,9 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
                   className="flex items-center gap-1 sm:gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (item.user_id) {
-                      router.push(`/profile/${item.user_id}`);
+                    const userId = item.user?.id || item.user_id;
+                    if (userId) {
+                      router.push(`/profile/${userId}`);
                     }
                   }}
                 >

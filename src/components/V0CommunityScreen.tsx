@@ -19,6 +19,7 @@ import {
   TrendingUp
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Post } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +54,7 @@ const PostSkeleton = () => (
 
 export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
   const { user: currentUser, profile } = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -321,7 +323,14 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
           filteredPosts.map((post) => (
             <Card key={post.id} className="p-4 yrdly-shadow">
               <div className="flex items-start gap-3 mb-3">
-                <Avatar className="w-10 h-10 flex-shrink-0">
+                <Avatar 
+                  className="w-10 h-10 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => {
+                    if (post.user_id) {
+                      router.push(`/profile/${post.user_id}`);
+                    }
+                  }}
+                >
                   <AvatarImage src={post.author_image || "/placeholder.svg"} />
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     {post.author_name?.substring(0, 2).toUpperCase() || "U"}
@@ -329,7 +338,16 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-semibold text-foreground truncate">{post.author_name || "Unknown User"}</h4>
+                    <h4 
+                      className="font-semibold text-foreground truncate cursor-pointer hover:underline"
+                      onClick={() => {
+                        if (post.user_id) {
+                          router.push(`/profile/${post.user_id}`);
+                        }
+                      }}
+                    >
+                      {post.author_name || "Unknown User"}
+                    </h4>
                     {post.category === "Event" && (
                       <Badge className="bg-primary text-primary-foreground flex-shrink-0">Event</Badge>
                     )}

@@ -49,6 +49,9 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
   const targetUser = user || externalTargetUser || currentUser;
   const targetProfile = user ? null : currentProfile;
   const isExternalProfile = !!targetUserId && targetUserId !== currentUser?.id;
+  
+  // Determine if this is the user's own profile
+  const actualIsOwnProfile = isOwnProfile !== undefined ? isOwnProfile : !isExternalProfile;
 
   useEffect(() => {
     if (!targetUser) return;
@@ -177,7 +180,7 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
             </div>
           </div>
 
-          {isOwnProfile && (
+          {actualIsOwnProfile && (
             <div className="flex items-center gap-4">
               <Button 
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
@@ -314,7 +317,7 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
         </Tabs>
       )}
 
-      {!isOwnProfile && (
+      {!actualIsOwnProfile && (
         <div className="flex gap-3">
           <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">
             <Users className="w-4 h-4 mr-2" />
