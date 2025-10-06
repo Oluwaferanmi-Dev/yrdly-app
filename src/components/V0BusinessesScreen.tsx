@@ -29,6 +29,7 @@ import { supabase } from "@/lib/supabase";
 import type { Business } from "@/types";
 import { CreateBusinessDialog } from "@/components/CreateBusinessDialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { useRouter } from "next/navigation";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import {
   DropdownMenu,
@@ -57,6 +58,7 @@ interface V0BusinessesScreenProps {
 
 function BusinessCard({ business }: { business: Business }) {
   const { user } = useAuth();
+  const router = useRouter();
   const { deleteBusiness } = usePosts();
   const { toast } = useToast();
   const [isLiked, setIsLiked] = useState(false);
@@ -222,6 +224,14 @@ function BusinessCard({ business }: { business: Business }) {
       </CardContent>
 
       <CardContent className="pt-0">
+        {/* Visit Button */}
+        <Button 
+          className="w-full mb-3 bg-primary text-primary-foreground hover:bg-primary/90"
+          onClick={() => router.push(`/businesses/${business.id}`)}
+        >
+          Visit Business
+        </Button>
+        
         {/* Actions */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -261,6 +271,7 @@ function EmptyBusinesses() {
 
 export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
   const { user } = useAuth();
+  const router = useRouter();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -445,7 +456,12 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
             <p className="text-sm text-muted-foreground">{filteredBusinesses[0].description}</p>
 
             <div className="flex gap-2">
-              <Button className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90">Visit Store</Button>
+              <Button 
+                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() => router.push(`/businesses/${filteredBusinesses[0].id}`)}
+              >
+                Visit Store
+              </Button>
               {filteredBusinesses[0].phone && (
                 <Button
                   variant="outline"

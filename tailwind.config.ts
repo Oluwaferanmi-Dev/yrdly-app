@@ -11,6 +11,9 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'xs': '475px',
+      },
       fontFamily: {
         body: ['var(--font-pt-sans)', ...fontFamily.sans],
         headline: ['var(--font-pt-sans)', ...fontFamily.sans],

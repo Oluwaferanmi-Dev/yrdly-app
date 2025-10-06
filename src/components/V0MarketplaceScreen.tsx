@@ -164,12 +164,12 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
   };
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-3 sm:p-4 space-y-4 sm:space-y-6">
       {/* Page Header */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">For Sale & Free</h2>
-          <p className="text-muted-foreground">Buy and sell items in your neighborhood</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">For Sale & Free</h2>
+          <p className="text-sm text-muted-foreground">Buy and sell items in your neighborhood</p>
         </div>
 
         {/* Search Bar */}
@@ -177,7 +177,7 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
             placeholder="Search For sale & free" 
-            className="pl-10 bg-card border-border focus:border-primary"
+            className="pl-10 bg-card border-border focus:border-primary text-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -186,13 +186,13 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
 
       {/* Items Grid */}
       {loading ? (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-64 w-full" />
+            <Skeleton key={i} className="h-48 sm:h-64 w-full" />
           ))}
         </div>
       ) : filteredItems.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {filteredItems.map((item) => (
             <Card key={item.id} className="p-0 overflow-hidden yrdly-shadow">
               <div className="relative cursor-pointer" onClick={() => onItemClick?.(item)}>
@@ -201,22 +201,22 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
                   alt={item.title || item.text || "Item"}
                   className="w-full aspect-square object-cover"
                 />
-                <Badge className={`absolute top-2 left-2 ${getPriceColor(item.price || 0)}`}>
+                <Badge className={`absolute top-1 left-1 sm:top-2 sm:left-2 text-xs ${getPriceColor(item.price || 0)}`}>
                   {formatPrice(item.price || 0)}
                 </Badge>
-                <Button variant="ghost" size="icon" className="absolute top-2 right-2 bg-white/80 hover:bg-white">
-                  <Heart className="w-4 h-4" />
+                <Button variant="ghost" size="icon" className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-white/80 hover:bg-white w-6 h-6 sm:w-8 sm:h-8">
+                  <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
                 </Button>
               </div>
-              <div className="p-3 space-y-2">
-                <h4 className="font-semibold text-foreground text-sm cursor-pointer" onClick={() => onItemClick?.(item)}>
+              <div className="p-2 sm:p-3 space-y-1 sm:space-y-2">
+                <h4 className="font-semibold text-foreground text-xs sm:text-sm cursor-pointer line-clamp-1" onClick={() => onItemClick?.(item)}>
                   {item.title || item.text || "Untitled Item"}
                 </h4>
                 <p className="text-xs text-muted-foreground line-clamp-2">
                   {item.description || item.text || "No description available"}
                 </p>
-                <div className="flex items-center gap-2">
-                  <Avatar className="w-5 h-5 flex-shrink-0">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Avatar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0">
                     <AvatarImage src={item.user?.avatar_url || "/placeholder.svg"} />
                     <AvatarFallback className={`text-xs ${getPriceColor(item.price || 0)}`}>
                       {item.user?.name?.slice(0, 2).toUpperCase() || item.user_id?.slice(0, 2).toUpperCase() || "U"}
@@ -232,7 +232,7 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
                 <div className="flex gap-1">
                   <Button
                     size="sm"
-                    className={`flex-1 text-xs ${getButtonColor(item.price || 0)}`}
+                    className={`flex-1 text-xs ${getButtonColor(item.price || 0)} h-7 sm:h-8`}
                     onClick={() => onItemClick?.(item)}
                   >
                     {item.price === 0 ? "Claim Free" : "Buy Now"}
@@ -240,7 +240,7 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
                   <Button
                     variant="outline"
                     size="icon"
-                    className={`${getBorderColor(item.price || 0)} bg-transparent`}
+                    className={`${getBorderColor(item.price || 0)} bg-transparent w-7 h-7 sm:w-8 sm:h-8`}
                     onClick={(e) => {
                       e.stopPropagation();
                       onMessageSeller?.(item);

@@ -146,86 +146,89 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
   // Check if we're on the home page
   const isHomePage = pathname === "/";
   
-  // Check if we're in a chat conversation
-  const isChatPage = pathname.startsWith("/messages/") && pathname !== "/messages";
+  // Check if we're in a chat conversation or business chat
+  const isChatPage = (pathname.startsWith("/messages/") && pathname !== "/messages") || 
+                     pathname.includes("/chat");
 
   return (
     <>
       {/* Fixed Header - Hidden in chat */}
       {!isChatPage && (
         <Suspense fallback={<div>Loading...</div>}>
-          <div className="fixed top-0 left-1/2 transform -translate-x-1/2 w-full max-w-sm bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-b border-border z-50 h-20">
-          <div className="flex items-center justify-between p-4">
-            {/* Yrdly Logo - Top Left */}
-            <Link href="/" className="flex items-center">
-              <img 
-                src="/yrdly-logo.png" 
-                alt="Yrdly" 
-                className="w-12 h-12 object-contain"
-              />
-            </Link>
+          <div className="fixed top-0 left-0 right-0 w-full bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-b border-border z-50 h-16 sm:h-20">
+            <div className="max-w-sm mx-auto px-4 sm:px-6">
+              <div className="flex items-center justify-between h-full">
+                {/* Yrdly Logo - Top Left */}
+                <Link href="/" className="flex items-center">
+                  <img 
+                    src="/yrdly-logo.png" 
+                    alt="Yrdly" 
+                    className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 object-contain"
+                  />
+                </Link>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
-              {isHomePage && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={() => {/* TODO: Implement search */}}
-                >
-                  <Search className="w-5 h-5" />
-                </Button>
-              )}
-              <Link href="/map">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-                  <Map className="w-5 h-5" />
-                </Button>
-              </Link>
-              <Link href="/messages">
-                <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground relative">
-                  <MessageCircle className="w-5 h-5" />
-                  {unreadMessagesCount > 0 && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full flex items-center justify-center">
-                      <span className="text-xs text-white font-bold">{unreadMessagesCount}</span>
-                    </div>
+                {/* Action Buttons */}
+                <div className="flex items-center gap-1 sm:gap-2">
+                  {isHomePage && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-foreground p-2"
+                      onClick={() => {/* TODO: Implement search */}}
+                    >
+                      <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </Button>
                   )}
-                </Button>
-              </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-foreground relative"
-                onClick={() => setShowNotifications(!showNotifications)}
-              >
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
-                )}
-              </Button>
-              <Button variant="ghost" size="sm" className="p-0" onClick={() => setShowProfile(!showProfile)}>
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={profile?.avatar_url || "/diverse-user-avatars.png"} />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                    {profile?.name?.charAt(0) || "U"}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
+                  <Link href="/map">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground p-2">
+                      <Map className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </Button>
+                  </Link>
+                  <Link href="/messages">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground relative p-2">
+                      <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                      {unreadMessagesCount > 0 && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-full flex items-center justify-center">
+                          <span className="text-xs text-white font-bold">{unreadMessagesCount}</span>
+                        </div>
+                      )}
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-foreground relative p-2"
+                    onClick={() => setShowNotifications(!showNotifications)}
+                  >
+                    <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+                    {unreadCount > 0 && (
+                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
+                    )}
+                  </Button>
+                  <Button variant="ghost" size="sm" className="p-1" onClick={() => setShowProfile(!showProfile)}>
+                    <Avatar className="w-6 h-6 sm:w-8 sm:h-8">
+                      <AvatarImage src={profile?.avatar_url || "/diverse-user-avatars.png"} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
+                        {profile?.name?.charAt(0) || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        </Suspense>
-      )}
+          </Suspense>
+        )}
 
       {/* Screen Content */}
-      <div className={`min-h-screen ${isChatPage ? 'pt-0 pb-0' : 'pt-20 pb-20'}`}>
+      <div className={`min-h-screen ${isChatPage ? 'pt-0 pb-0' : 'pt-16 pb-16 sm:pt-20 sm:pb-20'}`}>
         {isChatPage ? (
           <div className="w-full h-full">
             {children}
           </div>
         ) : (
-          <div className="max-w-sm mx-auto w-full">
-            <div className="px-4 sm:px-6">
+          <div className="w-full max-w-sm mx-auto">
+            <div className="px-3 sm:px-4 md:px-6">
               {children}
             </div>
           </div>
@@ -235,62 +238,64 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
       {/* Fixed Bottom Navigation - Hidden in chat */}
       {!isChatPage && (
         <Suspense fallback={<div>Loading...</div>}>
-          <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-sm bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-t border-border z-50 h-20">
-          <div className="flex items-center justify-around py-3">
-            <Link href="/" className="flex-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`flex flex-col gap-1 w-full ${pathname === "/" ? "text-primary" : "text-muted-foreground"}`}
-              >
-                <Home className="w-5 h-5" />
-                <span className="text-xs">Home</span>
-              </Button>
-            </Link>
-            <Link href="/neighbors" className="flex-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`flex flex-col gap-1 w-full ${pathname === "/neighbors" ? "text-primary" : "text-muted-foreground"}`}
-              >
-                <Users className="w-5 h-5" />
-                <span className="text-xs">Community</span>
-              </Button>
-            </Link>
-            <Link href="/marketplace" className="flex-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`flex flex-col gap-1 w-full ${pathname === "/marketplace" ? "text-primary" : "text-muted-foreground"}`}
-              >
-                <ShoppingCart className="w-5 h-5" />
-                <span className="text-xs">Market</span>
-              </Button>
-            </Link>
-            <Link href="/events" className="flex-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`flex flex-col gap-1 w-full ${pathname === "/events" ? "text-primary" : "text-muted-foreground"}`}
-              >
-                <Calendar className="w-5 h-5" />
-                <span className="text-xs">Events</span>
-              </Button>
-            </Link>
-            <Link href="/businesses" className="flex-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className={`flex flex-col gap-1 w-full ${pathname === "/businesses" ? "text-primary" : "text-muted-foreground"}`}
-              >
-                <Briefcase className="w-5 h-5" />
-                <span className="text-xs">Businesses</span>
-              </Button>
-            </Link>
+          <div className="fixed bottom-0 left-0 right-0 w-full bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-t border-border z-50 h-16 sm:h-20">
+            <div className="max-w-sm mx-auto">
+              <div className="flex items-center justify-around py-2 sm:py-3">
+                <Link href="/" className="flex-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex flex-col gap-1 w-full py-2 ${pathname === "/" ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    <Home className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-xs">Home</span>
+                  </Button>
+                </Link>
+                <Link href="/neighbors" className="flex-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex flex-col gap-1 w-full py-2 ${pathname === "/neighbors" ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-xs">Community</span>
+                  </Button>
+                </Link>
+                <Link href="/marketplace" className="flex-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex flex-col gap-1 w-full py-2 ${pathname === "/marketplace" ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-xs">Market</span>
+                  </Button>
+                </Link>
+                <Link href="/events" className="flex-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex flex-col gap-1 w-full py-2 ${pathname === "/events" ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-xs">Events</span>
+                  </Button>
+                </Link>
+                <Link href="/businesses" className="flex-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`flex flex-col gap-1 w-full py-2 ${pathname === "/businesses" ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-xs">Businesses</span>
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
-        </div>
-        </Suspense>
-      )}
+          </Suspense>
+        )}
 
       {/* Profile Dropdown */}
       {showProfile && (

@@ -28,6 +28,48 @@ export interface Business {
   website?: string;
   owner_name?: string;
   owner_avatar?: string;
+  // Business detail page fields
+  cover_image?: string;
+  logo?: string;
+  distance?: string;
+  catalog?: CatalogItem[];
+}
+
+export interface CatalogItem {
+  id: string;
+  business_id: string;
+  title: string;
+  description: string;
+  price: number;
+  images: string[];
+  category: string;
+  in_stock: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BusinessMessage {
+  id: string;
+  business_id: string;
+  sender_id: string;
+  sender_name: string;
+  sender_avatar?: string;
+  content: string;
+  timestamp: string;
+  is_read: boolean;
+  item_id?: string; // If discussing a specific catalog item
+  created_at?: string;
+}
+
+export interface BusinessReview {
+  id: string;
+  business_id: string;
+  user_id: string;
+  user_name: string;
+  user_avatar?: string;
+  rating: number;
+  comment: string;
+  created_at: string;
 }
 
 export type PostCategory = 'General' | 'Event' | 'For Sale' | 'Business';

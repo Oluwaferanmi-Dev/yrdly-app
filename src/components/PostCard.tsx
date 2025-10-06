@@ -262,51 +262,99 @@ export function PostCard({ post }: PostCardProps) {
         const sortedParticipantIds = [currentUser.id, author.id].sort();
         
         try {
-            // Check if conversation already exists
-            // Get all conversations for the current user and filter for the specific friend
-            const { data: allConversations, error: fetchError } = await supabase
-                .from('conversations')
-                .select('id, participant_ids')
-                .contains('participant_ids', [currentUser.id]);
-
-            if (fetchError) {
-                console.error("Error fetching conversations:", fetchError);
-                toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
-                return;
-            }
-
-            // Filter for conversation with the specific friend
-            const existingConversations = allConversations?.filter(conv => 
-                conv.participant_ids.includes(currentUser.id) && 
-                conv.participant_ids.includes(author.id) &&
-                conv.participant_ids.length === 2
-            );
-
-            let conversationId: string;
-
-            if (existingConversations && existingConversations.length > 0) {
-                conversationId = existingConversations[0].id;
-            } else {
-                // Create new conversation
-                const { data: newConversation, error: createError } = await supabase
+            // For marketplace posts, create item-specific conversations
+            if (post.category === "For Sale") {
+                // Check if item-specific conversation already exists
+                const { data: existingConversations, error: fetchError } = await supabase
                     .from('conversations')
-                    .insert({
-                        participant_ids: sortedParticipantIds,
-                        created_at: new Date().toISOString(),
-                    })
-                    .select('id')
-                    .single();
+                    .select('id, participant_ids, item_id')
+                    .contains('participant_ids', [currentUser.id])
+                    .eq('type', 'marketplace')
+                    .eq('item_id', post.id);
 
-                if (createError) {
-                    console.error("Error creating conversation:", createError);
-                    toast({ variant: "destructive", title: "Error", description: "Could not create conversation." });
+                if (fetchError) {
+                    console.error("Error fetching conversations:", fetchError);
+                    toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
                     return;
                 }
 
-                conversationId = newConversation.id;
+                let conversationId: string;
+
+                if (existingConversations && existingConversations.length > 0) {
+                    conversationId = existingConversations[0].id;
+                } else {
+                    // Create new item-specific conversation
+                    const { data: newConversation, error: createError } = await supabase
+                        .from('conversations')
+                        .insert({
+                            participant_ids: sortedParticipantIds,
+                            type: 'marketplace',
+                            item_id: post.id,
+                            item_title: post.title || post.text || "Item",
+                            item_image: post.image_url || post.image_urls?.[0] || "/placeholder.svg",
+                            item_price: post.price || 0,
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString(),
+                        })
+                        .select('id')
+                        .single();
+
+                    if (createError) {
+                        console.error("Error creating conversation:", createError);
+                        toast({ variant: "destructive", title: "Error", description: "Could not create conversation." });
+                        return;
+                    }
+
+                    conversationId = newConversation.id;
+                }
+                
+                router.push(`/messages/${conversationId}`);
+            } else {
+                // For non-marketplace posts, create general friend conversation
+                const { data: allConversations, error: fetchError } = await supabase
+                    .from('conversations')
+                    .select('id, participant_ids')
+                    .contains('participant_ids', [currentUser.id]);
+
+                if (fetchError) {
+                    console.error("Error fetching conversations:", fetchError);
+                    toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
+                    return;
+                }
+
+                // Filter for conversation with the specific friend
+                const existingConversations = allConversations?.filter(conv => 
+                    conv.participant_ids.includes(currentUser.id) && 
+                    conv.participant_ids.includes(author.id) &&
+                    conv.participant_ids.length === 2
+                );
+
+                let conversationId: string;
+
+                if (existingConversations && existingConversations.length > 0) {
+                    conversationId = existingConversations[0].id;
+                } else {
+                    // Create new conversation
+                    const { data: newConversation, error: createError } = await supabase
+                        .from('conversations')
+                        .insert({
+                            participant_ids: sortedParticipantIds,
+                            created_at: new Date().toISOString(),
+                        })
+                        .select('id')
+                        .single();
+
+                    if (createError) {
+                        console.error("Error creating conversation:", createError);
+                        toast({ variant: "destructive", title: "Error", description: "Could not create conversation." });
+                        return;
+                    }
+
+                    conversationId = newConversation.id;
+                }
+                
+                router.push(`/messages/${conversationId}`);
             }
-            
-            router.push(`/messages/${conversationId}`);
         } catch (error) {
             console.error("Error handling message action:", error);
             toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });

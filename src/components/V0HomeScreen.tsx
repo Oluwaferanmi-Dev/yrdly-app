@@ -256,68 +256,68 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
   };
 
   return (
-    <div ref={containerRef} className="p-4 space-y-4 pb-24 max-w-2xl mx-auto">
+    <div ref={containerRef} className="p-3 sm:p-4 space-y-3 sm:space-y-4 pb-20 sm:pb-24 max-w-2xl mx-auto">
       {/* Email verification banner removed - users verify during registration */}
 
       {/* Welcome banner removed as requested */}
 
       {/* Create Post Card */}
-      <Card className="p-4 yrdly-shadow">
-        <div className="flex items-center gap-3">
-          <Avatar className="w-10 h-10 flex-shrink-0">
+      <Card className="p-3 sm:p-4 yrdly-shadow">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
             <AvatarImage src={profile?.avatar_url || "/diverse-user-avatars.png"} />
-            <AvatarFallback className="bg-primary text-primary-foreground">
+            <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
               {profile?.name?.charAt(0) || "U"}
             </AvatarFallback>
           </Avatar>
           <CreatePostDialog>
             <Button
               variant="outline"
-              className="flex-1 justify-start text-muted-foreground bg-transparent text-left px-3 py-2 h-auto min-h-[40px]"
+              className="flex-1 justify-start text-muted-foreground bg-transparent text-left px-2 sm:px-3 py-2 h-auto min-h-[36px] sm:min-h-[40px]"
             >
-              <span className="truncate text-sm">What&apos;s happening in your neighborhood?</span>
+              <span className="truncate text-xs sm:text-sm">What&apos;s happening in your neighborhood?</span>
             </Button>
           </CreatePostDialog>
         </div>
       </Card>
 
       {/* Feed Posts */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {loading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-48 w-full rounded-lg" />
-            <Skeleton className="h-48 w-full rounded-lg" />
-            <Skeleton className="h-48 w-full rounded-lg" />
+          <div className="space-y-3 sm:space-y-4">
+            <Skeleton className="h-40 sm:h-48 w-full rounded-lg" />
+            <Skeleton className="h-40 sm:h-48 w-full rounded-lg" />
+            <Skeleton className="h-40 sm:h-48 w-full rounded-lg" />
           </div>
         ) : posts.length > 0 ? (
           posts.map((post) => (
-            <Card key={post.id} className="p-4 yrdly-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <Avatar className="w-10 h-10 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary transition-all">
+            <Card key={post.id} className="p-3 sm:p-4 yrdly-shadow">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                  <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-primary transition-all">
                     <AvatarImage src={post.author_image || "/placeholder.svg"} />
-                    <AvatarFallback className="bg-primary text-primary-foreground">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
                       {post.author_name?.substring(0, 2).toUpperCase() || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <h4 className="font-semibold text-foreground truncate cursor-pointer hover:text-primary">
+                    <h4 className="font-semibold text-foreground truncate cursor-pointer hover:text-primary text-sm sm:text-base">
                       {post.author_name || "Unknown User"}
                     </h4>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       {new Date(post.timestamp).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                   {post.category === "For Sale" && (
-                    <Badge className="bg-accent text-accent-foreground">For Sale</Badge>
+                    <Badge className="bg-accent text-accent-foreground text-xs">For Sale</Badge>
                   )}
                   {post.user_id === user?.id && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="w-4 h-4" />
+                        <Button variant="ghost" size="sm" className="p-1 sm:p-2">
+                          <MoreVertical className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -334,12 +334,12 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
                 </div>
               </div>
 
-              <div className="mb-3">
+              <div className="mb-2 sm:mb-3">
                 {(post.image_url || (post.image_urls && post.image_urls.length > 0)) && (
                   <img
                     src={post.image_url || post.image_urls?.[0] || "/placeholder.svg"}
                     alt={post.title || "Post image"}
-                    className="w-full h-48 object-cover rounded-lg mb-3"
+                    className="w-full h-40 sm:h-48 object-cover rounded-lg mb-2 sm:mb-3"
                   />
                 )}
 
@@ -385,38 +385,38 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
                 {post.category === "General" && <p className="text-foreground break-words">{post.text}</p>}
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-border flex-wrap gap-2">
-                <div className="flex items-center gap-4">
+              <div className="flex items-center justify-between pt-2 sm:pt-3 border-t border-border flex-wrap gap-2">
+                <div className="flex items-center gap-2 sm:gap-4">
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className={`text-muted-foreground hover:text-red-500 ${post.liked_by?.includes(user?.id || '') ? 'text-red-500' : ''}`}
+                    className={`text-muted-foreground hover:text-red-500 p-2 ${post.liked_by?.includes(user?.id || '') ? 'text-red-500' : ''}`}
                     onClick={() => handleLike(post.id)}
                   >
-                    <Heart className={`w-4 h-4 mr-1 ${post.liked_by?.includes(user?.id || '') ? 'fill-current' : ''}`} />
-                    <span className="text-sm">{post.liked_by?.length || 0}</span>
+                    <Heart className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 ${post.liked_by?.includes(user?.id || '') ? 'fill-current' : ''}`} />
+                    <span className="text-xs sm:text-sm">{post.liked_by?.length || 0}</span>
                   </Button>
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="text-muted-foreground hover:text-primary"
+                    className="text-muted-foreground hover:text-primary p-2"
                     onClick={() => handleCommentToggle(post.id)}
                   >
-                    <MessageCircle className="w-4 h-4 mr-1" />
-                    <span className="text-sm">{post.comment_count || 0}</span>
+                    <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                    <span className="text-xs sm:text-sm">{post.comment_count || 0}</span>
                   </Button>
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="text-muted-foreground hover:text-accent"
+                    className="text-muted-foreground hover:text-accent p-2"
                     onClick={() => handleShare(post.id)}
                   >
-                    <Share className="w-4 h-4 mr-1" />
-                    <span className="text-sm">Share</span>
+                    <Share className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                    <span className="text-xs sm:text-sm hidden xs:inline">Share</span>
                   </Button>
                 </div>
                 {post.category === "For Sale" && (
-                  <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
+                  <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90 text-xs sm:text-sm px-3 py-1">
                     Contact Seller
                   </Button>
                 )}
