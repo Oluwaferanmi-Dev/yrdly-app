@@ -21,7 +21,8 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
-  Clock
+  Clock,
+  Building
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
@@ -396,7 +397,19 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
       {/* Featured Business */}
       {filteredBusinesses.length > 0 && (
         <Card className="p-0 overflow-hidden yrdly-shadow-lg border-0">
-          <div className="relative h-32 yrdly-gradient"></div>
+          <div className="relative h-32">
+            {(filteredBusinesses[0].image_urls && filteredBusinesses[0].image_urls.length > 0) ? (
+              <img
+                src={filteredBusinesses[0].image_urls[0]}
+                alt={filteredBusinesses[0].name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-r from-primary/20 to-accent/20 flex items-center justify-center">
+                <Building className="w-12 h-12 text-muted-foreground" />
+              </div>
+            )}
+          </div>
           <div className="p-6 space-y-4">
             <div className="flex items-start justify-between">
               <div>

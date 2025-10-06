@@ -49,6 +49,7 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
           return;
         }
 
+        console.log('Marketplace items fetched:', data);
         setItems(data as PostType[]);
         setLoading(false);
       } catch (error) {
@@ -234,7 +235,7 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
                     className={`flex-1 text-xs ${getButtonColor(item.price || 0)}`}
                     onClick={() => onItemClick?.(item)}
                   >
-                    {item.price === 0 ? "Claim Free" : `Buy Now - ${formatPrice(item.price || 0)}`}
+                    {item.price === 0 ? "Claim Free" : "Buy Now"}
                   </Button>
                   <Button
                     variant="outline"

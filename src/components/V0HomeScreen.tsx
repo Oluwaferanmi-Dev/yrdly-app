@@ -17,12 +17,17 @@ import {
   Calendar,
   DollarSign,
   AlertTriangle,
+  Trash2,
+  MoreVertical,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { useHaptics } from "@/hooks/use-haptics";
 import { supabase } from "@/lib/supabase";
 import type { Post as PostType } from "@/types";
+import { DeleteService } from "@/lib/delete-service";
+import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyFeed } from "@/components/EmptyFeed";
 import { WelcomeBanner } from "@/components/WelcomeBanner";
@@ -31,7 +36,6 @@ import { SuggestedNeighbors } from "@/components/SuggestedNeighbors";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { PostCard } from "@/components/PostCard";
 import { CommentSection } from "@/components/CommentSection";
-import { useToast } from "@/hooks/use-toast";
 
 interface V0HomeScreenProps {
   onViewProfile?: (user: any) => void;
@@ -217,6 +221,40 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
     }
   };
 
+  // Handle delete functionality
+  const handleDelete = async (postId: string) => {
+    if (!user) return;
+
+    try {
+      const success = await DeleteService.deletePost(postId, user.id, {
+        showToast: true,
+        onSuccess: () => {
+          // Remove post from local state
+          setPosts(prevPosts => prevPosts.filter(post => post.id !== postId));
+          toast({
+            title: "Post Deleted",
+            description: "Your post has been deleted successfully.",
+          });
+          triggerHaptic('medium');
+        },
+        onError: (error) => {
+          toast({
+            variant: "destructive",
+            title: "Delete Failed",
+            description: error,
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: "An unexpected error occurred.",
+      });
+    }
+  };
+
   return (
     <div ref={containerRef} className="p-4 space-y-4 pb-24 max-w-2xl mx-auto">
       {/* Email verification banner removed - users verify during registration */}
@@ -271,12 +309,29 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
                     </p>
                   </div>
                 </div>
-                {post.category === "For Sale" && (
-                  <Badge className="bg-accent text-accent-foreground flex-shrink-0">For Sale</Badge>
-                )}
-                <Button variant="ghost" size="sm" className="flex-shrink-0">
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {post.category === "For Sale" && (
+                    <Badge className="bg-accent text-accent-foreground">For Sale</Badge>
+                  )}
+                  {post.user_id === user?.id && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          onClick={() => handleDelete(post.id)}
+                          className="text-red-600 focus:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Post
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               </div>
 
               <div className="mb-3">

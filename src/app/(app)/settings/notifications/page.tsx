@@ -232,6 +232,94 @@ export default function NotificationSettingsPage() {
                                 if (!user) return;
                                 
                                 try {
+                                    // First check if user has a push subscription
+                                    console.log('Checking subscription for user.id:', user.id);
+                                    const { data: existingSubscriptions, error: checkError } = await supabase
+                                        .from('push_subscriptions')
+                                        .select('id')
+                                        .eq('user_id', user.id)
+                                        .limit(1);
+                                    
+                                    const existingSubscription = existingSubscriptions?.[0];
+                                    
+                                    if (checkError) {
+                                        console.error('Error checking existing subscription:', checkError);
+                                    }
+
+                                    if (!existingSubscription) {
+                                        // Try to set up push notifications first
+                                        toast({
+                                            title: "Setting up notifications...",
+                                            description: "Please grant permission for notifications.",
+                                        });
+
+                                        // Request permission
+                                        const permission = await Notification.requestPermission();
+                                        if (permission !== 'granted') {
+                                            toast({
+                                                variant: "destructive",
+                                                title: "Permission Denied",
+                                                description: "Please enable notifications in your browser settings.",
+                                            });
+                                            return;
+                                        }
+
+                                        // Register service worker and subscribe
+                                        const registration = await navigator.serviceWorker.ready;
+                                        
+                                        // Convert VAPID key
+                                        const applicationServerKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+                                        if (!applicationServerKey) {
+                                            toast({
+                                                variant: "destructive",
+                                                title: "Configuration Error",
+                                                description: "Push notifications are not configured.",
+                                            });
+                                            return;
+                                        }
+
+                                        const base64 = applicationServerKey
+                                            .replace(/-/g, '+')
+                                            .replace(/_/g, '/');
+                                        const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
+                                        const binaryString = atob(padded);
+                                        const keyArray = new Uint8Array(binaryString.length);
+                                        for (let i = 0; i < binaryString.length; i++) {
+                                            keyArray[i] = binaryString.charCodeAt(i);
+                                        }
+
+                                        const subscription = await registration.pushManager.subscribe({
+                                            userVisibleOnly: true,
+                                            applicationServerKey: keyArray
+                                        });
+
+                                        // Save subscription
+                                        const { error: saveError } = await supabase
+                                            .from('push_subscriptions')
+                                            .upsert({
+                                                user_id: user.id,
+                                                subscription: subscription,
+                                                created_at: new Date().toISOString(),
+                                                updated_at: new Date().toISOString()
+                                            });
+
+                                        if (saveError) {
+                                            console.error('Error saving subscription:', saveError);
+                                            toast({
+                                                variant: "destructive",
+                                                title: "Setup Failed",
+                                                description: "Could not save notification settings.",
+                                            });
+                                            return;
+                                        }
+
+                                        toast({
+                                            title: "Notifications Enabled",
+                                            description: "Push notifications have been set up successfully.",
+                                        });
+                                    }
+
+                                    // Now send test notification
                                     const success = await PushNotificationService.testNotification(user.id);
                                     if (success) {
                                         toast({
@@ -242,7 +330,7 @@ export default function NotificationSettingsPage() {
                                         toast({
                                             variant: "destructive",
                                             title: "Test Failed",
-                                            description: "Push notifications may not be enabled. Please check your browser settings.",
+                                            description: "Could not send test notification. Please try again.",
                                         });
                                     }
                                 } catch (error) {

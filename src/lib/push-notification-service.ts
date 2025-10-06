@@ -16,14 +16,22 @@ export class PushNotificationService {
   static async sendToUser(userId: string, payload: PushNotificationPayload): Promise<boolean> {
     try {
       // Get user's push subscription
-      const { data: subscription, error: fetchError } = await supabase
+      console.log('PushNotificationService: Looking for subscription for user:', userId);
+      const { data: subscriptions, error: fetchError } = await supabase
         .from('push_subscriptions')
         .select('subscription')
         .eq('user_id', userId)
-        .single();
+        .limit(1);
+      
+      const subscription = subscriptions?.[0];
 
-      if (fetchError || !subscription) {
-        console.log('No push subscription found for user:', userId);
+      if (fetchError) {
+        console.error('PushNotificationService: Error fetching subscription:', fetchError);
+        return false;
+      }
+
+      if (!subscription) {
+        console.log('PushNotificationService: No push subscription found for user:', userId);
         return false;
       }
 

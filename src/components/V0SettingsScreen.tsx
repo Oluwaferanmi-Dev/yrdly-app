@@ -264,6 +264,25 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
         </Card>
       </div>
 
+      {/* Notifications */}
+      <div className="space-y-4">
+        <h3 className="font-semibold text-foreground">Notifications</h3>
+
+        <Card className="yrdly-shadow">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-between p-4 h-auto" 
+            onClick={() => router.push('/settings/notifications')}
+          >
+            <div className="flex items-center gap-3">
+              <Bell className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <span className="text-foreground">Notification Settings</span>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+          </Button>
+        </Card>
+      </div>
+
       {/* Support */}
       <div className="space-y-4">
         <h3 className="font-semibold text-foreground">Support</h3>
