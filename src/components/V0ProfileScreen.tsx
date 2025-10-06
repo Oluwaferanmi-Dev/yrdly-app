@@ -30,9 +30,11 @@ interface V0ProfileScreenProps {
   onBack?: () => void;
   user?: User;
   isOwnProfile?: boolean;
+  targetUserId?: string;
+  targetUser?: any;
 }
 
-export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0ProfileScreenProps) {
+export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId, targetUser: externalTargetUser }: V0ProfileScreenProps) {
   const router = useRouter();
   const { user: currentUser, profile: currentProfile } = useAuth();
   const [profileData, setProfileData] = useState<User | null>(null);
@@ -43,9 +45,10 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true }: V0Profile
     events: 0,
   });
 
-  // Use provided user or current user
-  const targetUser = user || currentUser;
+  // Use provided user, external target user, or current user
+  const targetUser = user || externalTargetUser || currentUser;
   const targetProfile = user ? null : currentProfile;
+  const isExternalProfile = !!targetUserId && targetUserId !== currentUser?.id;
 
   useEffect(() => {
     if (!targetUser) return;

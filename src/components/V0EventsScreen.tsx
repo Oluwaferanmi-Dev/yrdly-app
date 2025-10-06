@@ -99,12 +99,12 @@ function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPL
               {badge.text}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground line-clamp-2">{event.text || "No description available"}</p>
+          <p className="text-sm text-muted-foreground line-clamp-3 mb-2">{event.text || "No description available"}</p>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             {event.event_location?.address && (
-              <div className="flex items-center gap-1 min-w-0">
+              <div className="flex items-center gap-1 min-w-0 flex-1">
                 <MapPin className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{event.event_location.address}</span>
+                <span className="truncate max-w-[200px]">{event.event_location.address}</span>
               </div>
             )}
             <div className="flex items-center gap-1">

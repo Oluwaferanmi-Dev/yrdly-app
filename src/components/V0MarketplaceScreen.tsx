@@ -12,6 +12,7 @@ import { EnhancedItemCard } from "@/components/marketplace/EnhancedItemCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-supabase-auth";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Post as PostType } from "@/types";
 
@@ -22,6 +23,7 @@ interface V0MarketplaceScreenProps {
 
 export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0MarketplaceScreenProps) {
   const { user } = useAuth();
+  const router = useRouter();
   const [items, setItems] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -236,7 +238,7 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
                   onClick={(e) => {
                     e.stopPropagation();
                     if (item.user_id) {
-                      window.location.href = `/profile/${item.user_id}`;
+                      router.push(`/profile/${item.user_id}`);
                     }
                   }}
                 >
