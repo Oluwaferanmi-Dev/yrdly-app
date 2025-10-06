@@ -430,7 +430,6 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                                 </div>
                             )}
                         </div>
-                        </div>
                     </div>
                     <SheetFooter className="p-4 border-t flex-shrink-0">
                         <Button type="submit" className="w-full" variant="default" disabled={loading}>
