@@ -151,36 +151,6 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
     );
   }, [items, searchTerm]);
 
-  const handleEditItem = (item: PostType) => {
-    setEditingItem(item);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleDeleteItem = async (itemId: string) => {
-    try {
-      const { error } = await supabase
-        .from('posts')
-        .delete()
-        .eq('id', itemId);
-      
-      if (error) {
-        throw error;
-      }
-      
-      toast({
-        title: "Success",
-        description: "Item deleted successfully",
-      });
-    } catch (error) {
-      console.error("Failed to delete item:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete item. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleEditDialogClose = () => {
     setEditingItem(null);
     setIsEditDialogOpen(false);

@@ -70,7 +70,7 @@ function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPL
   };
 
   const badge = getEventBadge(event.event_date);
-  const isLiked = event.liked_by?.includes(user?.id || '') || false;
+  const isLiked = event.liked_by?.includes(currentUser?.id || '') || false;
 
   return (
     <Card className="p-4 yrdly-shadow cursor-pointer hover:shadow-lg transition-shadow" onClick={() => onClick(event.id)}>
