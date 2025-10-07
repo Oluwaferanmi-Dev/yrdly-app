@@ -3,12 +3,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { User, Post, FriendRequest } from "../types";
+import type { User, Post, FriendRequest, Business } from "../types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useRouter } from 'next/navigation';
-import { Loader2, User as UserIcon, Calendar, Map, ShoppingCart, FileText, Image as ImageIcon } from 'lucide-react';
+import { Loader2, User as UserIcon, Calendar, Map, ShoppingCart, FileText, Image as ImageIcon, Briefcase, Star } from 'lucide-react';
 import { UserProfileDialog } from './UserProfileDialog';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import Image from 'next/image';
@@ -17,6 +17,7 @@ import Image from 'next/image';
 type SearchResult = 
     | { type: 'user'; data: User }
     | { type: 'post'; data: Post }
+    | { type: 'business'; data: Business }
     | { type: 'page'; data: { name: string; path: string; icon: React.ElementType }};
 
 const allPages = [
@@ -24,6 +25,7 @@ const allPages = [
     { name: 'Map', path: '/map', icon: Map },
     { name: 'Marketplace', path: '/marketplace', icon: ShoppingCart },
     { name: 'Community', path: '/neighbors', icon: UserIcon },
+    { name: 'Businesses', path: '/businesses', icon: Briefcase },
 ];
 
 type FriendshipStatus = 'friends' | 'request_sent' | 'request_received' | 'none';
@@ -46,6 +48,8 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
             router.push(result.data.path);
         } else if (result.type === 'post') {
             router.push(`/posts/${result.data.id}`);
+        } else if (result.type === 'business') {
+            router.push(`/businesses/${result.data.id}`);
         }
     };
 
@@ -93,6 +97,48 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
                         )
                         .map(post => ({ type: 'post', data: post as Post } as SearchResult));
                     searchResults.push(...postsResults);
+                }
+
+                // Business search
+                const { data: businessesData, error: businessesError } = await supabase
+                    .from('businesses')
+                    .select(`
+                        *,
+                        users!businesses_owner_id_fkey(
+                            name,
+                            avatar_url
+                        )
+                    `)
+                    .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%`);
+                
+                if (!businessesError && businessesData) {
+                    const businessesResults = businessesData.map(business => {
+                        // Transform the data to match our Business interface
+                        const businessData: Business = {
+                            id: business.id,
+                            owner_id: business.owner_id,
+                            name: business.name,
+                            category: business.category,
+                            description: business.description,
+                            location: business.location,
+                            image_urls: business.image_urls,
+                            created_at: business.created_at,
+                            rating: business.rating || 0,
+                            review_count: business.review_count || 0,
+                            hours: business.hours || "Hours not specified",
+                            phone: business.phone,
+                            email: business.email,
+                            website: business.website,
+                            owner_name: business.users?.name || "Unknown Owner",
+                            owner_avatar: business.users?.avatar_url,
+                            cover_image: business.image_urls?.[0],
+                            logo: business.image_urls?.[0],
+                            distance: "0.5 km away", // This would be calculated based on user location
+                            catalog: [] // Will be fetched separately
+                        };
+                        return { type: 'business', data: businessData } as SearchResult;
+                    });
+                    searchResults.push(...businessesResults);
                 }
 
                 setResults(searchResults);
@@ -171,6 +217,52 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
                                     <span className="text-green-600 dark:text-green-400 font-medium">
                                         ₦{post.price.toLocaleString()}
                                     </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            case 'business':
+                const business = result.data;
+                return (
+                    <div key={`business-${business.id}`} className="flex items-center gap-4 p-3 rounded-md hover:bg-muted cursor-pointer" onClick={() => handleResultClick(result)}>
+                        {/* Business Image or Icon */}
+                        <div className="flex-shrink-0">
+                            {business.cover_image ? (
+                                <div className="relative w-12 h-12 rounded-md overflow-hidden">
+                                    <Image
+                                        src={business.cover_image}
+                                        alt={business.name}
+                                        fill
+                                        className="object-cover"
+                                        sizes="48px"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="w-12 h-12 bg-muted rounded-md flex items-center justify-center">
+                                    <Briefcase className="h-6 w-6 text-muted-foreground"/>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* Business Content */}
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                                <p className="font-semibold truncate">{business.name}</p>
+                                <span className="text-xs bg-muted px-2 py-1 rounded-full text-muted-foreground">
+                                    {business.category}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>by {business.owner_name}</span>
+                                {business.rating && business.rating > 0 && (
+                                    <div className="flex items-center gap-1">
+                                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                        <span>{business.rating.toFixed(1)}</span>
+                                        {business.review_count && business.review_count > 0 && (
+                                            <span>({business.review_count})</span>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         </div>
