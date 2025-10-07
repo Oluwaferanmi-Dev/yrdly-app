@@ -38,7 +38,6 @@ import { CreatePostDialog } from "./CreatePostDialog";
 import { useToast } from "@/hooks/use-toast";
 import { CommentSection } from "./CommentSection";
 import { timeAgo, formatPrice } from "@/lib/utils";
-import { UserProfileDialog } from "./UserProfileDialog";
 import { useRouter } from "next/navigation";
 import { useHaptics } from "@/hooks/use-haptics";
 import { ImageSwiper } from "./ImageSwiper";
@@ -59,7 +58,6 @@ export function PostCard({ post }: PostCardProps) {
   const [commentCount, setCommentCount] = useState(post.comment_count || 0);
   const [isLiked, setIsLiked] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isImageSwiperOpen, setIsImageSwiperOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -363,7 +361,7 @@ export function PostCard({ post }: PostCardProps) {
 
   const openProfile = () => {
     if (author && author.id !== currentUser?.id) {
-        setSelectedUser(author);
+        router.push(`/profile/${author.id}`);
     }
   };
 
@@ -431,18 +429,6 @@ export function PostCard({ post }: PostCardProps) {
     <>
     <Card className="overflow-hidden mb-4">
        <div onClick={handleCardClick} className="cursor-pointer">
-      {selectedUser && (
-          <UserProfileDialog 
-              user={selectedUser} 
-              open={!!selectedUser} 
-              onOpenChange={(wasChanged) => {
-                  if (wasChanged) {
-                    // Logic to refetch or update state if a change (like block/unfriend) happened
-                  }
-                  setSelectedUser(null)
-              }} 
-          />
-      )}
       <CardHeader className="flex flex-row items-center gap-3 p-3 pb-2">
         {loadingAuthor ? (
             <div className="flex items-center gap-3 w-full">

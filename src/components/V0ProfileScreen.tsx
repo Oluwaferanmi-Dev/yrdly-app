@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import type { User, Post } from "@/types";
 import { FriendsList } from "./FriendsList";
+import { useToast } from "@/hooks/use-toast";
 
 interface V0ProfileScreenProps {
   onBack?: () => void;
@@ -38,18 +39,21 @@ interface V0ProfileScreenProps {
 export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId, targetUser: externalTargetUser }: V0ProfileScreenProps) {
   const router = useRouter();
   const { user: currentUser, profile: currentProfile } = useAuth();
+  const { toast } = useToast();
   const [profileData, setProfileData] = useState<User | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFriendsList, setShowFriendsList] = useState(false);
+  const [isFriend, setIsFriend] = useState(false);
+  const [isFriendRequestSent, setIsFriendRequestSent] = useState(false);
   const [stats, setStats] = useState({
     friends: 0,
     events: 0,
   });
 
   // Use provided user, external target user, or current user
-  const targetUser = user || externalTargetUser || currentUser;
-  const targetProfile = user ? null : currentProfile;
+  const targetUser = externalTargetUser || user || currentUser;
+  const targetProfile = externalTargetUser ? null : (user ? null : currentProfile);
   const isExternalProfile = !!targetUserId && targetUserId !== currentUser?.id;
   
   // Determine if this is the user's own profile
@@ -142,6 +146,161 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
     return () => window.removeEventListener('focus', handleFocus);
   }, [targetUser, loading]);
 
+  // Check if users are friends
+  useEffect(() => {
+    if (!currentUser || !targetUser || actualIsOwnProfile) return;
+
+    const checkFriendship = async () => {
+      try {
+        const { data: currentUserData } = await supabase
+          .from('users')
+          .select('friends')
+          .eq('id', currentUser.id)
+          .single();
+
+        const isAlreadyFriend = currentUserData?.friends?.includes(targetUser.id) || false;
+        setIsFriend(isAlreadyFriend);
+
+        // Check if friend request was already sent
+        const { data: friendRequest } = await supabase
+          .from('friend_requests')
+          .select('id, status')
+          .or(`and(from_user_id.eq.${currentUser.id},to_user_id.eq.${targetUser.id}),and(from_user_id.eq.${targetUser.id},to_user_id.eq.${currentUser.id})`)
+          .single();
+
+        setIsFriendRequestSent(!!friendRequest && friendRequest.status === 'pending');
+      } catch (error) {
+        console.error('Error checking friendship:', error);
+      }
+    };
+
+    checkFriendship();
+  }, [currentUser, targetUser, actualIsOwnProfile]);
+
+  const handleAddFriend = async () => {
+    if (!currentUser || !targetUser) return;
+
+    try {
+      if (isFriend) {
+        // Remove friend
+        const { data: currentUserData } = await supabase
+          .from('users')
+          .select('friends')
+          .eq('id', currentUser.id)
+          .single();
+
+        const updatedFriends = currentUserData?.friends?.filter((id: string) => id !== targetUser.id) || [];
+
+        await supabase
+          .from('users')
+          .update({ friends: updatedFriends })
+          .eq('id', currentUser.id);
+
+        // Also remove from target user's friends list
+        const { data: targetUserData } = await supabase
+          .from('users')
+          .select('friends')
+          .eq('id', targetUser.id)
+          .single();
+
+        const targetUpdatedFriends = targetUserData?.friends?.filter((id: string) => id !== currentUser.id) || [];
+
+        await supabase
+          .from('users')
+          .update({ friends: targetUpdatedFriends })
+          .eq('id', targetUser.id);
+
+        setIsFriend(false);
+        toast({
+          title: "Friend Removed",
+          description: `You are no longer friends with ${targetUser.name || 'this user'}.`,
+        });
+      } else if (isFriendRequestSent) {
+        // Cancel friend request
+        await supabase
+          .from('friend_requests')
+          .delete()
+          .eq('from_user_id', currentUser.id)
+          .eq('to_user_id', targetUser.id);
+
+        setIsFriendRequestSent(false);
+        toast({
+          title: "Friend Request Cancelled",
+          description: "Friend request has been cancelled.",
+        });
+      } else {
+        // Send friend request
+        await supabase
+          .from('friend_requests')
+          .insert({
+            from_user_id: currentUser.id,
+            to_user_id: targetUser.id,
+            status: 'pending',
+            created_at: new Date().toISOString(),
+          });
+
+        setIsFriendRequestSent(true);
+        toast({
+          title: "Friend Request Sent",
+          description: `Friend request sent to ${targetUser.name || 'this user'}.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error handling friend request:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to process friend request. Please try again.",
+      });
+    }
+  };
+
+  const handleMessageUser = async () => {
+    if (!currentUser || !targetUser) return;
+
+    try {
+      // Check if conversation already exists
+      const sortedParticipantIds = [currentUser.id, targetUser.id].sort();
+      const { data: existingConversations, error: fetchError } = await supabase
+        .from('conversations')
+        .select('id')
+        .contains('participant_ids', sortedParticipantIds)
+        .eq('type', 'friend');
+
+      if (fetchError) throw fetchError;
+
+      let conversationId: string;
+
+      if (existingConversations && existingConversations.length > 0) {
+        conversationId = existingConversations[0].id;
+      } else {
+        // Create new conversation
+        const { data: newConv, error: createError } = await supabase
+          .from('conversations')
+          .insert({
+            participant_ids: sortedParticipantIds,
+            type: 'friend',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        conversationId = newConv.id;
+      }
+
+      router.push(`/messages/${conversationId}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not open conversation. Please try again.",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-4 space-y-6">
@@ -173,7 +332,7 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
   }
 
   const displayUser = profileData || targetUser;
-  const displayProfile = targetProfile;
+  const displayProfile = isExternalProfile ? profileData : targetProfile;
 
   return (
     <div className="p-4 space-y-6">
@@ -216,7 +375,7 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
             </div>
           </div>
 
-          {actualIsOwnProfile && (
+          {actualIsOwnProfile ? (
             <div className="flex items-center gap-4">
               <Button 
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
@@ -228,6 +387,24 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
               <Button variant="outline" className="border-border bg-transparent">
                 <Share className="w-4 h-4 mr-2" />
                 Share
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-4">
+              <Button 
+                className={isFriend ? "bg-red-500 hover:bg-red-600 text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"}
+                onClick={handleAddFriend}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                {isFriend ? "Remove Friend" : isFriendRequestSent ? "Friend Request Sent" : "Add Friend"}
+              </Button>
+              <Button 
+                variant="outline" 
+                className="border-border bg-transparent"
+                onClick={handleMessageUser}
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Message
               </Button>
             </div>
           )}
@@ -261,6 +438,27 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
         <Card className="p-6 yrdly-shadow">
           <h4 className="font-semibold text-foreground mb-3">About</h4>
           <p className="text-muted-foreground leading-relaxed">{displayProfile.bio}</p>
+        </Card>
+      )}
+
+      {/* Public Posts for External Profiles */}
+      {!actualIsOwnProfile && userPosts.length > 0 && (
+        <Card className="p-6 yrdly-shadow">
+          <h4 className="font-semibold text-foreground mb-4">Recent Posts</h4>
+          <div className="space-y-4">
+            {userPosts.slice(0, 3).map((post) => (
+              <div key={post.id} className="border-b border-border pb-4 last:border-b-0 last:pb-0">
+                <p className="text-foreground mb-2">{post.text || post.title || "No content"}</p>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Heart className="w-4 h-4" />
+                    {post.liked_by?.length || 0}
+                  </span>
+                  <span>{new Date(post.timestamp).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 

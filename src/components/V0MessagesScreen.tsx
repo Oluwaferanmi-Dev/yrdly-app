@@ -10,7 +10,6 @@ import { Search, MessageCircle, Store, Users, ShoppingBag } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
-import { NeighborChatLayout } from "@/components/messages/NeighborChatLayout";
 import Link from "next/link";
 import type { User } from "@/types";
 
@@ -227,6 +226,14 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
     }
   }, [selectedConversationId, conversations]);
 
+  // Clear selected conversation when component mounts without selectedConversationId
+  useEffect(() => {
+    if (!selectedConversationId) {
+      setSelectedConversation(null);
+    }
+  }, [selectedConversationId]);
+
+
   const filteredConversations = useMemo(() => {
     const matchesTab = (conv: Conversation) => {
       if (activeTab === "all") return true;
@@ -265,10 +272,6 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
     };
   }, [conversations]);
 
-    // If a conversation is selected, show chat interface
-    if (selectedConversation) {
-      return <NeighborChatLayout selectedConversationId={selectedConversation.id} />;
-    }
 
   if (loading) {
     return (
