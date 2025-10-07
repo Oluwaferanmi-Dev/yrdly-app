@@ -350,7 +350,7 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
       <Card className="p-6 yrdly-shadow">
         <div className="flex flex-col items-center text-center space-y-4">
           <Avatar className="w-24 h-24">
-            <AvatarImage src={displayProfile?.avatar_url || (displayUser as any)?.avatar_url || "/placeholder.svg"} />
+            <AvatarImage src={(displayProfile as any)?.avatarUrl || (displayProfile as any)?.avatar_url || (displayUser as any)?.avatarUrl || (displayUser as any)?.avatar_url || "/placeholder.svg"} />
             <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
               {displayProfile?.name?.charAt(0) || (displayUser as any)?.name?.charAt(0) || "U"}
             </AvatarFallback>

@@ -11,6 +11,7 @@ import { Suspense } from "react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
+import { SearchDialog } from "@/components/SearchDialog";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@/types";
 import Image from "next/image";
@@ -25,6 +26,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
   const { user, profile } = useAuth();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
@@ -145,7 +147,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
   }, [user]);
 
   // Check if we're on the home page
-  const isHomePage = pathname === "/";
+  const isHomePage = pathname === "/home";
   
   // Check if we're in a chat conversation or business chat
   const isChatPage = (pathname.startsWith("/messages/") && pathname !== "/messages") || 
@@ -177,7 +179,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
                       variant="ghost"
                       size="sm"
                       className="text-muted-foreground hover:text-foreground p-2"
-                      onClick={() => {/* TODO: Implement search */}}
+                      onClick={() => setShowSearch(true)}
                     >
                       <Search className="w-4 h-4 sm:w-5 sm:h-5" />
                     </Button>
@@ -314,6 +316,12 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
       <NotificationsDropdown 
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
+      />
+
+      {/* Search Dialog */}
+      <SearchDialog 
+        open={showSearch}
+        onOpenChange={setShowSearch}
       />
     </>
   );

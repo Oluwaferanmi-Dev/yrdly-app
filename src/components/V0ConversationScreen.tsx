@@ -251,7 +251,7 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
     } finally {
       setSending(false);
     }
-  }, [user, selectedConversation, newMessage, selectedFile, profile]);
+  }, [user, selectedConversation, newMessage, selectedFile]);
 
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -323,7 +323,7 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
             <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">Conversation not found</h3>
             <p className="text-muted-foreground mb-4">
-              This conversation doesn't exist or you don't have access to it.
+              This conversation doesn&apos;t exist or you don&apos;t have access to it.
             </p>
             <Button onClick={() => router.push("/messages")}>
               Back to Messages
