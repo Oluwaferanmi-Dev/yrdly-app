@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
@@ -10,13 +10,25 @@ export const dynamic = 'force-dynamic';
 
 export default function AuthCallback() {
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>('Processing...');
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        setStatus('Handling OAuth callback...');
         console.log('Handling OAuth callback...');
         console.log('Current URL:', window.location.href);
         console.log('Timestamp:', new Date().toISOString());
+        
+        // Check if Supabase client is properly initialized
+        if (!supabase || !supabase.auth) {
+          throw new Error('Supabase client not properly initialized');
+        }
+        
+        // Debug environment variables
+        console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing');
+        console.log('Supabase Anon Key:', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Set' : 'Missing');
         
         // Check if we have URL fragments (OAuth response)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -27,53 +39,87 @@ export default function AuthCallback() {
         
         // If we have an access token in the hash, exchange it for a session
         if (hashParams.get('access_token')) {
+          setStatus('Exchanging tokens for session...');
           console.log('Found access token, exchanging for session...');
-          const { data, error } = await supabase.auth.setSession({
-            access_token: hashParams.get('access_token')!,
-            refresh_token: hashParams.get('refresh_token')!,
-          });
           
-          if (error) {
-            console.error('Error setting session:', error);
-            router.push('/login?error=' + encodeURIComponent(error.message));
-            return;
-          }
-          
-          if (data.session) {
-            console.log('Session established:', data.session.user);
-            console.log('User email confirmed at:', data.session.user.email_confirmed_at);
-            console.log('User metadata:', data.session.user.user_metadata);
+          try {
+            const { data, error } = await supabase.auth.setSession({
+              access_token: hashParams.get('access_token')!,
+              refresh_token: hashParams.get('refresh_token')!,
+            });
             
-            // For OAuth users, we need to ensure they have a proper profile
-            // The AuthProvider will handle creating the profile if it doesn't exist
-            // Wait a moment for the auth state to update, then redirect
+            if (error) {
+              console.error('Error setting session:', error);
+              setError(`Session error: ${error.message}`);
+              setTimeout(() => {
+                router.push('/login?error=' + encodeURIComponent(error.message));
+              }, 2000);
+              return;
+            }
+            
+            if (data.session) {
+              setStatus('Session established, redirecting...');
+              console.log('Session established:', data.session.user);
+              console.log('User email confirmed at:', data.session.user.email_confirmed_at);
+              console.log('User metadata:', data.session.user.user_metadata);
+              
+              // For OAuth users, we need to ensure they have a proper profile
+              // The AuthProvider will handle creating the profile if it doesn't exist
+              // Wait a moment for the auth state to update, then redirect
+              setTimeout(() => {
+                window.location.href = '/home';
+              }, 1000);
+              return;
+            } else {
+              setError('No session data received');
+              setTimeout(() => {
+                router.push('/login?error=No session data received');
+              }, 2000);
+              return;
+            }
+          } catch (sessionError) {
+            console.error('Session error:', sessionError);
+            setError(`Session error: ${sessionError instanceof Error ? sessionError.message : 'Unknown error'}`);
             setTimeout(() => {
-              window.location.href = '/home';
-            }, 100);
+              router.push('/login?error=Session error');
+            }, 2000);
             return;
           }
         }
         
         // Check if we have a session already (user might be already authenticated)
+        setStatus('Checking existing session...');
         const { data, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Auth callback error:', error);
-          router.push('/login?error=' + encodeURIComponent(error.message));
+          setError(`Auth error: ${error.message}`);
+          setTimeout(() => {
+            router.push('/login?error=' + encodeURIComponent(error.message));
+          }, 2000);
           return;
         }
 
         if (data.session) {
+          setStatus('User already authenticated, redirecting...');
           console.log('User already authenticated:', data.session.user);
           // Redirect to home immediately with cache busting
-          window.location.href = '/home';
+          setTimeout(() => {
+            window.location.href = '/home';
+          }, 1000);
         } else {
+          setStatus('No session found, redirecting to login...');
           console.log('No session found, redirecting to login');
-          window.location.href = '/login';
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 1000);
         }
       } catch (error) {
         console.error('Unexpected error:', error);
-        router.push('/login?error=An unexpected error occurred');
+        setError(`Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setTimeout(() => {
+          router.push('/login?error=An unexpected error occurred');
+        }, 2000);
       }
     };
 
@@ -83,10 +129,17 @@ export default function AuthCallback() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
+      <div className="text-center max-w-md mx-auto p-6">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-        <p className="text-gray-600">Completing sign in...</p>
-        <p className="text-sm text-gray-500 mt-2">If this takes too long, <a href="/home" className="text-blue-600 underline">click here</a></p>
+        <p className="text-gray-600 mb-2">{status}</p>
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
+        <p className="text-sm text-gray-500 mt-2">
+          If this takes too long, <a href="/home" className="text-blue-600 underline">click here</a>
+        </p>
       </div>
     </div>
   );
