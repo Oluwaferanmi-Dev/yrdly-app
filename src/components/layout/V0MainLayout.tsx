@@ -5,7 +5,17 @@ import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Home, Users, ShoppingCart, Calendar, Briefcase, Search, Map, MessageCircle, Bell } from "lucide-react";
+import { 
+  HomeIcon, 
+  UsersIcon, 
+  ShoppingCartIcon, 
+  CalendarIcon, 
+  BriefcaseIcon, 
+  MagnifyingGlassIcon, 
+  MapIcon, 
+  ChatBubbleLeftRightIcon, 
+  BellIcon 
+} from "@heroicons/react/24/outline";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Suspense } from "react";
 import { useAuth } from "@/hooks/use-supabase-auth";
@@ -95,6 +105,8 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
           .from('conversations')
           .select(`
             id,
+            type,
+            participant_ids,
             messages(
               id,
               sender_id,
@@ -102,24 +114,97 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
               read_by
             )
           `)
-          .contains('participant_ids', [user.id.toString()]);
+          .contains('participant_ids', [user.id]);
 
         if (conversationsError) {
           console.error('Error fetching conversations for unread count:', conversationsError);
           return;
         }
 
-        // Calculate total unread messages across all conversations
-        let totalUnread = 0;
-        (conversationsData || []).forEach(conv => {
-          const unreadInConv = conv.messages?.filter((msg: any) => 
-            msg.sender_id !== user.id && 
-            (!msg.is_read || !msg.read_by?.includes(user.id.toString()))
-          ).length || 0;
-          totalUnread += unreadInConv;
-        });
+        // Calculate number of chats with unread messages (not total message count)
+        let unreadChatsCount = 0;
+        
+        // Process each conversation
+        for (const conv of (conversationsData || [])) {
+          let hasUnreadMessages = false;
+          
+          // For marketplace conversations, check chat_messages table
+          if (conv.type === 'marketplace') {
+            console.log(`Processing marketplace conversation: ${conv.id}, type: ${conv.type}`);
+            const { data: chatMessages, error: chatMessagesError } = await supabase
+              .from('chat_messages')
+              .select('sender_id, created_at')
+              .eq('chat_id', conv.id)
+              .order('created_at', { ascending: true });
 
-        setUnreadMessagesCount(totalUnread);
+            if (chatMessagesError) {
+              console.error('Error fetching chat messages for global count:', chatMessagesError);
+              continue;
+            }
+
+            console.log(`Marketplace conversation ${conv.id}:`, {
+              chatMessagesCount: chatMessages?.length || 0,
+              chatMessages: chatMessages,
+              conversationType: conv.type,
+              participantIds: conv.participant_ids
+            });
+
+            // If no messages exist, consider the chat as read
+            if (!chatMessages || chatMessages.length === 0) {
+              console.log(`Marketplace conversation ${conv.id} has no messages - considering as read`);
+              continue; // Skip this chat - it's considered read
+            }
+
+            const lastMessage = chatMessages?.[chatMessages.length - 1];
+            const lastMessageSentByUser = lastMessage?.sender_id === user.id;
+            
+            console.log(`Last message from user: ${lastMessageSentByUser}, sender_id: ${lastMessage?.sender_id}, user_id: ${user.id}`);
+            
+            // If the user sent the last message, the chat should be considered read
+            if (lastMessageSentByUser) {
+              console.log(`Skipping marketplace conversation ${conv.id} - user sent last message`);
+              continue; // Skip this chat - it's considered read
+            }
+            
+            // For marketplace conversations, since chat_messages doesn't have is_read column,
+            // we'll check if there are any messages from other users
+            hasUnreadMessages = chatMessages?.some((msg: any) => 
+              msg.sender_id !== user.id
+            ) || false;
+            
+            console.log(`Marketplace conversation ${conv.id} has unread messages: ${hasUnreadMessages}`);
+          } else {
+            // For other conversation types, use the existing logic
+            const lastMessage = conv.messages?.[conv.messages.length - 1];
+            const lastMessageSentByUser = lastMessage?.sender_id === user.id;
+            
+            // If the user sent the last message, the chat should be considered read
+            if (lastMessageSentByUser) {
+              continue; // Skip this chat - it's considered read
+            }
+            
+            // Otherwise, check if there are unread messages from other users
+            hasUnreadMessages = conv.messages?.some((msg: any) => 
+              msg.sender_id !== user.id && 
+              (!msg.is_read || !msg.read_by?.includes(user.id))
+            ) || false;
+          }
+          
+          if (hasUnreadMessages) {
+            unreadChatsCount++;
+          }
+        }
+
+        console.log('Global unread chats count:', unreadChatsCount);
+        console.log('Total conversations processed:', conversationsData?.length || 0);
+        console.log('Conversation types:', conversationsData?.map(c => ({ id: c.id, type: c.type, participant_ids: c.participant_ids })));
+        
+        // Debug: Check if any conversations are marketplace type
+        const marketplaceConversations = conversationsData?.filter(c => c.type === 'marketplace') || [];
+        console.log('Marketplace conversations found:', marketplaceConversations.length);
+        console.log('Marketplace conversation details:', marketplaceConversations);
+        
+        setUnreadMessagesCount(unreadChatsCount);
       } catch (error) {
         console.error('Error fetching unread messages count:', error);
       }
@@ -134,7 +219,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
         event: '*', 
         schema: 'public', 
         table: 'conversations',
-        filter: `participant_ids.cs.{${user.id.toString()}}`
+        filter: `participant_ids.cs.{${user.id}}`
       }, () => {
         // Refetch count when conversations change
         fetchUnreadMessagesCount();
@@ -181,17 +266,17 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
                       className="text-muted-foreground hover:text-foreground p-2"
                       onClick={() => setShowSearch(true)}
                     >
-                      <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <MagnifyingGlassIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </Button>
                   )}
                   <Link href="/map">
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground p-2">
-                      <Map className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <MapIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </Button>
                   </Link>
                   <Link href="/messages">
                     <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground relative p-2">
-                      <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <ChatBubbleLeftRightIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                       {unreadMessagesCount > 0 && (
                         <div className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center">
                           <span className="text-xs text-white font-bold leading-none">
@@ -207,7 +292,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
                     className="text-muted-foreground hover:text-foreground relative p-2"
                     onClick={() => setShowNotifications(!showNotifications)}
                   >
-                    <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <BellIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     {unreadCount > 0 && (
                       <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></div>
                     )}
@@ -254,7 +339,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
                     size="sm"
                     className={`flex flex-col gap-1 w-full py-2 ${pathname === "/" ? "text-primary" : "text-muted-foreground"}`}
                   >
-                    <Home className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <HomeIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="text-xs">Home</span>
                   </Button>
                 </Link>
@@ -264,7 +349,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
                     size="sm"
                     className={`flex flex-col gap-1 w-full py-2 ${pathname === "/neighbors" ? "text-primary" : "text-muted-foreground"}`}
                   >
-                    <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <UsersIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="text-xs">Community</span>
                   </Button>
                 </Link>
@@ -274,7 +359,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
                     size="sm"
                     className={`flex flex-col gap-1 w-full py-2 ${pathname === "/marketplace" ? "text-primary" : "text-muted-foreground"}`}
                   >
-                    <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <ShoppingCartIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="text-xs">Market</span>
                   </Button>
                 </Link>
@@ -284,7 +369,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
                     size="sm"
                     className={`flex flex-col gap-1 w-full py-2 ${pathname === "/events" ? "text-primary" : "text-muted-foreground"}`}
                   >
-                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="text-xs">Events</span>
                   </Button>
                 </Link>
@@ -294,7 +379,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
                     size="sm"
                     className={`flex flex-col gap-1 w-full py-2 ${pathname === "/businesses" ? "text-primary" : "text-muted-foreground"}`}
                   >
-                    <Briefcase className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <BriefcaseIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="text-xs">Businesses</span>
                   </Button>
                 </Link>

@@ -125,7 +125,8 @@ export function useOffline() {
           timestamp: new Date().toISOString(),
           is_offline_sent: true,
           synced_at: new Date().toISOString(),
-          status: 'pending_sync'
+          status: 'pending_sync',
+          is_read: true // Mark as read for the sender
         })
         .select('id')
         .single();

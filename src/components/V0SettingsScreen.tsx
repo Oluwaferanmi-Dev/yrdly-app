@@ -7,23 +7,24 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  ArrowLeft,
-  User,
-  Bell,
-  MapPin,
-  HelpCircle,
-  LogOut,
-  ChevronRight,
-  Moon,
-  Globe,
-  Lock,
-  Eye,
-  MessageCircle,
-  Calendar,
-  ShoppingCart,
-} from "lucide-react";
+  ArrowLeftIcon,
+  UserIcon,
+  BellIcon,
+  MapPinIcon,
+  QuestionMarkCircleIcon,
+  ArrowRightOnRectangleIcon,
+  ChevronRightIcon,
+  MoonIcon,
+  GlobeAltIcon,
+  LockClosedIcon,
+  EyeIcon,
+  ChatBubbleLeftRightIcon,
+  CalendarIcon,
+  ShoppingCartIcon,
+} from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useTheme } from "@/components/ThemeProvider";
+import { TawkChat } from "@/components/TawkChat";
 
 interface V0SettingsScreenProps {
   onBack?: () => void;
@@ -34,13 +35,6 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
   const { theme, setTheme } = useTheme();
   const { user, profile, signOut } = useAuth();
 
-  const [notifications, setNotifications] = useState({
-    messages: true,
-    events: true,
-    marketplace: false,
-    community: true,
-    businesses: false,
-  });
 
   const [privacy, setPrivacy] = useState({
     profileVisible: true,
@@ -90,7 +84,7 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={handleBack} className="p-0">
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeftIcon className="w-5 h-5" />
         </Button>
         <h2 className="text-2xl font-bold text-foreground">Settings</h2>
       </div>
@@ -115,7 +109,7 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
             </p>
           </div>
           <Button variant="ghost" size="sm" className="flex-shrink-0" onClick={handleEditProfile}>
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRightIcon className="w-5 h-5" />
           </Button>
         </div>
       </Card>
@@ -127,74 +121,24 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
         <Card className="yrdly-shadow">
           <Button variant="ghost" className="w-full justify-between p-4 h-auto" onClick={handleEditProfile}>
             <div className="flex items-center gap-3">
-              <User className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <UserIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <span className="text-foreground">Edit Profile</span>
             </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <ChevronRightIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
           </Button>
         </Card>
 
         <Card className="yrdly-shadow">
           <Button variant="ghost" className="w-full justify-between p-4 h-auto" onClick={handleLocationSettings}>
             <div className="flex items-center gap-3">
-              <MapPin className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <MapPinIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <span className="text-foreground">Location Settings</span>
             </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <ChevronRightIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
           </Button>
         </Card>
       </div>
 
-      {/* Notifications */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-foreground">Notifications</h3>
-
-        <Card className="p-4 space-y-4 yrdly-shadow">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <MessageCircle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground">Messages</span>
-            </div>
-            <Switch
-              checked={notifications.messages}
-              onCheckedChange={(checked) => setNotifications({ ...notifications, messages: checked })}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <Calendar className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground">Events</span>
-            </div>
-            <Switch
-              checked={notifications.events}
-              onCheckedChange={(checked) => setNotifications({ ...notifications, events: checked })}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <ShoppingCart className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground">Marketplace</span>
-            </div>
-            <Switch
-              checked={notifications.marketplace}
-              onCheckedChange={(checked) => setNotifications({ ...notifications, marketplace: checked })}
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <Bell className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground">Community Updates</span>
-            </div>
-            <Switch
-              checked={notifications.community}
-              onCheckedChange={(checked) => setNotifications({ ...notifications, community: checked })}
-            />
-          </div>
-        </Card>
-      </div>
 
       {/* Privacy & Security */}
       <div className="space-y-4">
@@ -203,7 +147,7 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
         <Card className="p-4 space-y-4 yrdly-shadow">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <Eye className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <EyeIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <span className="text-foreground">Profile Visible</span>
             </div>
             <Switch
@@ -215,7 +159,7 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
 
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <MapPin className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <MapPinIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <span className="text-foreground">Share Location</span>
             </div>
             <Switch
@@ -227,7 +171,7 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
 
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <Globe className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <GlobeAltIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <span className="text-foreground">Online Status</span>
             </div>
             <Switch
@@ -246,7 +190,7 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
         <Card className="p-4 space-y-4 yrdly-shadow">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <Moon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <MoonIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <span className="text-foreground">Dark Mode</span>
             </div>
             <Switch
@@ -275,10 +219,10 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
             onClick={() => router.push('/settings/notifications')}
           >
             <div className="flex items-center gap-3">
-              <Bell className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <BellIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <span className="text-foreground">Notification Settings</span>
             </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <ChevronRightIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
           </Button>
         </Card>
       </div>
@@ -290,11 +234,26 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
         <Card className="yrdly-shadow">
           <Button variant="ghost" className="w-full justify-between p-4 h-auto" onClick={handleHelp}>
             <div className="flex items-center gap-3">
-              <HelpCircle className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <QuestionMarkCircleIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               <span className="text-foreground">Help & Support</span>
             </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+            <ChevronRightIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
           </Button>
+        </Card>
+      </div>
+
+      {/* Live Chat Support */}
+      <div className="space-y-4">
+        <h3 className="font-semibold text-foreground">Live Chat</h3>
+        <Card className="yrdly-shadow p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <ChatBubbleLeftRightIcon className="w-5 h-5 text-primary" />
+            <span className="text-foreground font-medium">Need immediate help?</span>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Chat with our support team in real-time. We&apos;re here to help you with any questions or issues.
+          </p>
+          <TawkChat />
         </Card>
       </div>
 
@@ -306,7 +265,7 @@ export function V0SettingsScreen({ onBack }: V0SettingsScreenProps) {
             className="w-full justify-start p-4 h-auto text-red-600 hover:text-red-600 hover:bg-red-50"
             onClick={handleLogout}
           >
-            <LogOut className="w-5 h-5 mr-3" />
+            <ArrowRightOnRectangleIcon className="w-5 h-5 mr-3" />
             Logout
           </Button>
         </Card>

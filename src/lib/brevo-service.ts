@@ -6,12 +6,43 @@ apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BR
 
 export class BrevoEmailService {
   /**
-   * Send email verification email using Brevo with Firebase fallback
+   * Check if Brevo is properly configured
+   */
+  static isConfigured(): boolean {
+    return !!(
+      process.env.BREVO_API_KEY && 
+      process.env.BREVO_API_KEY !== 'your_brevo_api_key_here' &&
+      process.env.BREVO_FROM_EMAIL
+    );
+  }
+
+  /**
+   * Get configuration status for debugging
+   */
+  static getConfigurationStatus() {
+    return {
+      hasApiKey: !!(process.env.BREVO_API_KEY && process.env.BREVO_API_KEY !== 'your_brevo_api_key_here'),
+      hasFromEmail: !!process.env.BREVO_FROM_EMAIL,
+      isFullyConfigured: this.isConfigured()
+    };
+  }
+
+  /**
+   * Generate a manual verification link as fallback
+   */
+  static generateManualVerificationLink(userId: string, email: string): string {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yrdly-app.vercel.app';
+    return `${baseUrl}/onboarding/verify-email?token=${userId}&email=${encodeURIComponent(email)}`;
+  }
+
+  /**
+   * Send email verification email using Brevo with better error handling
    */
   static async sendVerificationEmail(email: string, verificationLink: string, userName?: string) {
-    // Check if Brevo API key is configured
-    if (!process.env.BREVO_API_KEY || process.env.BREVO_API_KEY === 'your_brevo_api_key_here') {
-      console.warn('Brevo API key not configured, falling back to Firebase email verification');
+    // Check if Brevo is properly configured
+    if (!this.isConfigured()) {
+      const configStatus = this.getConfigurationStatus();
+      console.warn('Brevo not properly configured:', configStatus);
       throw new Error('BREVO_NOT_CONFIGURED');
     }
 
@@ -43,9 +74,21 @@ export class BrevoEmailService {
       const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
       console.log('Verification email sent successfully via Brevo:', result);
       return result;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending verification email via Brevo:', error);
-      throw new Error('BREVO_SEND_FAILED');
+      
+      // Provide more specific error messages based on the error type
+      if (error.status === 401) {
+        throw new Error('BREVO_AUTH_FAILED');
+      } else if (error.status === 400) {
+        throw new Error('BREVO_INVALID_REQUEST');
+      } else if (error.status === 429) {
+        throw new Error('BREVO_RATE_LIMITED');
+      } else if (error.status >= 500) {
+        throw new Error('BREVO_SERVER_ERROR');
+      } else {
+        throw new Error('BREVO_SEND_FAILED');
+      }
     }
   }
 

@@ -21,10 +21,10 @@ import {
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import Image from "next/image";
 import type { Post as PostType } from "@/types";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { formatDistanceToNowStrict } from 'date-fns';
-import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import { useHaptics } from "@/hooks/use-haptics";
 
@@ -78,9 +78,11 @@ function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPL
       {/* Event Image */}
       {(event.image_url || (event.image_urls && event.image_urls.length > 0)) && (
         <div className="mb-4">
-          <img
+          <Image
             src={event.image_url || event.image_urls?.[0] || "/placeholder.svg"}
             alt={event.title || "Event image"}
+            width={400}
+            height={192}
             className="w-full h-48 object-cover rounded-lg"
           />
         </div>
@@ -557,11 +559,11 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
       {/* Floating Create Button */}
       <div className="fixed bottom-20 right-4 z-50">
         <CreateEventDialog>
-          <Button 
+          <Button
             size="lg" 
-            className="rounded-full w-14 h-14 bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow-lg"
+            className="rounded-full h-14 w-14 shadow-lg yrdly-gradient p-0"
           >
-            <Plus className="w-6 h-6" />
+            <Plus className="h-6 w-6" />
           </Button>
         </CreateEventDialog>
       </div>

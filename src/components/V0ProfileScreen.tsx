@@ -19,6 +19,7 @@ import {
   ShoppingBag,
   Briefcase,
   CalendarDays,
+  Clock,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
@@ -27,6 +28,7 @@ import { useRouter } from "next/navigation";
 import type { User, Post } from "@/types";
 import { FriendsList } from "./FriendsList";
 import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
 
 interface V0ProfileScreenProps {
   onBack?: () => void;
@@ -42,6 +44,9 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
   const { toast } = useToast();
   const [profileData, setProfileData] = useState<User | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [userItems, setUserItems] = useState<any[]>([]);
+  const [userBusinesses, setUserBusinesses] = useState<any[]>([]);
+  const [userEvents, setUserEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFriendsList, setShowFriendsList] = useState(false);
   const [isFriend, setIsFriend] = useState(false);
@@ -64,10 +69,10 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
 
     const fetchProfileData = async () => {
       try {
-        // Fetch user profile data
+        // Fetch user profile data including friends
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('*')
+          .select('*, friends')
           .eq('id', targetUser.id)
           .single();
 
@@ -92,11 +97,55 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
           setUserPosts(postsData || []);
         }
 
+        // Fetch user items (marketplace items)
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('user_id', targetUser.id)
+          .eq('category', 'For Sale')
+          .order('timestamp', { ascending: false })
+          .limit(10);
+
+        if (itemsError) {
+          console.error('Error fetching items:', itemsError);
+        } else {
+          setUserItems(itemsData || []);
+        }
+
+        // Fetch user businesses
+        const { data: businessesData, error: businessesError } = await supabase
+          .from('businesses')
+          .select('*')
+          .eq('owner_id', targetUser.id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (businessesError) {
+          console.error('Error fetching businesses:', businessesError);
+        } else {
+          setUserBusinesses(businessesData || []);
+        }
+
+        // Fetch user events
+        const { data: eventsData, error: eventsError } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('user_id', targetUser.id)
+          .eq('category', 'Event')
+          .order('timestamp', { ascending: false })
+          .limit(10);
+
+        if (eventsError) {
+          console.error('Error fetching events:', eventsError);
+        } else {
+          setUserEvents(eventsData || []);
+        }
+
         // Calculate stats with real data
-        const friendsCount = targetProfile?.friends?.length || 0;
+        const friendsCount = userData?.friends?.length || 0;
         
         // Count events created by this user
-        const { data: eventsData } = await supabase
+        const { data: eventsCountData } = await supabase
           .from('posts')
           .select('id')
           .eq('user_id', targetUser?.id)
@@ -104,7 +153,7 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
         
         setStats({
           friends: friendsCount,
-          events: eventsData?.length || 0,
+          events: eventsCountData?.length || 0,
         });
 
         setLoading(false);
@@ -384,10 +433,6 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
                 <Edit className="w-4 h-4 mr-2" />
                 Edit Profile
               </Button>
-              <Button variant="outline" className="border-border bg-transparent">
-                <Share className="w-4 h-4 mr-2" />
-                Share
-              </Button>
             </div>
           ) : (
             <div className="flex items-center gap-4">
@@ -478,78 +523,420 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
 
       {isOwnProfile && (
         <Tabs defaultValue="posts" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-card border border-border">
+          <TabsList className="grid w-full grid-cols-4 bg-muted/30 border border-border rounded-lg p-1">
             <TabsTrigger
               value="posts"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center justify-center text-center px-3 py-2 rounded-md transition-all duration-200 hover:bg-muted/50 data-[state=active]:rounded-md"
             >
-              <Heart className="w-4 h-4 mr-1" />
-              Posts
+              <Heart className="w-4 h-4 mr-2" />
+              <span className="font-medium">Posts</span>
+              {userPosts.length > 0 && (
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  {userPosts.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger
               value="items"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center justify-center text-center px-3 py-2 rounded-md transition-all duration-200 hover:bg-muted/50 data-[state=active]:rounded-md"
             >
-              <ShoppingBag className="w-4 h-4 mr-1" />
-              Items
+              <ShoppingBag className="w-4 h-4 mr-2" />
+              <span className="font-medium">Items</span>
+              {userItems.length > 0 && (
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  {userItems.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger
               value="businesses"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center justify-center text-center px-3 py-2 rounded-md transition-all duration-200 hover:bg-muted/50 data-[state=active]:rounded-md"
             >
-              <Briefcase className="w-4 h-4 mr-1" />
-              Business
+              <Briefcase className="w-4 h-4 mr-2" />
+              <span className="font-medium">Business</span>
+              {userBusinesses.length > 0 && (
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  {userBusinesses.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger
               value="events"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center justify-center text-center px-3 py-2 rounded-md transition-all duration-200 hover:bg-muted/50 data-[state=active]:rounded-md"
             >
-              <CalendarDays className="w-4 h-4 mr-1" />
-              Events
+              <CalendarDays className="w-4 h-4 mr-2" />
+              <span className="font-medium">Events</span>
+              {userEvents.length > 0 && (
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  {userEvents.length}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="posts" className="space-y-3 mt-4">
+          <TabsContent value="posts" className="mt-6">
             {userPosts.length > 0 ? (
-              userPosts.map((post) => (
-                <Card key={post.id} className="p-4 yrdly-shadow">
-                  <p className="text-foreground mb-2">{post.text || post.title || "No content"}</p>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Heart className="w-4 h-4" />
-                      {post.liked_by?.length || 0}
-                    </span>
-                    <span>{new Date(post.timestamp).toLocaleDateString()}</span>
-                  </div>
-                </Card>
-              ))
-            ) : (
-              <div className="text-center py-8">
-                <Heart className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
-                <p className="text-muted-foreground">No posts yet</p>
+              <div className="grid gap-4">
+                {userPosts.map((post) => (
+                  <Card key={post.id} className="p-5 yrdly-shadow hover:shadow-lg transition-shadow duration-200">
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-semibold text-foreground text-base mb-2 line-clamp-2">
+                            {post.text || post.title || "No content"}
+                          </h4>
+                          {post.image_url && (
+                            <div className="mt-3 rounded-lg overflow-hidden">
+                              <Image 
+                                src={post.image_url} 
+                                alt={post.text || post.title || "Post image"}
+                                width={400}
+                                height={200}
+                                className="w-full h-48 object-cover"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-3 border-t border-border">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50">
+                            <Heart className="w-4 h-4 text-red-500" />
+                            <span className="font-medium">{post.liked_by?.length || 0}</span>
+                          </span>
+                          <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50">
+                            <MessageCircle className="w-4 h-4 text-blue-500" />
+                            <span className="font-medium">{post.comment_count || 0}</span>
+                          </span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(post.timestamp).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
+            ) : (
+              <Card className="p-8 yrdly-shadow">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto bg-muted/30 rounded-full flex items-center justify-center">
+                    <Heart className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">No posts yet</h3>
+                    <p className="text-sm text-muted-foreground">Share your thoughts and experiences with the community</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => router.push('/home')}
+                  >
+                    <Heart className="w-4 h-4 mr-2" />
+                    Create your first post
+                  </Button>
+                </div>
+              </Card>
             )}
           </TabsContent>
 
-          <TabsContent value="items" className="space-y-3 mt-4">
-            <div className="text-center py-8">
-              <ShoppingBag className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
-              <p className="text-muted-foreground">No items for sale yet</p>
-            </div>
+          <TabsContent value="items" className="mt-6">
+            {userItems.length > 0 ? (
+              <div className="grid gap-4">
+                {userItems.map((item) => (
+                  <Card key={item.id} className="p-5 yrdly-shadow hover:shadow-lg transition-shadow duration-200">
+                    <div className="flex items-start gap-4">
+                      {item.image_urls && item.image_urls.length > 0 ? (
+                        <div className="relative">
+                          <Image 
+                            src={item.image_urls[0]} 
+                            alt={item.text || item.title}
+                            width={80}
+                            height={80}
+                            className="w-20 h-20 object-cover rounded-xl flex-shrink-0"
+                          />
+                          <Badge className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs px-2 py-1">
+                            For Sale
+                          </Badge>
+                        </div>
+                      ) : (
+                        <div className="w-20 h-20 bg-muted/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <ShoppingBag className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-semibold text-foreground text-base line-clamp-1">
+                            {item.text || item.title || "Untitled Item"}
+                          </h4>
+                          {item.price && (
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-green-600">₦{item.price.toLocaleString()}</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {item.description || "No description available"}
+                        </p>
+                        
+                        <div className="flex items-center justify-between pt-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {item.category || 'General'}
+                            </Badge>
+                            {item.condition && (
+                              <Badge variant="secondary" className="text-xs">
+                                {item.condition}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(item.timestamp).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="p-8 yrdly-shadow">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto bg-muted/30 rounded-full flex items-center justify-center">
+                    <ShoppingBag className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">No items for sale yet</h3>
+                    <p className="text-sm text-muted-foreground">Start selling items in your neighborhood</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => router.push('/marketplace')}
+                  >
+                    <ShoppingBag className="w-4 h-4 mr-2" />
+                    List your first item
+                  </Button>
+                </div>
+              </Card>
+            )}
           </TabsContent>
 
-          <TabsContent value="businesses" className="space-y-3 mt-4">
-            <div className="text-center py-8">
-              <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
-              <p className="text-muted-foreground">No businesses yet</p>
-            </div>
+          <TabsContent value="businesses" className="mt-6">
+            {userBusinesses.length > 0 ? (
+              <div className="grid gap-4">
+                {userBusinesses.map((business) => (
+                  <Card key={business.id} className="p-5 yrdly-shadow hover:shadow-lg transition-shadow duration-200">
+                    <div className="flex items-start gap-4">
+                      {business.image_urls && business.image_urls.length > 0 ? (
+                        <div className="relative">
+                          <Image 
+                            src={business.image_urls[0]} 
+                            alt={business.name}
+                            width={80}
+                            height={80}
+                            className="w-20 h-20 object-cover rounded-xl flex-shrink-0"
+                          />
+                          <Badge className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs px-2 py-1">
+                            Business
+                          </Badge>
+                        </div>
+                      ) : (
+                        <div className="w-20 h-20 bg-muted/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <Briefcase className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-semibold text-foreground text-base line-clamp-1">
+                            {business.name}
+                          </h4>
+                          {business.rating && (
+                            <div className="flex items-center gap-1 text-sm">
+                              <span className="text-yellow-500">★</span>
+                              <span className="font-medium">{business.rating}</span>
+                              <span className="text-muted-foreground">({business.review_count || 0})</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {business.description || "No description available"}
+                        </p>
+                        
+                        <div className="flex items-center justify-between pt-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {business.category || 'General'}
+                            </Badge>
+                            {business.location && (
+                              <Badge variant="secondary" className="text-xs">
+                                📍 {business.location}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(business.created_at).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="p-8 yrdly-shadow">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto bg-muted/30 rounded-full flex items-center justify-center">
+                    <Briefcase className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">No businesses yet</h3>
+                    <p className="text-sm text-muted-foreground">Create a business profile to reach more customers</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => router.push('/businesses')}
+                  >
+                    <Briefcase className="w-4 h-4 mr-2" />
+                    Create your business
+                  </Button>
+                </div>
+              </Card>
+            )}
           </TabsContent>
 
-          <TabsContent value="events" className="space-y-3 mt-4">
-            <div className="text-center py-8">
-              <CalendarDays className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
-              <p className="text-muted-foreground">No events posted yet</p>
-            </div>
+          <TabsContent value="events" className="mt-6">
+            {userEvents.length > 0 ? (
+              <div className="grid gap-4">
+                {userEvents.map((event) => (
+                  <Card key={event.id} className="p-5 yrdly-shadow hover:shadow-lg transition-shadow duration-200">
+                    <div className="flex items-start gap-4">
+                      {event.image_urls && event.image_urls.length > 0 ? (
+                        <div className="relative">
+                          <Image 
+                            src={event.image_urls[0]} 
+                            alt={event.text || event.title}
+                            width={80}
+                            height={80}
+                            className="w-20 h-20 object-cover rounded-xl flex-shrink-0"
+                          />
+                          <Badge className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs px-2 py-1">
+                            Event
+                          </Badge>
+                        </div>
+                      ) : (
+                        <div className="w-20 h-20 bg-muted/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <CalendarDays className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-semibold text-foreground text-base line-clamp-1">
+                            {event.text || event.title || "Untitled Event"}
+                          </h4>
+                          {event.event_date && (
+                            <div className="text-right">
+                              <p className="text-sm font-medium text-primary">
+                                {new Date(event.event_date).toLocaleDateString('en-US', { 
+                                  month: 'short', 
+                                  day: 'numeric'
+                                })}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {event.description || "No description available"}
+                        </p>
+                        
+                        <div className="space-y-1">
+                          {event.event_date && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Calendar className="w-3 h-3" />
+                              <span>{new Date(event.event_date).toLocaleDateString('en-US', { 
+                                weekday: 'long',
+                                month: 'long', 
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}</span>
+                            </div>
+                          )}
+                          {event.event_time && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              <span>{event.event_time}</span>
+                            </div>
+                          )}
+                          {event.location && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <MapPin className="w-3 h-3" />
+                              <span className="line-clamp-1">{event.location}</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center justify-between pt-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {event.category || 'General'}
+                            </Badge>
+                            {event.attendees && event.attendees.length > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                👥 {event.attendees.length} attending
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            Posted {new Date(event.timestamp).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="p-8 yrdly-shadow">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto bg-muted/30 rounded-full flex items-center justify-center">
+                    <CalendarDays className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground mb-2">No events posted yet</h3>
+                    <p className="text-sm text-muted-foreground">Create events to bring your community together</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4"
+                    onClick={() => router.push('/events')}
+                  >
+                    <CalendarDays className="w-4 h-4 mr-2" />
+                    Create your first event
+                  </Button>
+                </div>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       )}

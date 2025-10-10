@@ -9,6 +9,7 @@ import type { Business, CatalogItem, BusinessMessage } from "@/types";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
+import Image from "next/image";
 
 interface V0BusinessChatScreenProps {
   business: Business;
@@ -126,7 +127,7 @@ export function V0BusinessChatScreen({ business, item, onBack }: V0BusinessChatS
       sender_avatar: user.user_metadata?.avatar_url,
       content: message,
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      is_read: false,
+      is_read: true, // Mark as read for the sender
       item_id: item?.id,
       created_at: new Date().toISOString()
     };
@@ -143,7 +144,7 @@ export function V0BusinessChatScreen({ business, item, onBack }: V0BusinessChatS
           sender_id: user.id,
           content: message,
           item_id: item?.id || null,
-          is_read: false
+          is_read: true // Mark as read for the sender
         });
 
       if (error) {
@@ -154,7 +155,7 @@ export function V0BusinessChatScreen({ business, item, onBack }: V0BusinessChatS
         await supabase
           .from('conversations')
           .update({
-            last_message: message,
+            last_message_text: message,
             last_message_timestamp: new Date().toISOString(),
             updated_at: new Date().toISOString()
           })
@@ -193,9 +194,11 @@ export function V0BusinessChatScreen({ business, item, onBack }: V0BusinessChatS
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
-          <img 
+          <Image 
             src={business.logo || business.owner_avatar || "/placeholder.svg"} 
             alt={business.name} 
+            width={40}
+            height={40}
             className="w-full h-full object-cover" 
           />
         </div>
@@ -215,9 +218,11 @@ export function V0BusinessChatScreen({ business, item, onBack }: V0BusinessChatS
           <Card className="p-3">
             <div className="flex gap-3">
               <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
-                <img
+                <Image
                   src={item.images[0] || "/placeholder.svg"}
                   alt={item.title}
+                  width={64}
+                  height={64}
                   className="w-full h-full object-cover"
                 />
               </div>

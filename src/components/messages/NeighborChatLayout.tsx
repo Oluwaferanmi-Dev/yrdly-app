@@ -83,9 +83,23 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
 
         // Calculate unread count for each conversation
         const conversationsWithUnreadCount = (data || []).map(conv => {
+          // Check if the last message was sent by the current user
+          // Messages are ordered by created_at ascending, so last message is at the end
+          const lastMessage = conv.messages?.[conv.messages.length - 1];
+          const lastMessageSentByUser = lastMessage?.sender_id === user.id;
+          
+          // If the user sent the last message, the chat should be considered read
+          if (lastMessageSentByUser) {
+            return {
+              ...conv,
+              unread_count: 0
+            };
+          }
+          
+          // Otherwise, count unread messages from other users
           const unreadCount = conv.messages?.filter((msg: any) => 
             msg.sender_id !== user.id && 
-            (!msg.is_read || !msg.read_by?.includes(user.id.toString()))
+            (!msg.is_read || !msg.read_by?.includes(user.id))
           ).length || 0;
           
           return {
@@ -290,7 +304,8 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
           text: newMessage.trim(),
           image_url: imageUrl,
           timestamp: new Date().toISOString(),
-          is_read: false,
+          is_read: true, // Mark as read for the sender
+          read_by: [user.id], // Add sender to read_by array
         })
         .select()
         .single();

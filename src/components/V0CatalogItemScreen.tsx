@@ -8,6 +8,7 @@ import { ArrowLeft, Star, MapPin, Clock, Phone, MessageCircle, Share2, Heart, Sh
 import type { Business, CatalogItem } from "@/types";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-supabase-auth";
+import Image from "next/image";
 
 interface V0CatalogItemScreenProps {
   business: Business;
@@ -65,9 +66,11 @@ export function V0CatalogItemScreen({
       {/* Header with item images */}
       <div className="relative">
         <div className="relative h-64 bg-gradient-to-br from-primary/20 to-accent/20 overflow-hidden">
-          <img
+          <Image
             src={item.images[currentImageIndex] || "/placeholder.svg"}
             alt={item.title}
+            width={400}
+            height={256}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />

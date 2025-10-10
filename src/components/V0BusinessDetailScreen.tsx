@@ -10,6 +10,7 @@ import type { Business, CatalogItem } from "@/types";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-supabase-auth";
+import Image from "next/image";
 
 interface V0BusinessDetailScreenProps {
   business: Business;
@@ -111,9 +112,11 @@ export function V0BusinessDetailScreen({
       {/* Header with cover image */}
       <div className="relative">
         <div className="relative h-48 bg-gradient-to-br from-primary/20 to-accent/20 overflow-hidden">
-          <img
+          <Image
             src={business.cover_image || business.image_urls?.[0] || "/placeholder.svg"}
             alt={business.name}
+            width={400}
+            height={192}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -147,9 +150,11 @@ export function V0BusinessDetailScreen({
         {/* Business logo */}
         <div className="absolute -bottom-12 left-4">
           <div className="w-24 h-24 rounded-2xl bg-background border-4 border-background yrdly-shadow-lg overflow-hidden">
-            <img 
+            <Image 
               src={business.logo || business.owner_avatar || "/placeholder.svg"} 
               alt={business.name} 
+              width={96}
+              height={96}
               className="w-full h-full object-cover" 
             />
           </div>
@@ -255,9 +260,11 @@ export function V0BusinessDetailScreen({
                     onClick={() => onViewCatalogItem(item)}
                   >
                     <div className="relative aspect-square bg-muted">
-                      <img
+                      <Image
                         src={item.images[0] || "/placeholder.svg"}
                         alt={item.title}
+                        width={200}
+                        height={200}
                         className="w-full h-full object-cover"
                       />
                       {!item.in_stock && (

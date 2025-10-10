@@ -92,7 +92,7 @@ export function useOnboarding() {
     }
   };
 
-  const skipTour = async () => {
+  const handleSkipTour = async (from: string = 'unknown') => {
     if (!user) throw new Error('No user logged in');
     
     try {
@@ -101,7 +101,7 @@ export function useOnboarding() {
         onboarding_status: 'completed',
         onboarding_completed_at: new Date().toISOString()
       });
-      onboardingAnalytics.trackStepSkip('tour', 'user_skipped', { userId: user.id });
+      onboardingAnalytics.trackStepSkip('tour', `skipped_from_${from}`, { userId: user.id });
       onboardingAnalytics.trackOnboardingComplete(0, { userId: user.id, skipped: true });
     } catch (error: any) {
       console.error('Error skipping tour:', error);
@@ -109,6 +109,9 @@ export function useOnboarding() {
       throw error;
     }
   };
+
+  // Keep the old function for backward compatibility
+  const skipTour = handleSkipTour;
 
   const resetOnboarding = async () => {
     if (!user) throw new Error('No user logged in');
@@ -138,6 +141,7 @@ export function useOnboarding() {
     completeWelcome,
     completeTour,
     skipTour,
+    handleSkipTour,
     resetOnboarding,
     // Helper functions
     isEmailVerified: !!user?.email_confirmed_at,

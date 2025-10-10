@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import type { User } from "@/types";
+import Image from "next/image";
 
 interface Conversation {
   id: string;
@@ -65,7 +66,7 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
               read_by
             )
           `)
-          .contains('participant_ids', [user.id.toString()])
+          .contains('participant_ids', [user.id])
           .order('updated_at', { ascending: false });
 
         if (conversationsError) {
@@ -73,23 +74,93 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
           return;
         }
 
+        console.log('Raw conversations data:', conversationsData);
+        console.log('User ID:', user.id);
+        if (conversationsData && conversationsData.length > 0) {
+          console.log('First conversation fields:', Object.keys(conversationsData[0]));
+          console.log('First conversation last_message fields:', {
+            last_message: conversationsData[0].last_message,
+            last_message_text: conversationsData[0].last_message_text,
+            last_message_timestamp: conversationsData[0].last_message_timestamp
+          });
+        }
+
         // Calculate unread count for each conversation
-        const conversationsWithUnreadCount = (conversationsData || []).map(conv => {
-          const unreadCount = conv.messages?.filter((msg: any) => 
-            msg.sender_id !== user.id && 
-            (!msg.is_read || !msg.read_by?.includes(user.id.toString()))
-          ).length || 0;
-          
-          return {
-            ...conv,
-            unread_count: unreadCount
-          };
-        });
+        const conversationsWithUnreadCount = await Promise.all((conversationsData || []).map(async (conv) => {
+          // For marketplace conversations, we need to check chat_messages table
+          if (conv.type === 'marketplace') {
+            // Get the last message from chat_messages table
+            const { data: chatMessages, error: chatMessagesError } = await supabase
+              .from('chat_messages')
+              .select('sender_id, created_at')
+              .eq('chat_id', conv.id)
+              .order('created_at', { ascending: true });
+
+            if (chatMessagesError) {
+              console.error('Error fetching chat messages:', chatMessagesError);
+              return { ...conv, unread_count: 0 };
+            }
+
+            // If no messages exist, consider the chat as read
+            if (!chatMessages || chatMessages.length === 0) {
+              return {
+                ...conv,
+                unread_count: 0
+              };
+            }
+
+            const lastMessage = chatMessages?.[chatMessages.length - 1];
+            const lastMessageSentByUser = lastMessage?.sender_id === user.id;
+            
+            // If the user sent the last message, the chat should be considered read
+            if (lastMessageSentByUser) {
+              return {
+                ...conv,
+                unread_count: 0
+              };
+            }
+            
+            // For marketplace conversations, since chat_messages doesn't have is_read column,
+            // we'll count all messages from other users as potentially unread
+            // This is a simplified approach - in a real app, you'd want to add read tracking
+            const unreadCount = chatMessages?.filter((msg: any) => 
+              msg.sender_id !== user.id
+            ).length || 0;
+            
+            return {
+              ...conv,
+              unread_count: unreadCount
+            };
+          } else {
+            // For other conversation types, use the existing logic
+            const lastMessage = conv.messages?.[conv.messages.length - 1];
+            const lastMessageSentByUser = lastMessage?.sender_id === user.id;
+            
+            // If the user sent the last message, the chat should be considered read
+            if (lastMessageSentByUser) {
+              return {
+                ...conv,
+                unread_count: 0
+              };
+            }
+            
+            // Otherwise, count unread messages from other users
+            const unreadCount = conv.messages?.filter((msg: any) => 
+              msg.sender_id !== user.id && 
+              (!msg.is_read || !msg.read_by?.includes(user.id))
+            ).length || 0;
+            
+            return {
+              ...conv,
+              unread_count: unreadCount
+            };
+          }
+        }));
 
         // Transform data to match our interface
         const transformedConversations: Conversation[] = conversationsWithUnreadCount.map(conv => {
           // Get the other participant ID
-          const otherParticipantId = conv.participant_ids?.find((id: string) => id !== user.id.toString());
+          const otherParticipantId = conv.participant_ids?.find((id: string) => id !== user.id);
           
           // Handle business conversations differently
           if (conv.type === 'business') {
@@ -99,7 +170,7 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
               participantId: conv.business_id || conv.id,
               participantName: conv.business_name || "Business",
               participantAvatar: conv.business_logo || "/placeholder.svg",
-              lastMessage: conv.last_message || "Start a conversation",
+              lastMessage: conv.last_message_text || conv.last_message || "No messages yet",
               timestamp: new Date(conv.updated_at).toLocaleDateString(),
               unreadCount: conv.unread_count || 0,
               isOnline: false,
@@ -118,7 +189,7 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
               participantId: otherParticipantId || conv.id,
               participantName: "Unknown User", // We'll fetch this separately
               participantAvatar: "/placeholder.svg",
-              lastMessage: conv.last_message || "Start a conversation",
+              lastMessage: conv.last_message_text || conv.last_message || "No messages yet",
               timestamp: new Date(conv.updated_at).toLocaleDateString(),
               unreadCount: conv.unread_count || 0,
               isOnline: false,
@@ -136,7 +207,7 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
             participantId: otherParticipantId || conv.id,
             participantName: "Unknown User", // We'll fetch this separately
             participantAvatar: "/placeholder.svg",
-            lastMessage: conv.last_message || "Start a conversation",
+            lastMessage: conv.last_message_text || conv.last_message || "No messages yet",
             timestamp: new Date(conv.updated_at).toLocaleDateString(),
             unreadCount: conv.unread_count || 0,
             isOnline: false, // You can implement online status later
@@ -145,7 +216,28 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
         });
 
         console.log('Fetched conversations:', transformedConversations);
-        console.log('Conversation types:', transformedConversations.map(c => ({ id: c.id, type: c.type, participantName: c.participantName })));
+        console.log('Conversation types:', transformedConversations.map(c => ({ id: c.id, type: c.type, participantName: c.participantName, unreadCount: c.unreadCount })));
+        
+        // Debug unread counts
+        const totalUnreadMessages = transformedConversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
+        const unreadChats = transformedConversations.filter(conv => conv.unreadCount > 0).length;
+        console.log('Total unread messages across all chats:', totalUnreadMessages);
+        console.log('Number of chats with unread messages:', unreadChats);
+        
+        // Debug each conversation's last message and unread status
+        transformedConversations.forEach(conv => {
+          const conversationData = conversationsData.find(c => c.id === conv.id);
+          const lastMessage = conversationData?.messages?.[conversationData.messages.length - 1]; // Last message in the array
+          console.log(`Chat ${conv.participantName} (${conv.type}):`, {
+            unreadCount: conv.unreadCount,
+            lastMessageSender: lastMessage?.sender_id,
+            isLastMessageFromUser: lastMessage?.sender_id === user.id,
+            totalMessages: conversationData?.messages?.length || 0,
+            lastMessageText: lastMessage?.text || lastMessage?.content,
+            conversationId: conv.id,
+            lastMessageFromDB: conversationData?.last_message_text || conversationData?.last_message
+          });
+        });
         
         setConversations(transformedConversations);
         
@@ -201,7 +293,7 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
         event: '*', 
         schema: 'public', 
         table: 'conversations',
-        filter: `participant_ids.cs.{${user.id.toString()}}`
+        filter: `participant_ids.cs.{${user.id}}`
       }, (payload) => {
         console.log('Conversations realtime change received!', payload);
         fetchConversations(); // Refresh conversations
@@ -403,13 +495,15 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
 
                     {(conversation.type === "marketplace" || conversation.type === "business") && (
                       <div className="flex items-center gap-2 mb-2 p-2 bg-muted/50 rounded-lg">
-                        <img
+                        <Image
                           src={
                             conversation.type === "marketplace" 
                               ? (conversation.context?.itemImage || "/placeholder.svg")
                               : (conversation.context?.businessLogo || "/placeholder.svg")
                           }
                           alt=""
+                          width={40}
+                          height={40}
                           className="w-8 h-8 sm:w-10 sm:h-10 rounded object-cover flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">

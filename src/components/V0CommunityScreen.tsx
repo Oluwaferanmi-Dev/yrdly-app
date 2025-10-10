@@ -25,6 +25,7 @@ import type { Post } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { CommentSection } from "./CommentSection";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import Image from "next/image";
 
 interface V0CommunityScreenProps {
   className?: string;
@@ -341,8 +342,8 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
           <div className="text-xs text-muted-foreground">Neighbors</div>
         </Card>
         <Card className="p-4 text-center yrdly-shadow">
-          <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-2">
-            <TrendingUp className="w-4 h-4 text-accent" />
+          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
+            <TrendingUp className="w-4 h-4 text-green-600" />
           </div>
           <div className="text-lg font-bold text-foreground">{stats.activeToday.toLocaleString()}</div>
           <div className="text-xs text-muted-foreground">Active Today</div>
@@ -471,9 +472,11 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
                 {/* Post Image */}
                 {(post.image_url || (post.image_urls && post.image_urls.length > 0)) && (
                   <div className="mb-3">
-                    <img
+                    <Image
                       src={post.image_url || post.image_urls?.[0] || "/placeholder.svg"}
                       alt={post.title || "Post image"}
+                      width={400}
+                      height={192}
                       className="w-full h-48 object-cover rounded-lg"
                     />
                   </div>

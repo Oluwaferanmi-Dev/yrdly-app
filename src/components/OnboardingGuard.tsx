@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { useAuth } from '@/hooks/use-supabase-auth';
@@ -13,35 +13,47 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
   const { user, profile, loading } = useAuth();
   const { currentStep, isOnboardingComplete } = useOnboarding();
   const router = useRouter();
+  const redirectInitiated = useRef(false);
 
   useEffect(() => {
     // Don't redirect while loading or if user is not logged in
-    if (loading || !user || !profile) return;
+    if (loading || !user || !profile) {
+      redirectInitiated.current = false;
+      return;
+    }
 
     // If onboarding is complete, don't redirect
-    if (isOnboardingComplete) return;
+    if (isOnboardingComplete) {
+      redirectInitiated.current = false;
+      return;
+    }
+
+    // Prevent multiple redirects
+    if (redirectInitiated.current) return;
 
     // Redirect based on current onboarding step
-    switch (currentStep) {
-      case 'email_verification':
-        router.push('/onboarding/verify-email');
-        break;
-      case 'profile_setup':
-        router.push('/onboarding/profile');
-        break;
-      case 'welcome':
-        router.push('/onboarding/welcome');
-        break;
-      case 'tour':
-        router.push('/onboarding/tour');
-        break;
-      case 'signup':
-        router.push('/signup');
-        break;
-      default:
-        // For completed step, redirect to home
-        router.push('/home');
-        break;
+    const redirectPath = (() => {
+      switch (currentStep) {
+        case 'email_verification':
+          return '/onboarding/verify-email';
+        case 'profile_setup':
+          return '/onboarding/profile';
+        case 'welcome':
+          return '/onboarding/welcome';
+        case 'tour':
+          return '/onboarding/tour';
+        case 'signup':
+          return '/signup';
+        default:
+          return '/home';
+      }
+    })();
+
+    // Only redirect if we're not already on the target path
+    if (window.location.pathname !== redirectPath) {
+      redirectInitiated.current = true;
+      console.log(`OnboardingGuard: Redirecting to ${redirectPath} for step ${currentStep}`);
+      router.push(redirectPath);
     }
   }, [currentStep, isOnboardingComplete, user, profile, loading, router]);
 

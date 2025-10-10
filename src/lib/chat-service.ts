@@ -62,7 +62,7 @@ export class ChatService {
       sender_id: senderId,
       sender_name: senderName,
       content,
-      is_read: false,
+      is_read: true, // Mark as read for the sender
       message_type: messageType,
       metadata: metadata || null,
       timestamp: new Date().toISOString()

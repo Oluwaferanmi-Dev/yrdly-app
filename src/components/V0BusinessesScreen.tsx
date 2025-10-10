@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
+import Image from "next/image";
 import type { Business } from "@/types";
 import { CreateBusinessDialog } from "@/components/CreateBusinessDialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -50,7 +51,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { usePosts } from "@/hooks/use-posts";
 import { useToast } from "@/hooks/use-toast";
-import Image from "next/image";
 
 interface V0BusinessesScreenProps {
   className?: string;
@@ -413,9 +413,11 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
         >
           <div className="relative h-32">
             {(filteredBusinesses[0].image_urls && filteredBusinesses[0].image_urls.length > 0) ? (
-              <img
+              <Image
                 src={filteredBusinesses[0].image_urls[0]}
                 alt={filteredBusinesses[0].name}
+                width={400}
+                height={128}
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -526,11 +528,11 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
       {/* Floating Create Button */}
       <div className="fixed bottom-20 right-4 z-50">
         <CreateBusinessDialog>
-          <Button 
+          <Button
             size="lg" 
-            className="rounded-full w-14 h-14 bg-primary text-primary-foreground hover:bg-primary/90 yrdly-shadow-lg"
+            className="rounded-full h-14 w-14 shadow-lg yrdly-gradient p-0"
           >
-            <Plus className="w-6 h-6" />
+            <Plus className="h-6 w-6" />
           </Button>
         </CreateBusinessDialog>
       </div>

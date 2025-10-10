@@ -5,11 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageCircle, User, ArrowLeft } from "lucide-react";
+import { MessageCircle, User as UserIcon, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-supabase-auth";
-import type { User as UserType } from "@/types";
+import type { User } from "@/types";
 
 interface FriendsListProps {
   userId: string;
@@ -19,7 +19,7 @@ interface FriendsListProps {
 export function FriendsList({ userId, onBack }: FriendsListProps) {
   const router = useRouter();
   const { user: currentUser } = useAuth();
-  const [friends, setFriends] = useState<UserType[]>([]);
+  const [friends, setFriends] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -154,7 +154,7 @@ export function FriendsList({ userId, onBack }: FriendsListProps) {
         <Card>
           <CardContent className="p-8 text-center">
             <div className="inline-block bg-muted p-4 rounded-full mb-4">
-              <User className="h-12 w-12 text-muted-foreground" />
+              <UserIcon className="h-12 w-12 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold text-foreground mb-2">No Friends Yet</h3>
             <p className="text-sm text-muted-foreground">

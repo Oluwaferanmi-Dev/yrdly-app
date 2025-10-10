@@ -49,6 +49,25 @@ export class SupabaseChatService {
         throw createError;
       }
 
+      // Also create conversation in conversations table
+      const { error: conversationCreateError } = await supabase
+        .from('conversations')
+        .insert({
+          id: newChat.id, // Use the same ID as item_chats
+          type: 'marketplace',
+          participant_ids: [buyerId, sellerId],
+          item_title: itemTitle,
+          item_image: itemImageUrl,
+          item_price: null, // This would need to be passed as a parameter if needed
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+      if (conversationCreateError) {
+        console.error('Error creating conversation:', conversationCreateError);
+        // Don't throw here, the chat was created successfully
+      }
+
       return newChat.id;
     } catch (error) {
       console.error('Error in getOrCreateChat:', error);
@@ -190,7 +209,7 @@ export class SupabaseChatService {
           content: content,
           image_url: imageUrl,
           created_at: new Date().toISOString(),
-          is_read: false,
+          is_read: true, // Mark as read for the sender
         });
 
       if (messageError) {
@@ -209,6 +228,23 @@ export class SupabaseChatService {
 
       if (updateError) {
         console.error('Error updating chat last message:', updateError);
+        // Don't throw here, message was sent successfully
+      }
+
+      // Also update the conversations table for marketplace chats
+      const { error: conversationUpdateError } = await supabase
+        .from('conversations')
+        .update({
+          last_message_text: content,
+          last_message_timestamp: new Date().toISOString(),
+          last_message_sender_id: senderId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', chatId)
+        .eq('type', 'marketplace');
+
+      if (conversationUpdateError) {
+        console.error('Error updating conversation last message:', conversationUpdateError);
         // Don't throw here, message was sent successfully
       }
     } catch (error) {

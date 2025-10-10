@@ -162,6 +162,56 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
     fetchMessages();
   }, [selectedConversation]);
 
+  // Mark all messages as read when conversation is opened
+  useEffect(() => {
+    if (!selectedConversation || !user) return;
+
+    const markMessagesAsRead = async () => {
+      try {
+        // First, get all unread messages in this conversation
+        const { data: unreadMessages, error: fetchError } = await supabase
+          .from('messages')
+          .select('id, read_by')
+          .eq('conversation_id', selectedConversation.id)
+          .neq('sender_id', user.id)
+          .eq('is_read', false);
+
+        if (fetchError) {
+          console.error('Error fetching unread messages:', fetchError);
+          return;
+        }
+
+        if (!unreadMessages || unreadMessages.length === 0) {
+          return; // No unread messages to mark
+        }
+
+        // Update each message to mark as read and add user to read_by array
+        for (const message of unreadMessages) {
+          const currentReadBy = message.read_by || [];
+          const updatedReadBy = [...currentReadBy, user.id];
+
+          const { error: updateError } = await supabase
+            .from('messages')
+            .update({ 
+              is_read: true,
+              read_by: updatedReadBy
+            })
+            .eq('id', message.id);
+
+          if (updateError) {
+            console.error('Error updating message read status:', updateError);
+          }
+        }
+
+        console.log('Marked all messages as read for conversation:', selectedConversation.id);
+      } catch (error) {
+        console.error('Error in markMessagesAsRead:', error);
+      }
+    };
+
+    markMessagesAsRead();
+  }, [selectedConversation, user]);
+
   // Real-time subscription for messages
   useEffect(() => {
     if (!selectedConversation) return;
@@ -224,7 +274,8 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
           text: newMessage.trim() || (imageUrl ? 'Image' : ''),
           image_url: imageUrl,
           created_at: new Date().toISOString(),
-          is_read: false,
+          is_read: true, // Mark as read for the sender
+          read_by: [user.id], // Add sender to read_by array
         });
 
       if (error) {
