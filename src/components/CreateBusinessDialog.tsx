@@ -39,7 +39,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useState, useEffect, memo, useCallback, useMemo } from "react";
@@ -48,6 +48,7 @@ import { usePosts } from "@/hooks/use-posts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LocationInput, LocationValue } from "./LocationInput";
 import type { Business } from "@/types";
+import Image from "next/image";
 
 // Business categories list
 const BUSINESS_CATEGORIES = [
@@ -80,9 +81,7 @@ const getFormSchema = (isEditMode: boolean, postToEdit?: Business) => z.object({
     message: "Location is required.",
   }),
   image: z.any().refine((files) => files && (files.length > 0 || (Array.isArray(files) && files.some(f => typeof f === 'string'))), "An image is required for the business."),
-  // New fields for v0 design
-  rating: z.number().min(0).max(5).optional(),
-  review_count: z.number().min(0).optional(),
+  // Removed rating and review_count fields
   hours: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
@@ -101,6 +100,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
   const { createBusiness } = usePosts();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [removedImageIndexes, setRemovedImageIndexes] = useState<number[]>([]);
   const isMobile = useIsMobile();
   const isEditMode = !!postToEdit;
 
@@ -136,9 +136,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
             description: postToEdit.description,
             location: postToEdit.location,
             image: postToEdit.image_urls || [],
-            // New fields for v0 design
-            rating: postToEdit.rating,
-            review_count: postToEdit.review_count,
+            // Removed rating and review_count fields
             hours: postToEdit.hours,
             phone: postToEdit.phone,
             email: postToEdit.email,
@@ -153,9 +151,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
             description: "",
             location: { address: "" },
             image: undefined,
-            // New fields for v0 design
-            rating: undefined,
-            review_count: undefined,
+            // Removed rating and review_count fields
             hours: "",
             phone: "",
             email: "",
@@ -172,15 +168,36 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
+    
+    // Filter out removed images
+    let filteredImageUrls: string[] = [];
+    if (postToEdit?.image_urls) {
+      filteredImageUrls = postToEdit.image_urls.filter((_, index) => !removedImageIndexes.includes(index));
+    }
+    
+    // Validate image files
+    let validImageFiles: FileList | undefined;
+    if (values.image && values.image.length > 0) {
+      // Filter out invalid files
+      const validFiles = Array.from(values.image).filter(file => 
+        file && file instanceof File && file.name && file.size > 0
+      );
+      
+      if (validFiles.length > 0) {
+        // Create a new FileList-like object
+        const dataTransfer = new DataTransfer();
+        validFiles.forEach(file => dataTransfer.items.add(file as File));
+        validImageFiles = dataTransfer.files;
+      }
+    }
+    
     const businessData: Omit<Business, 'id' | 'owner_id' | 'created_at'> = {
         name: values.name,
         category: values.category,
         description: values.description || '',
         location: values.location,
-        image_urls: [], // Will be handled in createBusiness
-        // New fields for v0 design
-        rating: values.rating,
-        review_count: values.review_count,
+        image_urls: filteredImageUrls, // Pass filtered images
+        // Removed rating and review_count fields
         hours: values.hours,
         phone: values.phone,
         email: values.email,
@@ -188,7 +205,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
         owner_name: values.owner_name,
         owner_avatar: values.owner_avatar,
     };
-    await createBusiness(businessData, postToEdit?.id, values.image);
+    await createBusiness(businessData, postToEdit?.id, validImageFiles); // Pass validated files
     setLoading(false);
     handleOpenChange(false);
   }
@@ -198,7 +215,12 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
     if(onOpenChange) {
         onOpenChange(newOpenState);
     }
-  }, [onOpenChange]);
+    
+    if (!newOpenState) {
+      form.reset();
+      setRemovedImageIndexes([]); // Reset removed images on close
+    }
+  }, [onOpenChange, form]);
 
   const finalTitle = isEditMode ? "Edit Business" : "Add a Business";
   const finalDescription = isEditMode ? "Make changes to your business here." : "Add your business to the neighborhood directory.";
@@ -256,7 +278,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                                 render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Category</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Select a category" />
@@ -382,51 +404,48 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                                 )}
                             />
                             
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="rating"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Rating (0-5)</FormLabel>
-                                        <FormControl>
-                                            <Input 
-                                                type="number" 
-                                                min="0" 
-                                                max="5" 
-                                                step="0.1" 
-                                                placeholder="4.5" 
-                                                {...field}
-                                                onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="review_count"
-                                    render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Review Count</FormLabel>
-                                        <FormControl>
-                                            <Input 
-                                                type="number" 
-                                                min="0" 
-                                                placeholder="124" 
-                                                {...field}
-                                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                            </div>
                             {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
+                                <div className="space-y-3">
                                 <div className="text-sm text-muted-foreground">
-                                    Current images: {postToEdit.image_urls.length}. Upload more to add to the list.
+                                        Current images ({postToEdit.image_urls.length}):
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {postToEdit.image_urls.map((url, index) => {
+                                            const isRemoved = removedImageIndexes.includes(index);
+                                            return (
+                                                <div key={index} className={`relative group ${isRemoved ? 'opacity-50' : ''}`}>
+                                                    <Image
+                                                        src={url}
+                                                        alt={`Current image ${index + 1}`}
+                                                        width={100}
+                                                        height={100}
+                                                        className="w-full h-20 object-cover rounded-lg"
+                                                    />
+                                                    {!isRemoved && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="destructive"
+                                                            size="icon"
+                                                            className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            onClick={() => {
+                                                                setRemovedImageIndexes(prev => [...prev, index]);
+                                                            }}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </Button>
+                                                    )}
+                                                    {isRemoved && (
+                                                        <div className="absolute inset-0 bg-red-500/20 rounded-lg flex items-center justify-center">
+                                                            <X className="h-6 w-6 text-red-500" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Upload more images to add to the list.
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -476,7 +495,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                         render={({ field }) => (
                         <FormItem>
                             <FormLabel>Category</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a category" />
@@ -544,8 +563,47 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
                         )}
                     />
                     {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
+                        <div className="space-y-3">
                         <div className="text-sm text-muted-foreground">
-                            Current images: {postToEdit.image_urls.length}. Upload more to add to the list.
+                                Current images ({postToEdit.image_urls.length}):
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                                {postToEdit.image_urls.map((url, index) => {
+                                    const isRemoved = removedImageIndexes.includes(index);
+                                    return (
+                                        <div key={index} className={`relative group ${isRemoved ? 'opacity-50' : ''}`}>
+                                            <Image
+                                                src={url}
+                                                alt={`Current image ${index + 1}`}
+                                                width={100}
+                                                height={100}
+                                                className="w-full h-20 object-cover rounded-lg"
+                                            />
+                                            {!isRemoved && (
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={() => {
+                                                        setRemovedImageIndexes(prev => [...prev, index]);
+                                                    }}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            )}
+                                            {isRemoved && (
+                                                <div className="absolute inset-0 bg-red-500/20 rounded-lg flex items-center justify-center">
+                                                    <X className="h-6 w-6 text-red-500" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                                Upload more images to add to the list.
+                            </div>
                         </div>
                     )}
                 </div>

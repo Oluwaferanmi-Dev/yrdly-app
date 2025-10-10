@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -71,6 +71,7 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
     activeToday: 0,
     newPosts24h: 0
   });
+  const searchRef = useRef<HTMLDivElement>(null);
 
   // Fetch community posts and stats from Supabase
   useEffect(() => {
@@ -107,16 +108,32 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
           console.error('Error fetching users count:', usersError);
         }
 
-        // Get users active today (last 24 hours)
+        // Get users active today (users who posted or commented in last 24 hours)
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
-        const { count: activeToday, error: activeError } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .gte('last_seen', yesterday.toISOString());
+        
+        // Get unique users who posted in last 24 hours
+        const { data: activePosters, error: postersError } = await supabase
+          .from('posts')
+          .select('user_id')
+          .gte('timestamp', yesterday.toISOString());
+        
+        // Get unique users who commented in last 24 hours
+        const { data: activeCommenters, error: commentersError } = await supabase
+          .from('comments')
+          .select('user_id')
+          .gte('timestamp', yesterday.toISOString());
+        
+        // Combine and count unique active users
+        const activeUserIds = new Set([
+          ...(activePosters?.map(p => p.user_id) || []),
+          ...(activeCommenters?.map(c => c.user_id) || [])
+        ]);
+        
+        const activeToday = activeUserIds.size;
 
-        if (activeError) {
-          console.error('Error fetching active users:', activeError);
+        if (postersError || commentersError) {
+          console.error('Error fetching active users:', postersError || commentersError);
         }
 
         // Get posts from last 24 hours
@@ -161,6 +178,24 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
     };
   }, [currentUser]);
 
+  // Handle click outside to close search results
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowUserSearch(false);
+        setUsers([]);
+      }
+    };
+
+    if (showUserSearch) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserSearch]);
+
   const filteredPosts = useMemo(() => {
     if (!searchQuery) return posts;
     
@@ -184,6 +219,7 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
         .from('users')
         .select('id, name, email, avatar_url, created_at')
         .ilike('name', `%${query}%`)
+        .neq('id', currentUser?.id) // Exclude current user from search results
         .limit(10);
 
       if (error) throw error;
@@ -321,7 +357,7 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
           <p className="text-muted-foreground">What&apos;s happening in your neighborhood</p>
         </div>
 
-        <div className="relative">
+        <div className="relative" ref={searchRef}>
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search for neighbors..."
@@ -478,6 +514,7 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
                       width={400}
                       height={192}
                       className="w-full h-48 object-cover rounded-lg"
+                      style={{ height: "auto" }}
                     />
                   </div>
                 )}

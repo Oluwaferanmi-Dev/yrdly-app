@@ -28,6 +28,7 @@ import { useRouter } from "next/navigation";
 import type { User, Post } from "@/types";
 import { FriendsList } from "./FriendsList";
 import { useToast } from "@/hooks/use-toast";
+import { shortenAddress } from "@/lib/utils";
 import Image from "next/image";
 
 interface V0ProfileScreenProps {
@@ -83,11 +84,12 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
 
         setProfileData(userData);
 
-        // Fetch user posts
+        // Fetch user posts (only General category posts, not items or events)
         const { data: postsData, error: postsError } = await supabase
           .from('posts')
           .select('*')
           .eq('user_id', targetUser.id)
+          .eq('category', 'General')
           .order('timestamp', { ascending: false })
           .limit(10);
 
@@ -293,6 +295,14 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
           title: "Friend Request Sent",
           description: `Friend request sent to ${targetUser.name || 'this user'}.`,
         });
+        
+        // Trigger notification for friend request
+        try {
+          const { NotificationTriggers } = await import('@/lib/notification-triggers');
+          await NotificationTriggers.onFriendRequestSent(currentUser.id, targetUser.id);
+        } catch (error) {
+          console.error('Error creating friend request notification:', error);
+        }
       }
     } catch (error) {
       console.error('Error handling friend request:', error);
@@ -523,54 +533,38 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
 
       {isOwnProfile && (
         <Tabs defaultValue="posts" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-muted/30 border border-border rounded-lg p-1">
+          <TabsList className="grid w-full grid-cols-4 bg-background border border-border rounded-xl p-0.5 gap-0.1">
             <TabsTrigger
               value="posts"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center justify-center text-center px-3 py-2 rounded-md transition-all duration-200 hover:bg-muted/50 data-[state=active]:rounded-md"
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm"
             >
-              <Heart className="w-4 h-4 mr-2" />
+              <Heart className="w-4 h-4" />
               <span className="font-medium">Posts</span>
-              {userPosts.length > 0 && (
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                  {userPosts.length}
-                </Badge>
-              )}
+              <span className="text-xs opacity-70">({userPosts.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="items"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center justify-center text-center px-3 py-2 rounded-md transition-all duration-200 hover:bg-muted/50 data-[state=active]:rounded-md"
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm"
             >
-              <ShoppingBag className="w-4 h-4 mr-2" />
+              <ShoppingBag className="w-4 h-4" />
               <span className="font-medium">Items</span>
-              {userItems.length > 0 && (
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                  {userItems.length}
-                </Badge>
-              )}
+              <span className="text-xs opacity-70">({userItems.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="businesses"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center justify-center text-center px-3 py-2 rounded-md transition-all duration-200 hover:bg-muted/50 data-[state=active]:rounded-md"
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm"
             >
-              <Briefcase className="w-4 h-4 mr-2" />
+              <Briefcase className="w-4 h-4" />
               <span className="font-medium">Business</span>
-              {userBusinesses.length > 0 && (
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                  {userBusinesses.length}
-                </Badge>
-              )}
+              <span className="text-xs opacity-70">({userBusinesses.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="events"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm flex items-center justify-center text-center px-3 py-2 rounded-md transition-all duration-200 hover:bg-muted/50 data-[state=active]:rounded-md"
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm"
             >
-              <CalendarDays className="w-4 h-4 mr-2" />
+              <CalendarDays className="w-4 h-4" />
               <span className="font-medium">Events</span>
-              {userEvents.length > 0 && (
-                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                  {userEvents.length}
-                </Badge>
-              )}
+              <span className="text-xs opacity-70">({userEvents.length})</span>
             </TabsTrigger>
           </TabsList>
 
@@ -587,12 +581,13 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
                           </h4>
                           {post.image_url && (
                             <div className="mt-3 rounded-lg overflow-hidden">
-                              <Image 
+                              <Image
                                 src={post.image_url} 
                                 alt={post.text || post.title || "Post image"}
                                 width={400}
                                 height={200}
                                 className="w-full h-48 object-cover"
+                                style={{ height: "auto" }}
                               />
                             </div>
                           )}
@@ -781,8 +776,11 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
                               {business.category || 'General'}
                             </Badge>
                             {business.location && (
-                              <Badge variant="secondary" className="text-xs">
-                                📍 {business.location}
+                              <Badge variant="secondary" className="text-xs" title={typeof business.location === 'string' ? business.location : business.location?.address || 'Location not specified'}>
+                                📍 {typeof business.location === 'string' 
+                                  ? shortenAddress(business.location, 30)
+                                  : shortenAddress(business.location?.address || 'Location not specified', 30)
+                                }
                               </Badge>
                             )}
                           </div>
@@ -888,7 +886,12 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
                           {event.location && (
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <MapPin className="w-3 h-3" />
-                              <span className="line-clamp-1">{event.location}</span>
+                              <span className="line-clamp-1">
+                                {typeof event.location === 'string' 
+                                  ? event.location 
+                                  : event.location?.address || 'Location not specified'
+                                }
+                              </span>
                             </div>
                           )}
                         </div>

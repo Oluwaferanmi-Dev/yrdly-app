@@ -18,7 +18,15 @@ export const usePosts = () => {
       try {
         const { data, error } = await supabase
           .from('posts')
-          .select('*')
+          .select(`
+            *,
+            user:users!posts_user_id_fkey(
+              id,
+              name,
+              avatar_url,
+              created_at
+            )
+          `)
           .order('timestamp', { ascending: false });
 
         if (error) {
@@ -45,22 +53,88 @@ export const usePosts = () => {
         table: 'posts' 
       }, (payload) => {
         console.log('usePosts realtime change received!', payload);
+        console.log('Event type:', payload.eventType);
+        console.log('Payload new:', payload.new);
+        console.log('Payload old:', payload.old);
         
         if (payload.eventType === 'INSERT') {
           // Add new post to the beginning of the list
           const newPost = payload.new as Post;
-          setPosts(prevPosts => [newPost, ...prevPosts]);
+          console.log('Adding new post:', newPost.id);
+          
+          // Fetch user data for the new post
+          const fetchUserData = async () => {
+            try {
+              const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('id, name, avatar_url, created_at')
+                .eq('id', newPost.user_id)
+                .single();
+              
+              if (!userError && userData) {
+                const postWithUser = {
+                  ...newPost,
+                  user: userData
+                };
+                setPosts(prevPosts => [postWithUser, ...prevPosts]);
+              } else {
+                // Fallback to post without user data
+                setPosts(prevPosts => [newPost, ...prevPosts]);
+              }
+            } catch (error) {
+              console.error('Error fetching user data for new post:', error);
+              setPosts(prevPosts => [newPost, ...prevPosts]);
+            }
+          };
+          
+          fetchUserData();
         } else if (payload.eventType === 'UPDATE') {
           // Update existing post in the list
           const updatedPost = payload.new as Post;
-          setPosts(prevPosts => 
-            prevPosts.map(post => 
-              post.id === updatedPost.id ? updatedPost : post
-            )
-          );
+          console.log('Updating post:', updatedPost.id);
+          
+          // Fetch user data for the updated post
+          const fetchUserData = async () => {
+            try {
+              const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('id, name, avatar_url, created_at')
+                .eq('id', updatedPost.user_id)
+                .single();
+              
+              if (!userError && userData) {
+                const postWithUser = {
+                  ...updatedPost,
+                  user: userData
+                };
+                setPosts(prevPosts => 
+                  prevPosts.map(post => 
+                    post.id === updatedPost.id ? postWithUser : post
+                  )
+                );
+              } else {
+                // Fallback to post without user data
+                setPosts(prevPosts => 
+                  prevPosts.map(post => 
+                    post.id === updatedPost.id ? updatedPost : post
+                  )
+                );
+              }
+            } catch (error) {
+              console.error('Error fetching user data for updated post:', error);
+              setPosts(prevPosts => 
+                prevPosts.map(post => 
+                  post.id === updatedPost.id ? updatedPost : post
+                )
+              );
+            }
+          };
+          
+          fetchUserData();
         } else if (payload.eventType === 'DELETE') {
           // Remove deleted post from the list
           const deletedId = payload.old.id;
+          console.log('Deleting post:', deletedId);
           setPosts(prevPosts => 
             prevPosts.filter(post => post.id !== deletedId)
           );
@@ -78,14 +152,32 @@ export const usePosts = () => {
     path: 'posts' | 'event_images' | 'businesses' | 'avatars'
   ): Promise<string[]> => {
     if (!user) return [];
+    
+    // Check if files is valid and has items
+    if (!files || files.length === 0) {
+      console.warn('No files provided to uploadImages');
+      return [];
+    }
+    
     const uploadedUrls = await Promise.all(
         Array.from(files).map(async (file) => {
-            const { url, error } = await StorageService.uploadPostImage(user.id, file);
-            if (error) {
-                console.error('Upload error:', error);
-                return null;
+            // Additional check for individual file
+            if (!file || !file.name || !file.size || !(file instanceof File)) {
+              console.warn('Invalid file in FileList:', file);
+              return null;
             }
-            return url;
+            
+            try {
+              const { url, error } = await StorageService.uploadPostImage(user.id, file);
+              if (error) {
+                  console.error('Upload error:', error);
+                  return null;
+              }
+              return url;
+            } catch (error) {
+              console.error('Upload error:', error);
+              return null;
+            }
         })
     );
     return uploadedUrls.filter(url => url !== null) as string[];
@@ -103,10 +195,21 @@ export const usePosts = () => {
       }
 
       try {
-        let imageUrls: string[] = postData.image_urls || [];
+        let imageUrls: string[] = [];
+        
+        // For editing: preserve existing images
+        if (postIdToUpdate && postData.image_urls) {
+          imageUrls = [...postData.image_urls];
+          console.log('Preserving existing images:', imageUrls.length);
+        }
+        
+        // Add new images if any are uploaded
         if (imageFiles && imageFiles.length > 0) {
+            console.log('Uploading new images:', imageFiles.length, 'files');
             const uploadedUrls = await uploadImages(imageFiles, postData.category === 'Event' ? 'event_images' : 'posts');
-            imageUrls = postIdToUpdate ? [...imageUrls, ...uploadedUrls] : uploadedUrls;
+            imageUrls = [...imageUrls, ...uploadedUrls];
+        } else {
+            console.log('No new image files to upload');
         }
 
         // Clean up the data to remove undefined values and exclude imageFiles
@@ -212,6 +315,8 @@ export const usePosts = () => {
             return;
         }
         try {
+            console.log('Deleting post:', postId);
+            
             // First, get the post to retrieve image URLs
             const { data: postData, error: fetchError } = await supabase
                 .from('posts')
@@ -230,6 +335,8 @@ export const usePosts = () => {
                 .eq('id', postId);
             
             if (error) throw error;
+            
+            console.log('Post deleted successfully from database:', postId);
 
             // Delete associated images from storage
             if (postData?.image_urls && postData.image_urls.length > 0) {
@@ -287,5 +394,23 @@ export const usePosts = () => {
     [user, toast]
   );
 
-  return { posts, loading, createPost, createBusiness, deletePost, deleteBusiness };
+  const refreshPosts = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('timestamp', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching posts:', error);
+        return;
+      }
+
+      setPosts(data as Post[]);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    }
+  }, []);
+
+  return { posts, loading, createPost, createBusiness, deletePost, deleteBusiness, refreshPosts };
 };

@@ -1,44 +1,86 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 // @ts-ignore - Tawk.to doesn't have TypeScript definitions
 import TawkMessengerReact from "@tawk.to/tawk-messenger-react";
+
+// Declare Tawk API for TypeScript
+declare global {
+  interface Window {
+    Tawk_API?: {
+      showWidget: () => void;
+      hideWidget: () => void;
+      isWidgetReady: boolean;
+    };
+  }
+}
 
 interface TawkChatProps {
   className?: string;
 }
 
 export function TawkChat({ className }: TawkChatProps) {
+  const tawkRef = useRef<any>(null);
+
   useEffect(() => {
-    // Optional: You can add any initialization logic here
-    console.log("Tawk.to chat widget loaded");
+    // Wait for Tawk API to be ready before trying to show widget
+    const checkAndShowWidget = () => {
+      if (window.Tawk_API && window.Tawk_API.isWidgetReady) {
+        window.Tawk_API.showWidget();
+      } else {
+        // Retry after a short delay if API is not ready
+        setTimeout(checkAndShowWidget, 100);
+      }
+    };
+
+    // Start checking for the API
+    checkAndShowWidget();
+
+    // Cleanup function to hide widget when component unmounts
+    return () => {
+      if (window.Tawk_API && window.Tawk_API.isWidgetReady) {
+        window.Tawk_API.hideWidget();
+      }
+    };
   }, []);
 
   // Required callback functions to prevent errors
   const handleBeforeLoad = () => {
-    console.log("Tawk.to widget is about to load");
+    // Widget is about to load
   };
 
   const handleLoad = () => {
-    console.log("Tawk.to widget has loaded");
+    // Widget has loaded - now we can safely show it
+    if (window.Tawk_API) {
+      window.Tawk_API.showWidget();
+    }
   };
 
   const handleStatusChange = (status: string) => {
-    console.log("Tawk.to widget status changed:", status);
+    // Widget status changed
   };
 
   const handleChatMessageSystem = (message: any) => {
-    console.log("Tawk.to system message:", message);
+    // System message received
   };
 
   const handleUnreadCountChanged = (count: number) => {
-    console.log("Tawk.to unread count changed:", count);
+    // Unread count changed
+  };
+
+  const handleChatHidden = () => {
+    // Chat was hidden
+  };
+
+  const handleChatShown = () => {
+    // Chat was shown
   };
 
   return (
     <div className={`${className} relative`}>
       <div className="fixed bottom-20 right-4 z-40">
         <TawkMessengerReact
+          ref={tawkRef}
           propertyId="68bdbf72eb582f19258cedd9"
           widgetId="1j4ij7mb2"
           onBeforeLoad={handleBeforeLoad}
@@ -46,6 +88,8 @@ export function TawkChat({ className }: TawkChatProps) {
           onStatusChange={handleStatusChange}
           onChatMessageSystem={handleChatMessageSystem}
           onUnreadCountChanged={handleUnreadCountChanged}
+          onChatHidden={handleChatHidden}
+          onChatShown={handleChatShown}
         />
       </div>
     </div>

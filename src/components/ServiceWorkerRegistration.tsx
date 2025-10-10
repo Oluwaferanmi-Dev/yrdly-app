@@ -11,7 +11,6 @@ export function ServiceWorkerRegistration() {
   const registerServiceWorker = useCallback(async () => {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js');
-      console.log('Service Worker registered successfully:', registration);
 
       // Handle updates
       registration.addEventListener('updatefound', () => {

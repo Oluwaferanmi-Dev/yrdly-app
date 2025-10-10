@@ -32,7 +32,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useState, useEffect, memo, useCallback, useMemo } from "react";
@@ -40,6 +40,7 @@ import * as React from 'react';
 import { usePosts } from "@/hooks/use-posts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Post } from "@/types";
+import Image from "next/image";
 
 const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
   text: z.string().min(1, "Item title can't be empty.").max(100),
@@ -55,14 +56,19 @@ type CreateItemDialogProps = {
     children?: React.ReactNode;
     postToEdit?: Post;
     onOpenChange?: (open: boolean) => void;
+    open?: boolean; // Add open prop for programmatic control
 }
 
-const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: CreateItemDialogProps) => {
+const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange, open: externalOpen }: CreateItemDialogProps) => {
   const { createPost } = usePosts();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [removedImageIndexes, setRemovedImageIndexes] = useState<number[]>([]);
   const isMobile = useIsMobile();
   const isEditMode = !!postToEdit;
+  
+  // Use external open prop if provided, otherwise use internal state
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
 
   // Create form schema once and stabilize it
   const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
@@ -73,7 +79,7 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     defaultValues: {
       text: "",
       description: "",
-      price: undefined,
+      price: "" as any, // Use empty string instead of undefined to avoid controlled/uncontrolled warning
       image: undefined,
     },
   });
@@ -99,7 +105,7 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
           stableFormReset({
             text: "",
             description: "",
-            price: undefined,
+            price: "",
             image: undefined,
           });
         }
@@ -111,23 +117,59 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
+    
+    // Filter out removed images
+    let filteredImageUrls: string[] = [];
+    if (postToEdit?.image_urls) {
+      filteredImageUrls = postToEdit.image_urls.filter((_, index) => !removedImageIndexes.includes(index));
+    }
+    
+    // Validate image files
+    let validImageFiles: FileList | undefined;
+    if (values.image && values.image.length > 0) {
+      // Filter out invalid files
+      const validFiles = Array.from(values.image).filter(file => 
+        file && file instanceof File && file.name && file.size > 0
+      );
+      
+      if (validFiles.length > 0) {
+        // Create a new FileList-like object
+        const dataTransfer = new DataTransfer();
+        validFiles.forEach(file => dataTransfer.items.add(file as File));
+        validImageFiles = dataTransfer.files;
+      }
+    }
+    
     const postData: Partial<Post> = {
         text: values.text,
         description: values.description,
         category: "For Sale",
         price: values.price || 0,
+        image_urls: filteredImageUrls,
     };
-    await createPost(postData, postToEdit?.id, values.image);
+    await createPost(postData, postToEdit?.id, validImageFiles);
     setLoading(false);
     handleOpenChange(false);
   }
 
   const handleOpenChange = useCallback((newOpenState: boolean) => {
-    setOpen(newOpenState);
-    if(onOpenChange) {
+    if (externalOpen !== undefined) {
+      // External control - only call onOpenChange
+      if (onOpenChange) {
         onOpenChange(newOpenState);
+      }
+    } else {
+      // Internal control - update internal state
+      setInternalOpen(newOpenState);
+      if (onOpenChange) {
+        onOpenChange(newOpenState);
+      }
     }
-  }, [onOpenChange]);
+    
+    if (!newOpenState) {
+      form.reset();
+    }
+  }, [onOpenChange, externalOpen, form]);
 
   const finalTitle = isEditMode ? "Edit Item" : "Create Item for Sale";
   const finalDescription = isEditMode ? "Make changes to your item here." : "Sell something in your neighborhood.";
@@ -237,8 +279,47 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
                                 )}
                             />
                             {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
-                                <div className="text-sm text-muted-foreground">
-                                    Current images: {postToEdit.image_urls.length}. Upload more to add to the list.
+                                <div className="space-y-3">
+                                    <div className="text-sm text-muted-foreground">
+                                        Current images ({postToEdit.image_urls.length}):
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {postToEdit.image_urls.map((url, index) => {
+                                            const isRemoved = removedImageIndexes.includes(index);
+                                            return (
+                                                <div key={index} className={`relative group ${isRemoved ? 'opacity-50' : ''}`}>
+                                                    <Image
+                                                        src={url}
+                                                        alt={`Current image ${index + 1}`}
+                                                        width={100}
+                                                        height={100}
+                                                        className="w-full h-20 object-cover rounded-lg"
+                                                    />
+                                                    {!isRemoved && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="destructive"
+                                                            size="icon"
+                                                            className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            onClick={() => {
+                                                                setRemovedImageIndexes(prev => [...prev, index]);
+                                                            }}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </Button>
+                                                    )}
+                                                    {isRemoved && (
+                                                        <div className="absolute inset-0 bg-red-500/20 rounded-lg flex items-center justify-center">
+                                                            <X className="h-6 w-6 text-red-500" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Upload more images to add to the list.
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -257,9 +338,11 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        { children || <Trigger /> }
-      </DialogTrigger>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          { children || <Trigger /> }
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[525px] p-0">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>

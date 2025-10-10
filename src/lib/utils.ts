@@ -43,3 +43,24 @@ export const formatPrice = (price?: number) => {
         currency: 'NGN',
     }).format(price);
 };
+
+export const shortenAddress = (address: string, maxLength: number = 50): string => {
+    if (!address || address.length <= maxLength) {
+        return address;
+    }
+    
+    // Try to find a good breaking point (comma, space, etc.)
+    const truncated = address.substring(0, maxLength);
+    const lastComma = truncated.lastIndexOf(',');
+    const lastSpace = truncated.lastIndexOf(' ');
+    
+    // Use the last comma if it's within a reasonable range, otherwise use last space
+    const breakPoint = lastComma > maxLength * 0.7 ? lastComma : lastSpace;
+    
+    if (breakPoint > maxLength * 0.5) {
+        return address.substring(0, breakPoint) + '...';
+    }
+    
+    // If no good break point, just truncate and add ellipsis
+    return truncated + '...';
+};

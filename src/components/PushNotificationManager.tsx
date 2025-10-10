@@ -95,7 +95,6 @@ export function PushNotificationManager() {
                 if (error) {
                     console.error('Error saving push subscription:', error);
                 } else {
-                    console.log('Push subscription saved successfully');
                 }
 
             } catch (error) {

@@ -16,9 +16,10 @@ import {
   Calendar,
   Shield,
   Truck,
-  Star,
   MoreHorizontal,
-  User
+  User,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -41,8 +42,20 @@ export default function MarketplaceItemPage() {
   const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const itemId = params.itemId as string;
+
+  // Image navigation functions
+  const nextImage = () => {
+    if (!item?.image_urls || item.image_urls.length === 0) return;
+    setCurrentImageIndex((prev) => (prev + 1) % item.image_urls!.length);
+  };
+
+  const prevImage = () => {
+    if (!item?.image_urls || item.image_urls.length === 0) return;
+    setCurrentImageIndex((prev) => (prev - 1 + item.image_urls!.length) % item.image_urls!.length);
+  };
 
   useEffect(() => {
     if (!itemId) return;
@@ -320,29 +333,64 @@ export default function MarketplaceItemPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Image Section */}
           <div className="space-y-4">
-            <div className="aspect-square rounded-lg overflow-hidden bg-muted">
+            <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
               <Image
-                src={item.image_url || item.image_urls?.[0] || "/placeholder.svg"}
+                src={item.image_urls?.[currentImageIndex] || item.image_url || "/placeholder.svg"}
                 alt={item.title || "Item image"}
                 width={400}
                 height={400}
                 className="w-full h-full object-cover"
               />
+              
+              {/* Navigation arrows for multiple images */}
+              {item.image_urls && item.image_urls.length > 1 && (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
+                    onClick={prevImage}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
+                    onClick={nextImage}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+
+              {/* Image counter */}
+              {item.image_urls && item.image_urls.length > 1 && (
+                <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
+                  {currentImageIndex + 1} / {item.image_urls.length}
+                </div>
+              )}
             </div>
             
-            {/* Additional Images */}
+            {/* Thumbnail strip */}
             {item.image_urls && item.image_urls.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
-                {item.image_urls.slice(1, 5).map((url, index) => (
-                  <div key={index} className="aspect-square rounded-lg overflow-hidden bg-muted">
+              <div className="flex gap-2 overflow-x-auto">
+                {item.image_urls.map((url, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImageIndex(index)}
+                    className={`relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 ${
+                      index === currentImageIndex ? 'ring-2 ring-primary' : ''
+                    }`}
+                  >
                     <Image
                       src={url}
-                      alt={`${item.title} ${index + 2}`}
-                      width={100}
-                      height={100}
+                      alt={`Thumbnail ${index + 1}`}
+                      width={64}
+                      height={64}
                       className="w-full h-full object-cover"
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -381,13 +429,10 @@ export default function MarketplaceItemPage() {
                   <div className="flex-1">
                     <h3 className="font-semibold text-foreground">{item.author_name}</h3>
                     <p className="text-sm text-muted-foreground">
-                      Member since {new Date(item.timestamp).getFullYear()}
+                      Member since {new Date(item.user?.created_at || item.timestamp).getFullYear()}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-medium">4.8</span>
-                  </div>
+                  {/* Rating removed - no hardcoded values */}
                 </div>
                 
                 <div className="flex gap-2">

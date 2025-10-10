@@ -26,13 +26,7 @@ export default function ItemChatPage() {
         // Fetch business data
         const { data: businessData, error: businessError } = await supabase
           .from('businesses')
-          .select(`
-            *,
-            users!businesses_owner_id_fkey(
-              name,
-              avatar_url
-            )
-          `)
+          .select('*')
           .eq('id', businessId)
           .single();
 
@@ -70,8 +64,8 @@ export default function ItemChatPage() {
             phone: businessData.phone,
             email: businessData.email,
             website: businessData.website,
-            owner_name: businessData.users?.name || "Unknown Owner",
-            owner_avatar: businessData.users?.avatar_url,
+            owner_name: businessData.owner_name || "Unknown Owner",
+            owner_avatar: businessData.owner_avatar,
             cover_image: businessData.image_urls?.[0],
             logo: businessData.image_urls?.[0],
             distance: "0.5 km away",

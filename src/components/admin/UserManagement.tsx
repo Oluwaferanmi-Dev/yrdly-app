@@ -295,7 +295,10 @@ export function UserManagement() {
                       {user.location && (
                         <div className="flex items-center text-sm text-gray-500">
                           <MapPin className="h-3 w-3 mr-1" />
-                          {user.location}
+                          {typeof user.location === 'string' 
+                            ? user.location 
+                            : (user.location as any)?.address || 'Location not specified'
+                          }
                         </div>
                       )}
                     </TableCell>

@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import Image from "next/image";
+import { shortenAddress } from "@/lib/utils";
 
 interface V0BusinessDetailScreenProps {
   business: Business;
@@ -187,10 +188,10 @@ export function V0BusinessDetailScreen({
 
           <div className="flex items-center gap-2 text-muted-foreground">
             <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-            <span className="text-sm">
+            <span className="text-sm" title={typeof business.location === 'string' ? business.location : business.location?.address || 'Location not specified'}>
               {typeof business.location === 'string' 
-                ? business.location 
-                : business.location?.address || 'Location not specified'
+                ? shortenAddress(business.location, 60)
+                : shortenAddress(business.location?.address || 'Location not specified', 60)
               }
             </span>
             {business.distance && (
@@ -204,16 +205,18 @@ export function V0BusinessDetailScreen({
 
         {/* Action buttons */}
         <div className="flex gap-2">
-          <Button
-            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => onMessageOwner(business)}
-          >
-            <MessageCircle className="w-4 h-4 mr-2" />
-            Message
-          </Button>
+          {user?.id !== business.owner_id && (
+            <Button
+              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => onMessageOwner(business)}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Message
+            </Button>
+          )}
           <Button
             variant="outline"
-            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
+            className={`border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent ${user?.id === business.owner_id ? 'flex-1' : ''}`}
             onClick={handleCall}
             disabled={!business.phone}
           >
@@ -304,10 +307,10 @@ export function V0BusinessDetailScreen({
                 )}
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">
+                  <span className="text-muted-foreground" title={typeof business.location === 'string' ? business.location : business.location?.address || 'Location not specified'}>
                     {typeof business.location === 'string' 
-                      ? business.location 
-                      : business.location?.address || 'Location not specified'
+                      ? shortenAddress(business.location, 50)
+                      : shortenAddress(business.location?.address || 'Location not specified', 50)
                     }
                   </span>
                 </div>

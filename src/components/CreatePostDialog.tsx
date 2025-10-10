@@ -37,7 +37,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useState, useEffect, memo, useCallback, useMemo } from "react";
 import * as React from 'react';
-import { usePosts } from "@/hooks/use-posts";
+// Removed usePosts import - will receive createPost as prop
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Post } from "@/types";
 
@@ -51,15 +51,19 @@ type CreatePostDialogProps = {
     children?: React.ReactNode;
     postToEdit?: Post;
     onOpenChange?: (open: boolean) => void;
+    createPost: (postData: any, postId?: string, imageFiles?: FileList) => Promise<void>;
+    open?: boolean; // Add open prop for programmatic control
 }
 
-const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: CreatePostDialogProps) => {
+const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange, createPost, open: externalOpen }: CreatePostDialogProps) => {
   const { user } = useAuth();
-  const { createPost } = usePosts();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
   const isEditMode = !!postToEdit;
+  
+  // Use external open prop if provided, otherwise use internal state
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
 
   // Create form schema once and stabilize it
   const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
@@ -87,7 +91,7 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
         if (isEditMode && postToEdit) {
           stableFormReset({
             text: postToEdit.text,
-            imageFiles: postToEdit.image_urls || [],
+            imageFiles: undefined, // Don't set existing URLs as files
             category: postToEdit.category || "General",
           });
         } else if (!isEditMode) {
@@ -107,17 +111,36 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
     setLoading(true);
     // Only pass imageFiles if images are actually selected
     const imageFiles = values.imageFiles && values.imageFiles.length > 0 ? values.imageFiles : undefined;
-    await createPost(values, postToEdit?.id, imageFiles);
+    
+    // For editing, include existing image_urls
+    const postData = {
+      ...values,
+      image_urls: isEditMode && postToEdit?.image_urls ? postToEdit.image_urls : undefined
+    };
+    
+    await createPost(postData, postToEdit?.id, imageFiles);
     setLoading(false);
     handleOpenChange(false);
   }
 
   const handleOpenChange = useCallback((newOpenState: boolean) => {
-    setOpen(newOpenState);
-    if(onOpenChange) {
+    if (externalOpen !== undefined) {
+      // External control - only call onOpenChange
+      if (onOpenChange) {
         onOpenChange(newOpenState);
+      }
+    } else {
+      // Internal control - update internal state
+      setInternalOpen(newOpenState);
+      if (onOpenChange) {
+        onOpenChange(newOpenState);
+      }
     }
-  }, [onOpenChange]);
+    
+    if (!newOpenState) {
+      form.reset();
+    }
+  }, [onOpenChange, externalOpen, form]);
 
   const finalTitle = isEditMode ? "Edit Post" : "Create Post";
   const finalDescription = isEditMode ? "Make changes to your post here." : "Share something with your neighborhood.";
@@ -215,9 +238,11 @@ const CreatePostDialogComponent = ({ children, postToEdit, onOpenChange }: Creat
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        { children || <Trigger /> }
-      </DialogTrigger>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          { children || <Trigger /> }
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[525px] p-0">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>

@@ -28,6 +28,7 @@ import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 import type { Business } from "@/types";
+import { shortenAddress } from "@/lib/utils";
 import { CreateBusinessDialog } from "@/components/CreateBusinessDialog";
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { useRouter } from "next/navigation";
@@ -216,7 +217,9 @@ function BusinessCard({ business }: { business: Business }) {
           {business.location?.address && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">{business.location.address}</span>
+              <span className="truncate" title={business.location.address}>
+                {shortenAddress(business.location.address, 40)}
+              </span>
             </div>
           )}
           {/* Phone and email would be added to Business type in the future */}
@@ -244,9 +247,11 @@ function BusinessCard({ business }: { business: Business }) {
               <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500' : ''}`} />
               <span>{likeCount}</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleMessage}>
-              <MessageCircle className="h-4 w-4" />
-            </Button>
+            {user?.id !== business.owner_id && (
+              <Button variant="ghost" size="sm" onClick={handleMessage}>
+                <MessageCircle className="h-4 w-4" />
+              </Button>
+            )}
           </div>
           <Button variant="ghost" size="sm" onClick={handleShare}>
             <Share className="h-4 w-4" />
@@ -419,6 +424,7 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
                 width={400}
                 height={128}
                 className="w-full h-full object-cover"
+                style={{ height: "auto" }}
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-r from-primary/20 to-accent/20 flex items-center justify-center">
@@ -455,7 +461,9 @@ export function V0BusinessesScreen({ className }: V0BusinessesScreenProps) {
 
             <div className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="w-4 h-4 text-primary" />
-              <span className="text-sm">{filteredBusinesses[0].location.address}</span>
+              <span className="text-sm" title={filteredBusinesses[0].location.address}>
+                {shortenAddress(filteredBusinesses[0].location.address, 50)}
+              </span>
             </div>
 
             <p className="text-sm text-muted-foreground">{filteredBusinesses[0].description}</p>

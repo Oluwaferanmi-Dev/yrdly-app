@@ -74,15 +74,7 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
           return;
         }
 
-        console.log('Raw conversations data:', conversationsData);
-        console.log('User ID:', user.id);
         if (conversationsData && conversationsData.length > 0) {
-          console.log('First conversation fields:', Object.keys(conversationsData[0]));
-          console.log('First conversation last_message fields:', {
-            last_message: conversationsData[0].last_message,
-            last_message_text: conversationsData[0].last_message_text,
-            last_message_timestamp: conversationsData[0].last_message_timestamp
-          });
         }
 
         // Calculate unread count for each conversation
@@ -215,14 +207,9 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
           };
         });
 
-        console.log('Fetched conversations:', transformedConversations);
-        console.log('Conversation types:', transformedConversations.map(c => ({ id: c.id, type: c.type, participantName: c.participantName, unreadCount: c.unreadCount })));
-        
         // Debug unread counts
         const totalUnreadMessages = transformedConversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
         const unreadChats = transformedConversations.filter(conv => conv.unreadCount > 0).length;
-        console.log('Total unread messages across all chats:', totalUnreadMessages);
-        console.log('Number of chats with unread messages:', unreadChats);
         
         // Debug each conversation's last message and unread status
         transformedConversations.forEach(conv => {
@@ -346,12 +333,6 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
     };
 
     const filtered = conversations.filter(conv => matchesTab(conv) && matchesSearch(conv));
-    console.log(`Filtering for tab "${activeTab}":`, {
-      totalConversations: conversations.length,
-      filteredCount: filtered.length,
-      conversations: conversations.map(c => ({ id: c.id, type: c.type, participantName: c.participantName })),
-      filtered: filtered.map(c => ({ id: c.id, type: c.type, participantName: c.participantName }))
-    });
     return filtered;
   }, [conversations, activeTab, searchQuery]);
 

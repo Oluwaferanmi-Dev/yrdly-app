@@ -21,49 +21,58 @@ export default function BusinessDetailPage() {
 
     const fetchBusiness = async () => {
       try {
-        const { data, error } = await supabase
+        // First fetch the business data
+        const { data: businessData, error: businessError } = await supabase
           .from('businesses')
-          .select(`
-            *,
-            users!businesses_owner_id_fkey(
-              name,
-              avatar_url
-            )
-          `)
+          .select('*')
           .eq('id', businessId)
           .single();
 
-        if (error) {
-          console.error('Error fetching business:', error);
+        if (businessError) {
+          console.error('Error fetching business:', businessError);
           return;
         }
 
-        if (data) {
+        if (businessData) {
+          // Then fetch the owner data separately
+          let ownerData = null;
+          if (businessData.owner_id) {
+            const { data: userData, error: userError } = await supabase
+              .from('users')
+              .select('name, avatar_url')
+              .eq('id', businessData.owner_id)
+              .single();
+            
+            if (!userError && userData) {
+              ownerData = userData;
+            }
+          }
+
           // Transform the data to match our Business interface
-          const businessData: Business = {
-            id: data.id,
-            owner_id: data.owner_id,
-            name: data.name,
-            category: data.category,
-            description: data.description,
-            location: data.location,
-            image_urls: data.image_urls,
-            created_at: data.created_at,
-            rating: data.rating || 0,
-            review_count: data.review_count || 0,
-            hours: data.hours || "Hours not specified",
-            phone: data.phone,
-            email: data.email,
-            website: data.website,
-            owner_name: data.users?.name || "Unknown Owner",
-            owner_avatar: data.users?.avatar_url,
-            cover_image: data.image_urls?.[0],
-            logo: data.image_urls?.[0],
+          const business: Business = {
+            id: businessData.id,
+            owner_id: businessData.owner_id,
+            name: businessData.name,
+            category: businessData.category,
+            description: businessData.description,
+            location: businessData.location,
+            image_urls: businessData.image_urls,
+            created_at: businessData.created_at,
+            rating: businessData.rating || 0,
+            review_count: businessData.review_count || 0,
+            hours: businessData.hours || "Hours not specified",
+            phone: businessData.phone,
+            email: businessData.email,
+            website: businessData.website,
+            owner_name: ownerData?.name || businessData.owner_name || "Unknown Owner",
+            owner_avatar: ownerData?.avatar_url || businessData.owner_avatar,
+            cover_image: businessData.image_urls?.[0],
+            logo: businessData.image_urls?.[0],
             distance: "0.5 km away", // This would be calculated based on user location
             catalog: [] // Will be fetched separately
           };
 
-          setBusiness(businessData);
+          setBusiness(business);
         }
       } catch (error) {
         console.error('Error fetching business:', error);

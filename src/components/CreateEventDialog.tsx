@@ -32,7 +32,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useState, useEffect, memo, useCallback, useMemo } from "react";
@@ -41,6 +41,7 @@ import { LocationInput, LocationValue } from "./LocationInput";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { usePosts } from "@/hooks/use-posts";
 import type { Post } from "@/types";
+import Image from "next/image";
 
 const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
   title: z.string().min(1, "Event title can't be empty.").max(100),
@@ -57,14 +58,19 @@ type CreateEventDialogProps = {
     children?: React.ReactNode;
     onOpenChange?: (open: boolean) => void;
     postToEdit?: Post;
+    open?: boolean; // Add open prop for programmatic control
 }
 
-const CreateEventDialogComponent = memo(function CreateEventDialog({ children, onOpenChange, postToEdit }: CreateEventDialogProps) {
+const CreateEventDialogComponent = memo(function CreateEventDialog({ children, onOpenChange, postToEdit, open: externalOpen }: CreateEventDialogProps) {
   const { createPost } = usePosts();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [removedImageIndexes, setRemovedImageIndexes] = useState<number[]>([]);
   const isMobile = useIsMobile();
   const isEditMode = !!postToEdit;
+  
+  // Use external open prop if provided, otherwise use internal state
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
 
   // Create form schema once and stabilize it
   const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
@@ -100,7 +106,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
           
           stableFormReset({
             title: postToEdit.title,
-            description: postToEdit.description,
+            description: postToEdit.text || postToEdit.description || "",
             location: postToEdit.event_location,
             eventDateTime: eventDateTime,
             eventLink: postToEdit.event_link,
@@ -125,6 +131,28 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     
+    // Filter out removed images
+    let filteredImageUrls: string[] = [];
+    if (postToEdit?.image_urls) {
+      filteredImageUrls = postToEdit.image_urls.filter((_, index) => !removedImageIndexes.includes(index));
+    }
+    
+    // Validate image files
+    let validImageFiles: FileList | undefined;
+    if (values.image && values.image.length > 0) {
+      // Filter out invalid files
+      const validFiles = Array.from(values.image).filter(file => 
+        file && file instanceof File && file.name && file.size > 0
+      );
+      
+      if (validFiles.length > 0) {
+        // Create a new FileList-like object
+        const dataTransfer = new DataTransfer();
+        validFiles.forEach(file => dataTransfer.items.add(file as File));
+        validImageFiles = dataTransfer.files;
+      }
+    }
+    
     // Parse datetime-local input to separate date and time
     const eventDateTime = new Date(values.eventDateTime);
     const eventDate = eventDateTime.toISOString().split('T')[0];
@@ -139,16 +167,31 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
         event_time: eventTime,
         event_link: values.eventLink,
         attendees: postToEdit?.attendees || [],
+        image_urls: filteredImageUrls,
     };
-    await createPost(eventData, postToEdit?.id, values.image);
+    await createPost(eventData, postToEdit?.id, validImageFiles);
     setLoading(false);
     handleOpenChange(false);
   }
 
   const handleOpenChange = useCallback((newOpenState: boolean) => {
-    setOpen(newOpenState);
-    if(onOpenChange) onOpenChange(newOpenState);
-  }, [onOpenChange]);
+    if (externalOpen !== undefined) {
+      // External control - only call onOpenChange
+      if (onOpenChange) {
+        onOpenChange(newOpenState);
+      }
+    } else {
+      // Internal control - update internal state
+      setInternalOpen(newOpenState);
+      if (onOpenChange) {
+        onOpenChange(newOpenState);
+      }
+    }
+    
+    if (!newOpenState) {
+      form.reset();
+    }
+  }, [onOpenChange, externalOpen, form]);
 
   const finalTitle = isEditMode ? "Edit Event" : "Create Event";
   const finalDescription = isEditMode ? "Make changes to your event." : "Plan and share your neighborhood event.";
@@ -272,6 +315,50 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
                                 </FormItem>
                               )}
                             />
+                            {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
+                                <div className="space-y-3">
+                                    <div className="text-sm text-muted-foreground">
+                                        Current images ({postToEdit.image_urls.length}):
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {postToEdit.image_urls.map((url, index) => {
+                                            const isRemoved = removedImageIndexes.includes(index);
+                                            return (
+                                                <div key={index} className={`relative group ${isRemoved ? 'opacity-50' : ''}`}>
+                                                    <Image
+                                                        src={url}
+                                                        alt={`Current image ${index + 1}`}
+                                                        width={100}
+                                                        height={100}
+                                                        className="w-full h-20 object-cover rounded-lg"
+                                                    />
+                                                    {!isRemoved && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="destructive"
+                                                            size="icon"
+                                                            className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            onClick={() => {
+                                                                setRemovedImageIndexes(prev => [...prev, index]);
+                                                            }}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </Button>
+                                                    )}
+                                                    {isRemoved && (
+                                                        <div className="absolute inset-0 bg-red-500/20 rounded-lg flex items-center justify-center">
+                                                            <X className="h-6 w-6 text-red-500" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Upload more images to add to the list.
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                     <SheetFooter className="p-4 border-t flex-shrink-0">
@@ -288,7 +375,9 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>{children ? children : <Trigger />}</DialogTrigger>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>{children ? children : <Trigger />}</DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[525px] p-0 flex flex-col max-h-[90vh]">
         <DialogHeader className="p-6 pb-0 flex-shrink-0">
           <DialogTitle>{finalTitle}</DialogTitle>
@@ -382,6 +471,50 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
                         </FormItem>
                       )}
                     />
+                    {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
+                        <div className="space-y-3">
+                            <div className="text-sm text-muted-foreground">
+                                Current images ({postToEdit.image_urls.length}):
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                                {postToEdit.image_urls.map((url, index) => {
+                                    const isRemoved = removedImageIndexes.includes(index);
+                                    return (
+                                        <div key={index} className={`relative group ${isRemoved ? 'opacity-50' : ''}`}>
+                                            <Image
+                                                src={url}
+                                                alt={`Current image ${index + 1}`}
+                                                width={100}
+                                                height={100}
+                                                className="w-full h-20 object-cover rounded-lg"
+                                            />
+                                            {!isRemoved && (
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={() => {
+                                                        setRemovedImageIndexes(prev => [...prev, index]);
+                                                    }}
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </Button>
+                                            )}
+                                            {isRemoved && (
+                                                <div className="absolute inset-0 bg-red-500/20 rounded-lg flex items-center justify-center">
+                                                    <X className="h-6 w-6 text-red-500" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                                Upload more images to add to the list.
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
             <DialogFooter className="p-6 pt-0 border-t flex-shrink-0">

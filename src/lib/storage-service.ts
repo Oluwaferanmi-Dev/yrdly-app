@@ -3,6 +3,12 @@ import { supabase } from './supabase';
 export class StorageService {
   // Get proper MIME type for file
   private static getMimeType(file: File): string {
+    // Validate file parameter
+    if (!file || !file.name) {
+      console.warn('Invalid file provided to getMimeType:', file);
+      return 'image/jpeg'; // Default fallback
+    }
+
     // If file already has a proper MIME type, use it
     if (file.type && file.type !== 'application/octet-stream') {
       return file.type;
@@ -38,6 +44,12 @@ export class StorageService {
 
   // Convert HEIC to JPEG if needed
   private static async convertHeicToJpeg(file: File): Promise<File> {
+    // Add null/undefined checks
+    if (!file || !file.name) {
+      console.warn('Invalid file provided to convertHeicToJpeg:', file);
+      return file;
+    }
+
     if (!file.name.toLowerCase().endsWith('.heic') && !file.name.toLowerCase().endsWith('.heif')) {
       return file;
     }
@@ -87,6 +99,12 @@ export class StorageService {
     }
   ): Promise<{ data: any; error: any }> {
     try {
+      // Validate file parameter
+      if (!file) {
+        console.error('No file provided to uploadFile');
+        return { data: null, error: new Error('No file provided') };
+      }
+
       // Convert HEIC files to JPEG
       const processedFile = await this.convertHeicToJpeg(file);
       

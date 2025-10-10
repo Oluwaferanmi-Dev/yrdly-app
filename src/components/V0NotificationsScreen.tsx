@@ -5,11 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Bell, 
-  Search, 
   UserPlus, 
   MessageCircle, 
   Heart, 
@@ -193,7 +191,6 @@ export function V0NotificationsScreen({ className }: V0NotificationsScreenProps)
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'unread' | 'read'>('all');
 
   useEffect(() => {
@@ -282,17 +279,13 @@ export function V0NotificationsScreen({ className }: V0NotificationsScreenProps)
 
   const filteredNotifications = useMemo(() => {
     return notifications.filter(notif => {
-      const matchesSearch = searchQuery === '' || 
-        notif.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        notif.body.toLowerCase().includes(searchQuery.toLowerCase());
-      
       const matchesFilter = filterType === 'all' || 
         (filterType === 'unread' && !notif.is_read) ||
         (filterType === 'read' && notif.is_read);
       
-      return matchesSearch && matchesFilter;
+      return matchesFilter;
     });
-  }, [notifications, searchQuery, filterType]);
+  }, [notifications, filterType]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -371,17 +364,8 @@ export function V0NotificationsScreen({ className }: V0NotificationsScreenProps)
           )}
         </div>
 
-        {/* Search and Filter */}
+        {/* Filter */}
         <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search notifications..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-card border-border focus:border-primary"
-            />
-          </div>
           <Button
             variant={filterType === 'all' ? 'default' : 'outline'}
             size="sm"

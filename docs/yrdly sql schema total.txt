@@ -1,0 +1,1628 @@
+-- Add missing columns to conversations table for marketplace and business chats
+
+-- Add type column to distinguish between friend, marketplace, and business conversations
+ALTER TABLE conversations 
+ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'friend' CHECK (type IN ('friend', 'marketplace', 'business'));
+
+-- Add marketplace-specific columns
+ALTER TABLE conversations 
+ADD COLUMN IF NOT EXISTS item_id UUID REFERENCES posts(id) ON DELETE CASCADE;
+
+ALTER TABLE conversations 
+ADD COLUMN IF NOT EXISTS item_title TEXT;
+
+ALTER TABLE conversations 
+ADD COLUMN IF NOT EXISTS item_image TEXT;
+
+ALTER TABLE conversations 
+ADD COLUMN IF NOT EXISTS item_price DECIMAL(10,2);
+
+-- Add business-specific columns
+ALTER TABLE conversations 
+ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES businesses(id) ON DELETE CASCADE;
+
+ALTER TABLE conversations 
+ADD COLUMN IF NOT EXISTS business_name TEXT;
+
+ALTER TABLE conversations 
+ADD COLUMN IF NOT EXISTS business_logo TEXT;
+
+-- Add context column for additional data
+ALTER TABLE conversations 
+ADD COLUMN IF NOT EXISTS context JSONB;
+
+-- Add indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_conversations_type ON conversations(type);
+CREATE INDEX IF NOT EXISTS idx_conversations_item_id ON conversations(item_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_business_id ON conversations(business_id);
+
+-- Update existing conversations to have type 'friend' if they don't have a type
+UPDATE conversations 
+SET type = 'friend' 
+WHERE type IS NULL;
+
+CREATE TABLE business_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
+  sender_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  item_id UUID REFERENCES catalog_items(id) ON DELETE CASCADE,
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE business_reviews (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE catalog_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  business_id UUID REFERENCES businesses(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  price DECIMAL(10,2) NOT NULL,
+  images TEXT[],
+  category TEXT,
+  in_stock BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+
+CREATE TABLE push_subscriptions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  subscription JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Add the missing columns to the businesses table
+ALTER TABLE businesses 
+ADD COLUMN rating DECIMAL(3,2) DEFAULT NULL,
+ADD COLUMN review_count INTEGER DEFAULT 0,
+ADD COLUMN hours TEXT DEFAULT NULL,
+ADD COLUMN phone TEXT DEFAULT NULL,
+ADD COLUMN email TEXT DEFAULT NULL,
+ADD COLUMN website TEXT DEFAULT NULL,
+ADD COLUMN owner_name TEXT DEFAULT NULL,
+ADD COLUMN owner_avatar TEXT DEFAULT NULL;
+
+-- Add reactions column to comments table if it doesn't exist
+DO $$
+BEGIN
+    -- Check if reactions column exists
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'comments' 
+        AND column_name = 'reactions' 
+        AND table_schema = 'public'
+    ) THEN
+        -- Add reactions column as JSONB
+        ALTER TABLE public.comments 
+        ADD COLUMN reactions JSONB DEFAULT '{}';
+        
+        -- Add index for better performance
+        CREATE INDEX idx_comments_reactions ON public.comments USING GIN (reactions);
+    END IF;
+END $$;
+
+-- Update existing comments to have empty reactions if they don't have any
+UPDATE public.comments 
+SET reactions = '{}' 
+WHERE reactions IS NULL;
+
+-- Ensure reactions column has a default value
+ALTER TABLE public.comments 
+ALTER COLUMN reactions SET DEFAULT '{}';
+
+-- Add RLS policy for updating reactions
+DROP POLICY IF EXISTS "Users can update comment reactions" ON public.comments;
+CREATE POLICY "Users can update comment reactions" ON public.comments
+    FOR UPDATE USING (true)
+    WITH CHECK (true);
+
+-- Grant necessary permissions
+GRANT UPDATE ON public.comments TO authenticated;
+GRANT SELECT ON public.comments TO authenticated;
+
+-- Create conversations table
+CREATE TABLE IF NOT EXISTS public.conversations (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    participant_ids TEXT[] NOT NULL,
+    last_message_text TEXT,
+    last_message_timestamp TIMESTAMPTZ,
+    last_message_sender_id TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create messages table
+CREATE TABLE IF NOT EXISTS public.messages (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    conversation_id UUID NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+    sender_id TEXT NOT NULL,
+    text TEXT,
+    image_url TEXT,
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    is_read BOOLEAN DEFAULT FALSE,
+    read_by TEXT[] DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for conversations
+DROP POLICY IF EXISTS "Users can view conversations they participate in" ON public.conversations;
+CREATE POLICY "Users can view conversations they participate in" ON public.conversations
+    FOR SELECT USING (auth.uid()::text = ANY(participant_ids));
+
+DROP POLICY IF EXISTS "Users can insert conversations they participate in" ON public.conversations;
+CREATE POLICY "Users can insert conversations they participate in" ON public.conversations
+    FOR INSERT WITH CHECK (auth.uid()::text = ANY(participant_ids));
+
+DROP POLICY IF EXISTS "Users can update conversations they participate in" ON public.conversations;
+CREATE POLICY "Users can update conversations they participate in" ON public.conversations
+    FOR UPDATE USING (auth.uid()::text = ANY(participant_ids));
+
+-- RLS Policies for messages
+DROP POLICY IF EXISTS "Users can view messages in conversations they participate in" ON public.messages;
+CREATE POLICY "Users can view messages in conversations they participate in" ON public.messages
+    FOR SELECT USING (
+        conversation_id IN (
+            SELECT id FROM public.conversations 
+            WHERE auth.uid()::text = ANY(participant_ids)
+        )
+    );
+
+DROP POLICY IF EXISTS "Users can insert messages in conversations they participate in" ON public.messages;
+CREATE POLICY "Users can insert messages in conversations they participate in" ON public.messages
+    FOR INSERT WITH CHECK (
+        sender_id = auth.uid()::text AND
+        conversation_id IN (
+            SELECT id FROM public.conversations 
+            WHERE auth.uid()::text = ANY(participant_ids)
+        )
+    );
+
+DROP POLICY IF EXISTS "Users can update messages they sent" ON public.messages;
+CREATE POLICY "Users can update messages they sent" ON public.messages
+    FOR UPDATE USING (sender_id = auth.uid()::text);
+
+-- Function to update conversation last message
+CREATE OR REPLACE FUNCTION update_conversation_last_message()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE public.conversations
+    SET 
+        last_message_text = NEW.text,
+        last_message_timestamp = NEW.timestamp,
+        last_message_sender_id = NEW.sender_id,
+        updated_at = NOW()
+    WHERE id = NEW.conversation_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to update conversation when message is inserted
+DROP TRIGGER IF EXISTS update_conversation_on_message_insert ON public.messages;
+CREATE TRIGGER update_conversation_on_message_insert
+    AFTER INSERT ON public.messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_conversation_last_message();
+
+-- Function to mark messages as read
+CREATE OR REPLACE FUNCTION mark_messages_as_read(
+    p_conversation_id UUID,
+    p_user_id TEXT
+)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE public.messages
+    SET 
+        is_read = TRUE,
+        read_by = CASE 
+            WHEN p_user_id = ANY(read_by) THEN read_by
+            ELSE array_append(read_by, p_user_id)
+        END
+    WHERE conversation_id = p_conversation_id 
+    AND sender_id::text != p_user_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Enable real-time for both tables (only if not already added)
+DO $$
+BEGIN
+    -- Add conversations table to realtime publication if not already added
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+        AND tablename = 'conversations' 
+        AND schemaname = 'public'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
+    END IF;
+    
+    -- Add messages table to realtime publication if not already added
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+        AND tablename = 'messages' 
+        AND schemaname = 'public'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+    END IF;
+END $$;
+
+-- Fix Messaging System - Create proper tables and RLS policies
+-- This migration creates the messages and conversations tables with proper structure
+
+-- Create conversations table
+CREATE TABLE IF NOT EXISTS public.conversations (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    participant_ids TEXT[] NOT NULL,
+    last_message_id UUID,
+    last_message_text TEXT,
+    last_message_sender_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    last_message_timestamp TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create messages table
+CREATE TABLE IF NOT EXISTS public.messages (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    conversation_id UUID NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
+    sender_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    text TEXT,
+    image_url TEXT,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    is_read BOOLEAN DEFAULT FALSE,
+    read_by TEXT[] DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_conversations_participant_ids ON public.conversations USING GIN(participant_ids);
+CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON public.conversations(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON public.messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON public.messages(timestamp ASC);
+CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON public.messages(sender_id);
+
+-- Enable RLS
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view conversations they participate in" ON public.conversations;
+DROP POLICY IF EXISTS "Users can create conversations" ON public.conversations;
+DROP POLICY IF EXISTS "Users can update conversations they participate in" ON public.conversations;
+DROP POLICY IF EXISTS "Users can delete conversations they participate in" ON public.conversations;
+
+DROP POLICY IF EXISTS "Users can view messages in their conversations" ON public.messages;
+DROP POLICY IF EXISTS "Users can send messages in their conversations" ON public.messages;
+DROP POLICY IF EXISTS "Users can update their own messages" ON public.messages;
+DROP POLICY IF EXISTS "Users can delete their own messages" ON public.messages;
+
+-- RLS Policies for conversations
+CREATE POLICY "Users can view conversations they participate in"
+    ON public.conversations
+    FOR SELECT
+    USING (auth.uid()::text = ANY(participant_ids));
+
+CREATE POLICY "Users can create conversations"
+    ON public.conversations
+    FOR INSERT
+    WITH CHECK (auth.uid()::text = ANY(participant_ids));
+
+CREATE POLICY "Users can update conversations they participate in"
+    ON public.conversations
+    FOR UPDATE
+    USING (auth.uid()::text = ANY(participant_ids))
+    WITH CHECK (auth.uid()::text = ANY(participant_ids));
+
+CREATE POLICY "Users can delete conversations they participate in"
+    ON public.conversations
+    FOR DELETE
+    USING (auth.uid()::text = ANY(participant_ids));
+
+-- RLS Policies for messages
+CREATE POLICY "Users can view messages in their conversations"
+    ON public.messages
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.conversations 
+            WHERE id = conversation_id 
+            AND auth.uid()::text = ANY(participant_ids)
+        )
+    );
+
+CREATE POLICY "Users can send messages in their conversations"
+    ON public.messages
+    FOR INSERT
+    WITH CHECK (
+        auth.uid()::text = sender_id::text AND
+        EXISTS (
+            SELECT 1 FROM public.conversations 
+            WHERE id = conversation_id 
+            AND auth.uid()::text = ANY(participant_ids)
+        )
+    );
+
+CREATE POLICY "Users can update their own messages"
+    ON public.messages
+    FOR UPDATE
+    USING (auth.uid()::text = sender_id::text)
+    WITH CHECK (auth.uid()::text = sender_id::text);
+
+CREATE POLICY "Users can delete their own messages"
+    ON public.messages
+    FOR DELETE
+    USING (auth.uid()::text = sender_id::text);
+
+-- Grant permissions
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.conversations TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.messages TO authenticated;
+
+-- Enable real-time (only if not already added)
+DO $$ 
+BEGIN
+    -- Add conversations table to realtime publication if not already there
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+        AND tablename = 'conversations' 
+        AND schemaname = 'public'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
+    END IF;
+    
+    -- Add messages table to realtime publication if not already there
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+        AND tablename = 'messages' 
+        AND schemaname = 'public'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+    END IF;
+END $$;
+
+-- Create function to update conversation last message
+CREATE OR REPLACE FUNCTION update_conversation_last_message()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Update the conversation's last message info
+    UPDATE public.conversations
+    SET 
+        last_message_id = NEW.id,
+        last_message_text = NEW.text,
+        last_message_sender_id = NEW.sender_id,
+        last_message_timestamp = NEW.timestamp,
+        updated_at = NOW()
+    WHERE id = NEW.conversation_id;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to automatically update conversation last message
+DROP TRIGGER IF EXISTS trigger_update_conversation_last_message ON public.messages;
+CREATE TRIGGER trigger_update_conversation_last_message
+    AFTER INSERT ON public.messages
+    FOR EACH ROW
+    EXECUTE FUNCTION update_conversation_last_message();
+
+-- Create function to mark messages as read
+CREATE OR REPLACE FUNCTION mark_messages_as_read(
+    p_conversation_id UUID,
+    p_user_id UUID
+)
+RETURNS void AS $$
+BEGIN
+    -- Mark all unread messages in the conversation as read for this user
+    UPDATE public.messages
+    SET 
+        is_read = true,
+        read_by = array_append(COALESCE(read_by, '{}'), p_user_id::text)
+    WHERE 
+        conversation_id = p_conversation_id 
+        AND sender_id::text != p_user_id::text
+        AND NOT (p_user_id::text = ANY(COALESCE(read_by, '{}')));
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute permission on the function
+GRANT EXECUTE ON FUNCTION mark_messages_as_read(UUID, UUID) TO authenticated;
+
+-- Fix RLS policies for businesses table to allow authenticated users to create, read, update, and delete their own businesses
+
+-- Enable RLS if not already enabled
+ALTER TABLE public.businesses ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view all businesses" ON public.businesses;
+DROP POLICY IF EXISTS "Users can create their own businesses" ON public.businesses;
+DROP POLICY IF EXISTS "Users can update their own businesses" ON public.businesses;
+DROP POLICY IF EXISTS "Users can delete their own businesses" ON public.businesses;
+
+-- Create new RLS policies
+
+-- Policy for SELECT: Allow all authenticated users to view all businesses
+CREATE POLICY "Users can view all businesses"
+    ON public.businesses
+    FOR SELECT
+    USING (auth.role() = 'authenticated');
+
+-- Policy for INSERT: Allow authenticated users to create businesses
+CREATE POLICY "Users can create their own businesses"
+    ON public.businesses
+    FOR INSERT
+    WITH CHECK (
+        auth.role() = 'authenticated' AND
+        auth.uid() = owner_id
+    );
+
+-- Policy for UPDATE: Allow users to update their own businesses
+CREATE POLICY "Users can update their own businesses"
+    ON public.businesses
+    FOR UPDATE
+    USING (auth.uid() = owner_id)
+    WITH CHECK (auth.uid() = owner_id);
+
+-- Policy for DELETE: Allow users to delete their own businesses
+CREATE POLICY "Users can delete their own businesses"
+    ON public.businesses
+    FOR DELETE
+    USING (auth.uid() = owner_id);
+
+-- Grant necessary permissions to authenticated role
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.businesses TO authenticated;
+
+-- Ensure the businesses table exists with the correct structure
+CREATE TABLE IF NOT EXISTS public.businesses (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    description TEXT,
+    location JSONB NOT NULL,
+    image_urls TEXT[] DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_businesses_owner_id ON public.businesses(owner_id);
+CREATE INDEX IF NOT EXISTS idx_businesses_category ON public.businesses(category);
+CREATE INDEX IF NOT EXISTS idx_businesses_created_at ON public.businesses(created_at DESC);
+
+-- Enable real-time for businesses table
+ALTER PUBLICATION supabase_realtime ADD TABLE public.businesses;
+
+-- Fix Notifications Schema Migration
+-- This migration handles both existing and new notification table structures
+
+-- First, let's check if the table exists and what columns it has
+-- If the table doesn't exist, create it with the full schema
+-- If it exists but has different column names, we'll handle the migration
+
+-- Drop existing table if it has the wrong structure (be careful with this in production!)
+-- We'll use a safer approach by checking and altering columns
+
+-- Check if sender_id column exists, if not add it
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'notifications' 
+        AND column_name = 'sender_id'
+        AND table_schema = 'public'
+    ) THEN
+        ALTER TABLE public.notifications ADD COLUMN sender_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- Check if related_id column exists, if not add it
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'notifications' 
+        AND column_name = 'related_id'
+        AND table_schema = 'public'
+    ) THEN
+        ALTER TABLE public.notifications ADD COLUMN related_id UUID;
+    END IF;
+END $$;
+
+-- Check if related_type column exists, if not add it
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'notifications' 
+        AND column_name = 'related_type'
+        AND table_schema = 'public'
+    ) THEN
+        ALTER TABLE public.notifications ADD COLUMN related_type VARCHAR(50);
+    END IF;
+END $$;
+
+-- Check if title column exists, if not add it
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'notifications' 
+        AND column_name = 'title'
+        AND table_schema = 'public'
+    ) THEN
+        ALTER TABLE public.notifications ADD COLUMN title VARCHAR(255) NOT NULL DEFAULT 'Notification';
+    END IF;
+END $$;
+
+-- Check if data column exists, if not add it
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'notifications' 
+        AND column_name = 'data'
+        AND table_schema = 'public'
+    ) THEN
+        ALTER TABLE public.notifications ADD COLUMN data JSONB DEFAULT '{}';
+    END IF;
+END $$;
+
+-- Check if read_at column exists, if not add it
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'notifications' 
+        AND column_name = 'read_at'
+        AND table_schema = 'public'
+    ) THEN
+        ALTER TABLE public.notifications ADD COLUMN read_at TIMESTAMP WITH TIME ZONE;
+    END IF;
+END $$;
+
+-- Check if updated_at column exists, if not add it
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'notifications' 
+        AND column_name = 'updated_at'
+        AND table_schema = 'public'
+    ) THEN
+        ALTER TABLE public.notifications ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+    END IF;
+END $$;
+
+-- Update existing rows to have proper default values
+UPDATE public.notifications 
+SET title = COALESCE(title, 'Notification')
+WHERE title IS NULL OR title = '';
+
+UPDATE public.notifications 
+SET data = COALESCE(data, '{}')
+WHERE data IS NULL;
+
+-- Create indexes if they don't exist
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON public.notifications(user_id, is_read) WHERE is_read = FALSE;
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON public.notifications(type);
+CREATE INDEX IF NOT EXISTS idx_notifications_sender_id ON public.notifications(sender_id);
+
+-- Enable Row Level Security if not already enabled
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies and recreate them
+DROP POLICY IF EXISTS "Users can view their own notifications" ON public.notifications;
+CREATE POLICY "Users can view their own notifications"
+    ON public.notifications
+    FOR SELECT
+    USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update their own notifications" ON public.notifications;
+CREATE POLICY "Users can update their own notifications"
+    ON public.notifications
+    FOR UPDATE
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete their own notifications" ON public.notifications;
+CREATE POLICY "Users can delete their own notifications"
+    ON public.notifications
+    FOR DELETE
+    USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "System can create notifications" ON public.notifications;
+CREATE POLICY "System can create notifications"
+    ON public.notifications
+    FOR INSERT
+    WITH CHECK (true);
+
+-- Create or replace the create_notification function
+CREATE OR REPLACE FUNCTION create_notification(
+    p_user_id UUID,
+    p_type VARCHAR(50),
+    p_title VARCHAR(255),
+    p_message TEXT,
+    p_sender_id UUID DEFAULT NULL,
+    p_related_id UUID DEFAULT NULL,
+    p_related_type VARCHAR(50) DEFAULT NULL,
+    p_data JSONB DEFAULT '{}'
+)
+RETURNS UUID AS $$
+DECLARE
+    notification_id UUID;
+BEGIN
+    INSERT INTO public.notifications (
+        user_id,
+        type,
+        title,
+        message,
+        sender_id,
+        related_id,
+        related_type,
+        data
+    ) VALUES (
+        p_user_id,
+        p_type,
+        p_title,
+        p_message,
+        p_sender_id,
+        p_related_id,
+        p_related_type,
+        p_data
+    ) RETURNING id INTO notification_id;
+    
+    RETURN notification_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create or replace the mark_notification_read function
+CREATE OR REPLACE FUNCTION mark_notification_read(p_notification_id UUID, p_user_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+    UPDATE public.notifications 
+    SET is_read = TRUE, read_at = NOW()
+    WHERE id = p_notification_id AND user_id = p_user_id;
+    
+    RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create or replace the mark_all_notifications_read function
+CREATE OR REPLACE FUNCTION mark_all_notifications_read(p_user_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+    updated_count INTEGER;
+BEGIN
+    UPDATE public.notifications 
+    SET is_read = TRUE, read_at = NOW()
+    WHERE user_id = p_user_id AND is_read = FALSE;
+    
+    GET DIAGNOSTICS updated_count = ROW_COUNT;
+    RETURN updated_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create or replace the clear_all_notifications function
+CREATE OR REPLACE FUNCTION clear_all_notifications(p_user_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM public.notifications WHERE user_id = p_user_id;
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create trigger for updated_at if it doesn't exist
+CREATE OR REPLACE FUNCTION update_notifications_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_update_notifications_updated_at ON public.notifications;
+CREATE TRIGGER trigger_update_notifications_updated_at
+    BEFORE UPDATE ON public.notifications
+    FOR EACH ROW
+    EXECUTE FUNCTION update_notifications_updated_at();
+
+-- Enable real-time for notifications table (only if not already enabled)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables 
+        WHERE pubname = 'supabase_realtime' 
+        AND tablename = 'notifications'
+    ) THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+    END IF;
+END $$;
+
+-- Create notification type constraint
+ALTER TABLE public.notifications 
+DROP CONSTRAINT IF EXISTS check_notification_type;
+
+ALTER TABLE public.notifications 
+ADD CONSTRAINT check_notification_type 
+CHECK (type IN (
+    'friend_request',
+    'friend_request_accepted', 
+    'friend_request_declined',
+    'message',
+    'message_reaction',
+    'post_like',
+    'post_comment',
+    'post_share',
+    'event_invite',
+    'event_reminder',
+    'event_cancelled',
+    'event_updated',
+    'marketplace_item_sold',
+    'marketplace_item_interest',
+    'marketplace_message',
+    'community_update',
+    'system_announcement',
+    'welcome',
+    'profile_view',
+    'mention'
+));
+
+-- Create or replace the notification stats view
+CREATE OR REPLACE VIEW notification_stats AS
+SELECT 
+    user_id,
+    COUNT(*) as total_notifications,
+    COUNT(*) FILTER (WHERE is_read = FALSE) as unread_count,
+    COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') as today_count,
+    COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days') as week_count
+FROM public.notifications
+GROUP BY user_id;
+
+-- Grant permissions
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.notifications TO authenticated;
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT EXECUTE ON FUNCTION create_notification TO authenticated;
+GRANT EXECUTE ON FUNCTION mark_notification_read TO authenticated;
+GRANT EXECUTE ON FUNCTION mark_all_notifications_read TO authenticated;
+GRANT EXECUTE ON FUNCTION clear_all_notifications TO authenticated;
+GRANT SELECT ON notification_stats TO authenticated;
+
+
+-- Fix comment counts for existing posts by counting actual comments
+-- This migration updates the comment_count field to match the actual number of comments
+
+-- Update comment_count for all posts based on actual comment count
+UPDATE public.posts 
+SET comment_count = (
+    SELECT COUNT(*) 
+    FROM public.comments 
+    WHERE comments.post_id = posts.id
+)
+WHERE id IN (
+    SELECT DISTINCT post_id 
+    FROM public.comments
+);
+
+-- Also update posts that have no comments to ensure they have comment_count = 0
+UPDATE public.posts 
+SET comment_count = 0 
+WHERE comment_count IS NULL OR comment_count = 0;
+
+-- Verify the update worked by showing some statistics
+SELECT 
+    'Posts with comments' as category,
+    COUNT(*) as count
+FROM public.posts 
+WHERE comment_count > 0
+
+UNION ALL
+
+SELECT 
+    'Posts without comments' as category,
+    COUNT(*) as count
+FROM public.posts 
+WHERE comment_count = 0
+
+UNION ALL
+
+SELECT 
+    'Total posts' as category,
+    COUNT(*) as count
+FROM public.posts;
+
+
+-- Fix posts table structure to ensure likes and comments work properly
+-- This migration ensures the posts table has the correct columns and default values
+
+-- Add liked_by column if it doesn't exist
+DO $$ BEGIN
+    ALTER TABLE public.posts ADD COLUMN liked_by uuid[] DEFAULT '{}'::uuid[];
+EXCEPTION
+    WHEN duplicate_column THEN RAISE NOTICE 'column liked_by already exists in public.posts.';
+END $$;
+
+-- Add comment_count column if it doesn't exist
+DO $$ BEGIN
+    ALTER TABLE public.posts ADD COLUMN comment_count INTEGER DEFAULT 0;
+EXCEPTION
+    WHEN duplicate_column THEN RAISE NOTICE 'column comment_count already exists in public.posts.';
+END $$;
+
+-- Update existing rows to ensure liked_by is not null and is an empty array if null
+UPDATE public.posts
+SET liked_by = '{}'::uuid[]
+WHERE liked_by IS NULL;
+
+-- Update existing rows to ensure comment_count is not null and is 0 if null
+UPDATE public.posts
+SET comment_count = 0
+WHERE comment_count IS NULL;
+
+-- Ensure RLS policies allow updates to liked_by and comment_count
+-- Policy for authenticated users to update their own posts
+DROP POLICY IF EXISTS "Allow authenticated users to update their own posts" ON public.posts;
+CREATE POLICY "Allow authenticated users to update their own posts"
+ON public.posts
+FOR UPDATE
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+-- Policy for authenticated users to like/unlike posts (update liked_by)
+-- This policy allows any authenticated user to update the liked_by column
+DROP POLICY IF EXISTS "Allow authenticated users to like/unlike posts" ON public.posts;
+CREATE POLICY "Allow authenticated users to like/unlike posts"
+ON public.posts
+FOR UPDATE
+USING (true) -- Any authenticated user can update liked_by
+WITH CHECK (true); -- No additional check on the new value, application logic handles it
+
+-- Policy for authenticated users to update comment_count (via comment creation)
+-- This policy allows any authenticated user to update the comment_count column
+DROP POLICY IF EXISTS "Allow authenticated users to update comment_count" ON public.posts;
+CREATE POLICY "Allow authenticated users to update comment_count"
+ON public.posts
+FOR UPDATE
+USING (true) -- Any authenticated user can update comment_count
+WITH CHECK (true); -- No additional check on the new value, application logic handles it
+
+-- Real-time is already enabled for posts table
+
+-- Fix posts table to ensure proper default values for liked_by and comment_count
+-- This migration ensures that existing posts have the correct default values
+
+-- Update posts that have NULL liked_by to empty array
+UPDATE posts 
+SET liked_by = '{}' 
+WHERE liked_by IS NULL;
+
+-- Update posts that have NULL comment_count to 0
+UPDATE posts 
+SET comment_count = 0 
+WHERE comment_count IS NULL;
+
+-- Add default values to the posts table if they don't exist
+ALTER TABLE posts 
+ALTER COLUMN liked_by SET DEFAULT '{}';
+
+ALTER TABLE posts 
+ALTER COLUMN comment_count SET DEFAULT 0;
+
+-- Ensure the columns are not nullable
+ALTER TABLE posts 
+ALTER COLUMN liked_by SET NOT NULL;
+
+ALTER TABLE posts 
+ALTER COLUMN comment_count SET NOT NULL;
+
+-- Fix posts table to ensure proper default values for liked_by and comment_count
+-- This migration ensures that existing posts have the correct default values
+
+-- Update posts that have NULL liked_by to empty array
+UPDATE posts 
+SET liked_by = '{}' 
+WHERE liked_by IS NULL;
+
+-- Update posts that have NULL comment_count to 0
+UPDATE posts 
+SET comment_count = 0 
+WHERE comment_count IS NULL;
+
+-- Add default values to the posts table if they don't exist
+ALTER TABLE posts 
+ALTER COLUMN liked_by SET DEFAULT '{}';
+
+ALTER TABLE posts 
+ALTER COLUMN comment_count SET DEFAULT 0;
+
+-- Ensure the columns are not nullable
+ALTER TABLE posts 
+ALTER COLUMN liked_by SET NOT NULL;
+
+ALTER TABLE posts 
+ALTER COLUMN comment_count SET NOT NULL;
+
+-- Enable real-time for posts table
+ALTER PUBLICATION supabase_realtime ADD TABLE public.posts;
+
+-- Enable real-time for messages table
+ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+
+-- Enable real-time for conversations table
+ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
+
+-- Enable real-time for comments table
+ALTER PUBLICATION supabase_realtime ADD TABLE public.comments;
+
+-- Enable real-time for notifications table
+ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+
+-- Fix RLS policy for conversations table
+-- The current policy expects text but participant_ids contains UUIDs
+
+-- Drop the existing policy
+DROP POLICY IF EXISTS "Users can create conversations" ON public.conversations;
+
+-- Create a new policy that works with UUIDs
+CREATE POLICY "Users can create conversations" ON public.conversations 
+FOR INSERT WITH CHECK (auth.uid() = ANY(participant_ids::uuid[]));
+
+-- Also fix the read policy to be consistent
+DROP POLICY IF EXISTS "Users can read own conversations" ON public.conversations;
+
+CREATE POLICY "Users can read own conversations" ON public.conversations 
+FOR SELECT USING (auth.uid() = ANY(participant_ids::uuid[]));
+
+
+-- Add missing columns to item_chats table
+ALTER TABLE public.item_chats 
+ADD COLUMN IF NOT EXISTS last_message_at TIMESTAMPTZ DEFAULT NOW();
+
+ALTER TABLE public.item_chats 
+ADD COLUMN IF NOT EXISTS last_message TEXT;
+
+-- Update existing records
+UPDATE public.item_chats 
+SET last_message_at = last_activity 
+WHERE last_message_at IS NULL;
+
+-- Create index for performance
+CREATE INDEX IF NOT EXISTS idx_item_chats_last_message_at ON public.item_chats(last_message_at DESC);
+
+-- Add RLS policy for inserting notifications
+-- This allows users to create notifications for other users (like friend requests)
+
+CREATE POLICY "Users can insert notifications" ON public.notifications 
+FOR INSERT WITH CHECK (true);
+
+-- Also ensure the notifications table has RLS enabled
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+-- Ensure comments table exists with proper structure
+CREATE TABLE IF NOT EXISTS public.comments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    post_id UUID REFERENCES public.posts(id) ON DELETE CASCADE,
+    author_name TEXT NOT NULL,
+    author_image TEXT,
+    text TEXT NOT NULL,
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    parent_id UUID REFERENCES public.comments(id) ON DELETE CASCADE,
+    reactions JSONB DEFAULT '{}', -- { emoji: [userIds] }
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS
+ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for comments (drop existing first to avoid conflicts)
+DROP POLICY IF EXISTS "Comments are readable by everyone" ON public.comments;
+DROP POLICY IF EXISTS "Users can create comments" ON public.comments;
+DROP POLICY IF EXISTS "Users can update own comments" ON public.comments;
+DROP POLICY IF EXISTS "Users can delete own comments" ON public.comments;
+
+CREATE POLICY "Comments are readable by everyone" ON public.comments FOR SELECT USING (true);
+CREATE POLICY "Users can create comments" ON public.comments FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own comments" ON public.comments FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own comments" ON public.comments FOR DELETE USING (auth.uid() = user_id);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_comments_post_id ON public.comments(post_id);
+CREATE INDEX IF NOT EXISTS idx_comments_user_id ON public.comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON public.comments(parent_id);
+CREATE INDEX IF NOT EXISTS idx_comments_timestamp ON public.comments(timestamp);
+
+
+
+-- Update storage buckets to allow HEIC files
+-- Run this in your Supabase SQL Editor
+
+-- Update post-images bucket to allow HEIC files
+UPDATE storage.buckets 
+SET allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif']
+WHERE id = 'post-images';
+
+-- Update chat-images bucket to allow HEIC files
+UPDATE storage.buckets 
+SET allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif']
+WHERE id = 'chat-images';
+
+-- Update user-avatars bucket to allow HEIC files
+UPDATE storage.buckets 
+SET allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif']
+WHERE id = 'user-avatars';
+
+-- Fix RLS policies for friend_requests table
+-- This migration adds the missing RLS policies for friend_requests table
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view friend requests" ON public.friend_requests;
+DROP POLICY IF EXISTS "Users can insert friend requests" ON public.friend_requests;
+DROP POLICY IF EXISTS "Users can update friend requests" ON public.friend_requests;
+DROP POLICY IF EXISTS "Users can delete friend requests" ON public.friend_requests;
+
+-- Create RLS policies for friend_requests table
+
+-- Users can view friend requests where they are either the sender or receiver
+CREATE POLICY "Users can view friend requests" ON public.friend_requests 
+FOR SELECT USING (
+    auth.uid() = from_user_id OR auth.uid() = to_user_id
+);
+
+-- Users can insert friend requests where they are the sender
+CREATE POLICY "Users can insert friend requests" ON public.friend_requests 
+FOR INSERT WITH CHECK (
+    auth.uid() = from_user_id
+);
+
+-- Users can update friend requests where they are either the sender or receiver
+CREATE POLICY "Users can update friend requests" ON public.friend_requests 
+FOR UPDATE USING (
+    auth.uid() = from_user_id OR auth.uid() = to_user_id
+);
+
+-- Users can delete friend requests where they are either the sender or receiver
+CREATE POLICY "Users can delete friend requests" ON public.friend_requests 
+FOR DELETE USING (
+    auth.uid() = from_user_id OR auth.uid() = to_user_id
+);
+
+
+-- Drop the existing restrictive policy
+DROP POLICY IF EXISTS "Users can read own data" ON public.users;
+
+-- Create a new policy that allows users to read all users' data
+CREATE POLICY "Users can read all users" ON public.users FOR SELECT USING (true);
+
+-- Step 1: Add all missing onboarding columns to the users table
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS onboarding_status TEXT DEFAULT 'signup';
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT false;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS onboarding_completed_at TIMESTAMPTZ;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS tour_completed BOOLEAN DEFAULT false;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS welcome_message_sent BOOLEAN DEFAULT false;
+
+-- Step 2: Create the onboarding_step enum type
+DO $$ BEGIN
+    CREATE TYPE onboarding_step AS ENUM ('signup', 'email_verification', 'profile_setup', 'welcome', 'tour', 'completed');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- Step 3: Update existing data to valid enum values (if any)
+UPDATE public.users 
+SET onboarding_status = 'signup' 
+WHERE onboarding_status IS NULL OR onboarding_status NOT IN ('signup', 'email_verification', 'profile_setup', 'welcome', 'tour', 'completed');
+
+-- Step 4: Change the column type to use the enum
+ALTER TABLE public.users ALTER COLUMN onboarding_status DROP DEFAULT;
+ALTER TABLE public.users ALTER COLUMN onboarding_status TYPE onboarding_step USING onboarding_status::onboarding_step;
+ALTER TABLE public.users ALTER COLUMN onboarding_status SET DEFAULT 'signup';
+
+-- Step 5: Add indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_users_username ON public.users(username);
+CREATE INDEX IF NOT EXISTS idx_users_onboarding_status ON public.users(onboarding_status);
+
+SELECT column_name, data_type, is_nullable 
+FROM information_schema.columns 
+WHERE table_name = 'users' AND column_name = 'username';
+
+ALTER TABLE public.users ADD COLUMN username TEXT UNIQUE;
+
+-- Fix RLS policies for Supabase Storage
+-- Run this in your Supabase SQL Editor
+
+-- Drop existing policies for user-avatars
+DROP POLICY IF EXISTS "Users can upload their own avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own avatars" ON storage.objects;
+
+-- Create corrected RLS policies for user-avatars bucket
+-- Path structure: avatars/{userId}/{fileName}
+-- So userId is at index [2] in the folder path
+CREATE POLICY "Users can upload their own avatars" ON storage.objects
+FOR INSERT WITH CHECK (
+  bucket_id = 'user-avatars' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+CREATE POLICY "Users can update their own avatars" ON storage.objects
+FOR UPDATE USING (
+  bucket_id = 'user-avatars' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+CREATE POLICY "Users can delete their own avatars" ON storage.objects
+FOR DELETE USING (
+  bucket_id = 'user-avatars' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+-- Also fix post-images policies if needed
+-- Path structure: posts/{userId}/{fileName}
+DROP POLICY IF EXISTS "Users can upload their own post images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own post images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own post images" ON storage.objects;
+
+CREATE POLICY "Users can upload their own post images" ON storage.objects
+FOR INSERT WITH CHECK (
+  bucket_id = 'post-images' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+CREATE POLICY "Users can update their own post images" ON storage.objects
+FOR UPDATE USING (
+  bucket_id = 'post-images' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+CREATE POLICY "Users can delete their own post images" ON storage.objects
+FOR DELETE USING (
+  bucket_id = 'post-images' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+-- Supabase Storage Setup for Yrdly App
+-- Run this in your Supabase SQL Editor
+
+-- Create storage buckets
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES 
+  ('post-images', 'post-images', true, 10485760, ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp']),
+  ('chat-images', 'chat-images', true, 10485760, ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp']),
+  ('user-avatars', 'user-avatars', true, 5242880, ARRAY['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+
+-- Create RLS policies for post-images bucket
+CREATE POLICY "Users can upload post images" ON storage.objects
+FOR INSERT WITH CHECK (
+  bucket_id = 'post-images' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+CREATE POLICY "Users can view post images" ON storage.objects
+FOR SELECT USING (bucket_id = 'post-images');
+
+CREATE POLICY "Users can update their own post images" ON storage.objects
+FOR UPDATE USING (
+  bucket_id = 'post-images' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+CREATE POLICY "Users can delete their own post images" ON storage.objects
+FOR DELETE USING (
+  bucket_id = 'post-images' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+-- Create RLS policies for chat-images bucket
+CREATE POLICY "Users can upload chat images" ON storage.objects
+FOR INSERT WITH CHECK (
+  bucket_id = 'chat-images' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+CREATE POLICY "Users can view chat images" ON storage.objects
+FOR SELECT USING (bucket_id = 'chat-images');
+
+CREATE POLICY "Users can update their own chat images" ON storage.objects
+FOR UPDATE USING (
+  bucket_id = 'chat-images' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+CREATE POLICY "Users can delete their own chat images" ON storage.objects
+FOR DELETE USING (
+  bucket_id = 'chat-images' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+-- Create RLS policies for user-avatars bucket
+CREATE POLICY "Users can upload their own avatars" ON storage.objects
+FOR INSERT WITH CHECK (
+  bucket_id = 'user-avatars' AND
+  auth.uid()::text = (storage.foldername(name))[1]
+);
+
+CREATE POLICY "Users can view avatars" ON storage.objects
+FOR SELECT USING (bucket_id = 'user-avatars');
+
+CREATE POLICY "Users can update their own avatars" ON storage.objects
+FOR UPDATE USING (
+  bucket_id = 'user-avatars' AND
+  auth.uid()::text = (storage.foldername(name))[1]
+);
+
+CREATE POLICY "Users can delete their own avatars" ON storage.objects
+FOR DELETE USING (
+  bucket_id = 'user-avatars' AND
+  auth.uid()::text = (storage.foldername(name))[1]
+);
+
+
+-- Yrdly App Database Schema for Supabase
+-- This schema replicates your Firestore structure in PostgreSQL
+
+-- Enable necessary extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "postgis";
+
+-- Create custom types
+CREATE TYPE post_category AS ENUM ('General', 'Event', 'For Sale', 'Business');
+CREATE TYPE escrow_status AS ENUM ('pending', 'paid', 'shipped', 'delivered', 'completed', 'disputed', 'cancelled');
+CREATE TYPE payment_method AS ENUM ('card', 'bank_transfer', 'mobile_money');
+CREATE TYPE delivery_option AS ENUM ('face_to_face', 'partnered_service', 'own_logistics');
+CREATE TYPE account_type AS ENUM ('bank_account', 'mobile_money', 'digital_wallet');
+CREATE TYPE verification_status AS ENUM ('pending', 'verified', 'rejected', 'expired');
+CREATE TYPE verification_level AS ENUM ('basic', 'bank_account', 'identity', 'address');
+
+-- Users table (extends Supabase auth.users)
+CREATE TABLE public.users (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    email TEXT,
+    avatar_url TEXT,
+    bio TEXT,
+    location JSONB, -- { state, lga, city, ward }
+    friends UUID[] DEFAULT '{}',
+    blocked_users UUID[] DEFAULT '{}',
+    notification_settings JSONB DEFAULT '{
+        "friendRequests": true,
+        "messages": true,
+        "postUpdates": true,
+        "comments": true,
+        "postLikes": true,
+        "eventInvites": true
+    }',
+    is_online BOOLEAN DEFAULT false,
+    last_seen TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Businesses table
+CREATE TABLE public.businesses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    owner_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    description TEXT,
+    location JSONB NOT NULL, -- { address, geopoint }
+    image_urls TEXT[],
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Posts table
+CREATE TABLE public.posts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    author_name TEXT NOT NULL,
+    author_image TEXT,
+    text TEXT NOT NULL,
+    description TEXT, -- For marketplace listings
+    image_url TEXT,
+    image_urls TEXT[],
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    comment_count INTEGER DEFAULT 0,
+    category post_category NOT NULL,
+    
+    -- Event-specific fields
+    title TEXT,
+    event_date TEXT,
+    event_time TEXT,
+    event_link TEXT,
+    event_location JSONB, -- { address, geopoint }
+    attendees TEXT[] DEFAULT '{}',
+    
+    -- For Sale specific fields
+    price DECIMAL(10,2),
+    
+    liked_by TEXT[] DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Comments table
+CREATE TABLE public.comments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    post_id UUID REFERENCES public.posts(id) ON DELETE CASCADE,
+    author_name TEXT NOT NULL,
+    author_image TEXT,
+    text TEXT NOT NULL,
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    parent_id UUID REFERENCES public.comments(id) ON DELETE CASCADE,
+    reactions JSONB DEFAULT '{}', -- { emoji: [userIds] }
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Friend requests table
+CREATE TABLE public.friend_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    from_user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    to_user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    participant_ids TEXT[] NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(from_user_id, to_user_id)
+);
+
+-- Conversations table
+CREATE TABLE public.conversations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    participant_ids TEXT[] NOT NULL,
+    last_message_id UUID,
+    last_message_text TEXT,
+    last_message_sender_id TEXT,
+    last_message_timestamp TIMESTAMPTZ,
+    last_message_is_read BOOLEAN DEFAULT false,
+    last_message_read_by TEXT[] DEFAULT '{}',
+    typing JSONB DEFAULT '{}', -- { userId: boolean }
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Messages table
+CREATE TABLE public.messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE,
+    sender_id TEXT NOT NULL,
+    text TEXT,
+    image_url TEXT,
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    is_read BOOLEAN DEFAULT false,
+    read_by TEXT[] DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Escrow transactions table
+CREATE TABLE public.escrow_transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    item_id TEXT NOT NULL,
+    buyer_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    seller_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    amount DECIMAL(10,2) NOT NULL,
+    commission DECIMAL(10,2) NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    seller_amount DECIMAL(10,2) NOT NULL,
+    status escrow_status NOT NULL DEFAULT 'pending',
+    payment_method payment_method NOT NULL,
+    delivery_details JSONB NOT NULL, -- { option, address, meetingPoint, etc. }
+    paid_at TIMESTAMPTZ,
+    shipped_at TIMESTAMPTZ,
+    delivered_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    dispute_reason TEXT,
+    dispute_resolved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seller accounts table
+CREATE TABLE public.seller_accounts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    account_type account_type NOT NULL,
+    account_details JSONB NOT NULL, -- BankAccountDetails | MobileMoneyDetails | DigitalWalletDetails
+    verification_status verification_status NOT NULL DEFAULT 'pending',
+    verification_level verification_level NOT NULL DEFAULT 'basic',
+    is_primary BOOLEAN DEFAULT false,
+    is_active BOOLEAN DEFAULT true,
+    verified_at TIMESTAMPTZ,
+    rejected_reason TEXT,
+    verification_data JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Verification documents table
+CREATE TABLE public.verification_documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    document_type TEXT NOT NULL CHECK (document_type IN ('government_id', 'utility_bill', 'bank_statement')),
+    document_url TEXT NOT NULL,
+    status verification_status NOT NULL DEFAULT 'pending',
+    uploaded_at TIMESTAMPTZ DEFAULT NOW(),
+    verified_at TIMESTAMPTZ,
+    rejected_reason TEXT
+);
+
+-- Payout requests table
+CREATE TABLE public.payout_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    seller_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    account_id UUID REFERENCES public.seller_accounts(id) ON DELETE CASCADE,
+    amount DECIMAL(10,2) NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
+    requested_at TIMESTAMPTZ DEFAULT NOW(),
+    processed_at TIMESTAMPTZ,
+    failure_reason TEXT,
+    transaction_reference TEXT
+);
+
+-- Item chats table (marketplace-specific chats)
+CREATE TABLE public.item_chats (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    item_id TEXT NOT NULL,
+    buyer_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    seller_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    item_title TEXT NOT NULL,
+    item_image_url TEXT,
+    last_activity TIMESTAMPTZ DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Chat messages table (for item chats)
+CREATE TABLE public.chat_messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    chat_id UUID REFERENCES public.item_chats(id) ON DELETE CASCADE,
+    sender_id TEXT NOT NULL,
+    sender_name TEXT NOT NULL,
+    content TEXT NOT NULL,
+    message_type TEXT NOT NULL DEFAULT 'text' CHECK (message_type IN ('text', 'image', 'system')),
+    metadata JSONB DEFAULT '{}',
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Notifications table
+CREATE TABLE public.notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+    type TEXT NOT NULL CHECK (type IN ('friend_request', 'message', 'post_like', 'comment', 'event_invite', 'escrow_update')),
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    data JSONB DEFAULT '{}',
+    is_read BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    read_at TIMESTAMPTZ
+);
+
+-- Create indexes for better performance
+CREATE INDEX idx_posts_user_id ON public.posts(user_id);
+CREATE INDEX idx_posts_category ON public.posts(category);
+CREATE INDEX idx_posts_timestamp ON public.posts(timestamp DESC);
+CREATE INDEX idx_comments_post_id ON public.comments(post_id);
+CREATE INDEX idx_comments_user_id ON public.comments(user_id);
+CREATE INDEX idx_messages_conversation_id ON public.messages(conversation_id);
+CREATE INDEX idx_messages_timestamp ON public.messages(timestamp DESC);
+CREATE INDEX idx_escrow_buyer_id ON public.escrow_transactions(buyer_id);
+CREATE INDEX idx_escrow_seller_id ON public.escrow_transactions(seller_id);
+CREATE INDEX idx_escrow_status ON public.escrow_transactions(status);
+CREATE INDEX idx_seller_accounts_user_id ON public.seller_accounts(user_id);
+CREATE INDEX idx_item_chats_buyer_id ON public.item_chats(buyer_id);
+CREATE INDEX idx_item_chats_seller_id ON public.item_chats(seller_id);
+CREATE INDEX idx_item_chats_item_id ON public.item_chats(item_id);
+CREATE INDEX idx_chat_messages_chat_id ON public.chat_messages(chat_id);
+CREATE INDEX idx_chat_messages_timestamp ON public.chat_messages(timestamp DESC);
+CREATE INDEX idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX idx_notifications_created_at ON public.notifications(created_at DESC);
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.businesses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.friend_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.escrow_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.seller_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.verification_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.payout_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.item_chats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies (basic ones - you can customize these)
+-- Users can read their own data and public user data
+CREATE POLICY "Users can read own data" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own data" ON public.users FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can insert own data" ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Posts are readable by everyone, writable by owner
+CREATE POLICY "Posts are readable by everyone" ON public.posts FOR SELECT USING (true);
+CREATE POLICY "Users can create posts" ON public.posts FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own posts" ON public.posts FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own posts" ON public.posts FOR DELETE USING (auth.uid() = user_id);
+
+-- Comments are readable by everyone, writable by owner
+CREATE POLICY "Comments are readable by everyone" ON public.comments FOR SELECT USING (true);
+CREATE POLICY "Users can create comments" ON public.comments FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own comments" ON public.comments FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own comments" ON public.comments FOR DELETE USING (auth.uid() = user_id);
+
+-- Conversations and messages - participants only
+CREATE POLICY "Users can read own conversations" ON public.conversations FOR SELECT USING (auth.uid()::text = ANY(participant_ids));
+CREATE POLICY "Users can create conversations" ON public.conversations FOR INSERT WITH CHECK (auth.uid()::text = ANY(participant_ids));
+CREATE POLICY "Users can read own messages" ON public.messages FOR SELECT USING (auth.uid()::text = sender_id);
+CREATE POLICY "Users can create messages" ON public.messages FOR INSERT WITH CHECK (auth.uid()::text = sender_id);
+
+-- Escrow transactions - buyer and seller only
+CREATE POLICY "Users can read own escrow transactions" ON public.escrow_transactions FOR SELECT USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
+CREATE POLICY "Users can create escrow transactions" ON public.escrow_transactions FOR INSERT WITH CHECK (auth.uid() = buyer_id OR auth.uid() = seller_id);
+
+-- Seller accounts - owner only
+CREATE POLICY "Users can manage own seller accounts" ON public.seller_accounts FOR ALL USING (auth.uid() = user_id);
+
+-- Item chats - buyer and seller only
+CREATE POLICY "Users can read own item chats" ON public.item_chats FOR SELECT USING (auth.uid() = buyer_id OR auth.uid() = seller_id);
+CREATE POLICY "Users can create item chats" ON public.item_chats FOR INSERT WITH CHECK (auth.uid() = buyer_id OR auth.uid() = seller_id);
+
+-- Chat messages - participants only
+CREATE POLICY "Users can read own chat messages" ON public.chat_messages FOR SELECT USING (auth.uid()::text = sender_id);
+CREATE POLICY "Users can create chat messages" ON public.chat_messages FOR INSERT WITH CHECK (auth.uid()::text = sender_id);
+
+-- Notifications - owner only
+CREATE POLICY "Users can read own notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can update own notifications" ON public.notifications FOR UPDATE USING (auth.uid() = user_id);
+
+-- Create updated_at trigger function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Add updated_at triggers
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_businesses_updated_at BEFORE UPDATE ON public.businesses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_posts_updated_at BEFORE UPDATE ON public.posts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_comments_updated_at BEFORE UPDATE ON public.comments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_friend_requests_updated_at BEFORE UPDATE ON public.friend_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_conversations_updated_at BEFORE UPDATE ON public.conversations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_messages_updated_at BEFORE UPDATE ON public.messages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_escrow_transactions_updated_at BEFORE UPDATE ON public.escrow_transactions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_seller_accounts_updated_at BEFORE UPDATE ON public.seller_accounts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_item_chats_updated_at BEFORE UPDATE ON public.item_chats FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_chat_messages_updated_at BEFORE UPDATE ON public.chat_messages FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

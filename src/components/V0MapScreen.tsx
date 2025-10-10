@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,16 +11,15 @@ import {
   Briefcase, 
   Clock, 
   Users,
-  Filter,
   Search,
-  Navigation
+  Navigation,
+  ChevronRight
 } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { Business, Post } from '@/types';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface V0MapScreenProps {
   className?: string;
@@ -42,8 +41,9 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMarker, setSelectedMarker] = useState<MarkerData | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'events' | 'businesses'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [nearbyEvents, setNearbyEvents] = useState(0);
+  const [nearbyBusinesses, setNearbyBusinesses] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -60,16 +60,31 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
       
       if (!eventsError && eventsData) {
         eventsData.forEach(post => {
+          // Handle different event_location data structures
+          let lat, lng, address;
+          
           if (post.event_location?.geopoint) {
+            // New structure with geopoint
+            lat = post.event_location.geopoint.latitude;
+            lng = post.event_location.geopoint.longitude;
+            address = post.event_location.address;
+          } else if (post.event_location?.latitude && post.event_location?.longitude) {
+            // Direct lat/lng structure
+            lat = post.event_location.latitude;
+            lng = post.event_location.longitude;
+            address = post.event_location.address || post.event_location.name;
+          } else if (typeof post.event_location === 'string') {
+            // String address - we'll skip this for now as we need coordinates
+            return;
+          }
+          
+          if (lat && lng) {
             fetchedMarkers.push({
               id: post.id,
               type: 'event',
-              position: { 
-                lat: post.event_location.geopoint.latitude, 
-                lng: post.event_location.geopoint.longitude 
-              },
+              position: { lat, lng },
               title: post.title || post.text,
-              address: post.event_location.address,
+              address: address || 'Location not specified',
               description: post.text,
               date: post.event_date,
               time: post.event_time,
@@ -104,6 +119,8 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
       }
       
       setMarkers(fetchedMarkers);
+      setNearbyEvents(fetchedMarkers.filter(m => m.type === 'event').length);
+      setNearbyBusinesses(fetchedMarkers.filter(m => m.type === 'business').length);
       setLoading(false);
     };
 
@@ -122,76 +139,38 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
     if (marker.type === 'event') {
       router.push(`/posts/${marker.id}`);
     } else {
-      router.push(`/businesses`);
+      router.push(`/businesses/${marker.id}`);
     }
   };
 
   const filteredMarkers = markers.filter(marker => {
-    const matchesType = filterType === 'all' || 
-      (filterType === 'events' && marker.type === 'event') ||
-      (filterType === 'businesses' && marker.type === 'business');
     const matchesSearch = searchQuery === '' || 
       marker.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       marker.address.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesType && matchesSearch;
+    return matchesSearch;
   });
 
   return (
-    <div className={`h-screen w-full relative ${className}`}>
-      {/* Header */}
-      <div className="absolute top-4 left-4 right-4 z-10 space-y-3">
-        <Card className="yrdly-shadow">
-          <CardContent className="p-4">
-            <div className="space-y-3">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search locations..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-card border-border focus:border-primary"
-                />
-              </div>
-
-              {/* Filter */}
-              <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Locations</SelectItem>
-                  <SelectItem value="events">Events Only</SelectItem>
-                  <SelectItem value="businesses">Businesses Only</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stats */}
-        <Card className="yrdly-shadow">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-red-500" />
-                <span>{markers.filter(m => m.type === 'event').length} Events</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-blue-500" />
-                <span>{markers.filter(m => m.type === 'business').length} Businesses</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <div className={`h-screen w-full relative bg-gray-900 ${className}`}>
+      {/* Top Search Bar */}
+      <div className="absolute top-4 left-4 right-4 z-10">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Search locations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 rounded-xl h-12"
+          />
+        </div>
       </div>
 
       {/* Loading Overlay */}
       {loading && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-20">
+        <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center z-20">
           <div className="text-center space-y-4">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-            <p className="text-muted-foreground">Loading map...</p>
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+            <p className="text-gray-400">Loading map...</p>
           </div>
         </div>
       )}
@@ -205,6 +184,45 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
           disableDefaultUI={true}
           mapId="7bdaf6c131a6958be5380043f"
           className="w-full h-full"
+          options={{
+            styles: [
+              {
+                featureType: "all",
+                elementType: "geometry",
+                stylers: [{ color: "#2d3748" }]
+              },
+              {
+                featureType: "water",
+                elementType: "geometry",
+                stylers: [{ color: "#1a202c" }]
+              },
+              {
+                featureType: "road",
+                elementType: "geometry",
+                stylers: [{ color: "#4a5568" }]
+              },
+              {
+                featureType: "poi",
+                elementType: "labels.text.fill",
+                stylers: [{ color: "#9ca3af" }]
+              },
+              {
+                featureType: "poi",
+                elementType: "labels.text.stroke",
+                stylers: [{ color: "#1a202c" }]
+              },
+              {
+                featureType: "administrative",
+                elementType: "labels.text.fill",
+                stylers: [{ color: "#9ca3af" }]
+              },
+              {
+                featureType: "administrative",
+                elementType: "labels.text.stroke",
+                stylers: [{ color: "#1a202c" }]
+              }
+            ]
+          }}
         >
           {filteredMarkers.map(marker => (
             <AdvancedMarker 
@@ -212,70 +230,115 @@ export function V0MapScreen({ className }: V0MapScreenProps) {
               position={marker.position} 
               onClick={() => handleMarkerClick(marker)}
             >
-              <Pin 
-                background={marker.type === 'business' ? 'hsl(var(--primary))' : 'hsl(var(--destructive))'}
-                borderColor={'hsl(var(--background))'}
-                glyphColor={'hsl(var(--primary-foreground))'}
-              />
+              <div className="relative">
+                <Pin 
+                  background={marker.type === 'business' ? '#3b82f6' : '#ef4444'}
+                  borderColor={'#1a202c'}
+                  glyphColor={'white'}
+                />
+                {/* Location Labels */}
+                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                  <span className="text-white text-sm font-medium bg-black/50 px-2 py-1 rounded">
+                    {marker.title}
+                  </span>
+                </div>
+              </div>
             </AdvancedMarker>
           ))}
 
           {selectedMarker && (
             <InfoWindow position={selectedMarker.position} onCloseClick={handleInfoWindowClose}>
-              <Card className="border-none shadow-lg yrdly-shadow max-w-xs">
-                <CardHeader className="p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    {selectedMarker.type === 'event' ? (
-                      <Calendar className="w-4 h-4 text-red-500" />
-                    ) : (
-                      <Briefcase className="w-4 h-4 text-blue-500" />
-                    )}
-                    <Badge variant={selectedMarker.type === 'event' ? 'destructive' : 'default'}>
-                      {selectedMarker.type === 'event' ? 'Event' : 'Business'}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-base">{selectedMarker.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 pt-0 space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4" />
-                    <span className="truncate">{selectedMarker.address}</span>
-                  </div>
-                  
-                  {selectedMarker.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {selectedMarker.description}
-                    </p>
+              <div className="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl max-w-xs p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  {selectedMarker.type === 'event' ? (
+                    <Calendar className="w-4 h-4 text-red-500" />
+                  ) : (
+                    <Briefcase className="w-4 h-4 text-blue-500" />
                   )}
-
-                  {selectedMarker.type === 'event' && selectedMarker.date && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      <span>{selectedMarker.date} {selectedMarker.time && `at ${selectedMarker.time}`}</span>
-                    </div>
-                  )}
-
-                  {selectedMarker.type === 'event' && selectedMarker.attendees && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Users className="w-4 h-4" />
-                      <span>{selectedMarker.attendees} attending</span>
-                    </div>
-                  )}
-
-                  <Button 
-                    size="sm" 
-                    className="w-full" 
-                    onClick={() => handleViewDetails(selectedMarker)}
+                  <Badge 
+                    variant={selectedMarker.type === 'event' ? 'destructive' : 'default'}
+                    className="text-xs"
                   >
-                    <Navigation className="w-4 h-4 mr-2" />
-                    View Details
-                  </Button>
-                </CardContent>
-              </Card>
+                    {selectedMarker.type === 'event' ? 'Event' : 'Business'}
+                  </Badge>
+                </div>
+                <h3 className="text-white font-semibold text-base mb-2">{selectedMarker.title}</h3>
+                
+                <div className="flex items-center gap-2 text-sm text-gray-300 mb-2">
+                  <MapPin className="w-4 h-4" />
+                  <span className="truncate">{selectedMarker.address}</span>
+                </div>
+                
+                {selectedMarker.description && (
+                  <p className="text-sm text-gray-300 mb-3 line-clamp-2">
+                    {selectedMarker.description}
+                  </p>
+                )}
+
+                {selectedMarker.type === 'event' && selectedMarker.date && (
+                  <div className="flex items-center gap-2 text-sm text-gray-300 mb-2">
+                    <Clock className="w-4 h-4" />
+                    <span>{selectedMarker.date} {selectedMarker.time && `at ${selectedMarker.time}`}</span>
+                  </div>
+                )}
+
+                {selectedMarker.type === 'event' && selectedMarker.attendees && (
+                  <div className="flex items-center gap-2 text-sm text-gray-300 mb-3">
+                    <Users className="w-4 h-4" />
+                    <span>{selectedMarker.attendees} attending</span>
+                  </div>
+                )}
+
+                <Button 
+                  size="sm" 
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white" 
+                  onClick={() => handleViewDetails(selectedMarker)}
+                >
+                  <Navigation className="w-4 h-4 mr-2" />
+                  View Details
+                </Button>
+              </div>
             </InfoWindow>
           )}
         </Map>
       </APIProvider>
+
+      {/* Bottom Information Panel */}
+      <div className="absolute bottom-4 left-4 right-4 z-10">
+        <Card className="bg-gray-800 border-gray-700 rounded-xl">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              {/* Events Count */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-red-500" />
+                  <span className="text-white font-medium">
+                    {nearbyEvents} Event{nearbyEvents !== 1 ? 's' : ''} nearby
+                  </span>
+                </div>
+                <div className="w-px h-6 bg-gray-600"></div>
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-5 h-5 text-blue-500" />
+                  <span className="text-white font-medium">
+                    {nearbyBusinesses} Business{nearbyBusinesses !== 1 ? 'es' : ''}
+                  </span>
+                </div>
+              </div>
+              
+              {/* View All Button */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-300 hover:text-white hover:bg-gray-700"
+                onClick={() => router.push('/events')}
+              >
+                View All
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

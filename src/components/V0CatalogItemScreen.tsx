@@ -181,17 +181,19 @@ export function V0CatalogItemScreen({
 
         {/* Action buttons */}
         <div className="flex gap-2">
-          <Button
-            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => onMessageOwner(item)}
-            disabled={!item.in_stock}
-          >
-            <MessageCircle className="w-4 h-4 mr-2" />
-            {item.in_stock ? "Message About Item" : "Item Unavailable"}
-          </Button>
+          {user?.id !== business.owner_id && (
+            <Button
+              className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => onMessageOwner(item)}
+              disabled={!item.in_stock}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              {item.in_stock ? "Message About Item" : "Item Unavailable"}
+            </Button>
+          )}
           <Button
             variant="outline"
-            className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
+            className={`border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent ${user?.id === business.owner_id ? 'flex-1' : ''}`}
             onClick={handleCall}
             disabled={!business.phone}
           >
@@ -201,24 +203,26 @@ export function V0CatalogItemScreen({
         </div>
 
         {/* Additional actions */}
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => onMessageOwner()}
-          >
-            <MessageCircle className="w-4 h-4 mr-2" />
-            Message Business
-          </Button>
-          <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => window.open(`/businesses/${business.id}`, '_blank')}
-          >
-            <MapPin className="w-4 h-4 mr-2" />
-            Visit Store
-          </Button>
-        </div>
+        {user?.id !== business.owner_id && (
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => onMessageOwner()}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Message Business
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => window.open(`/businesses/${business.id}`, '_blank')}
+            >
+              <MapPin className="w-4 h-4 mr-2" />
+              Visit Store
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Item details */}

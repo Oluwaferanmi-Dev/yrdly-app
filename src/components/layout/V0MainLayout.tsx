@@ -196,14 +196,8 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
           }
         }
 
-        console.log('Global unread chats count:', unreadChatsCount);
-        console.log('Total conversations processed:', conversationsData?.length || 0);
-        console.log('Conversation types:', conversationsData?.map(c => ({ id: c.id, type: c.type, participant_ids: c.participant_ids })));
-        
         // Debug: Check if any conversations are marketplace type
         const marketplaceConversations = conversationsData?.filter(c => c.type === 'marketplace') || [];
-        console.log('Marketplace conversations found:', marketplaceConversations.length);
-        console.log('Marketplace conversation details:', marketplaceConversations);
         
         setUnreadMessagesCount(unreadChatsCount);
       } catch (error) {
@@ -255,6 +249,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
                     width={60}
                     height={60}
                     className="w-15 h-15 sm:w-17 sm:h-17 md:w-19 md:h-19 object-contain"
+                    style={{ height: "auto" }}
                   />
                 </Link>
 

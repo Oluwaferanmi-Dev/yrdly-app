@@ -25,13 +25,7 @@ export default function BusinessChatPage() {
       try {
         const { data, error } = await supabase
           .from('businesses')
-          .select(`
-            *,
-            users!businesses_owner_id_fkey(
-              name,
-              avatar_url
-            )
-          `)
+          .select('*')
           .eq('id', businessId)
           .single();
 
@@ -56,8 +50,8 @@ export default function BusinessChatPage() {
             phone: data.phone,
             email: data.email,
             website: data.website,
-            owner_name: data.users?.name || "Unknown Owner",
-            owner_avatar: data.users?.avatar_url,
+            owner_name: data.owner_name || "Unknown Owner",
+            owner_avatar: data.owner_avatar,
             cover_image: data.image_urls?.[0],
             logo: data.image_urls?.[0],
             distance: "0.5 km away",

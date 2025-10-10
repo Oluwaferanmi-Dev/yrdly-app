@@ -19,14 +19,15 @@ import {
   MessageCircle
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
+import { useToast } from "@/hooks/use-toast";
+import { useHaptics } from "@/hooks/use-haptics";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 import type { Post as PostType } from "@/types";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { formatDistanceToNowStrict } from 'date-fns';
-import { useToast } from "@/hooks/use-toast";
-import { useHaptics } from "@/hooks/use-haptics";
+import { sendEventConfirmationEmail } from "@/lib/email-actions";
 
 interface V0EventsScreenProps {
   className?: string;
@@ -84,6 +85,7 @@ function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPL
             width={400}
             height={192}
             className="w-full h-48 object-cover rounded-lg"
+            style={{ height: "auto" }}
           />
         </div>
       )}
@@ -273,12 +275,63 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
           description: "Failed to RSVP. Please try again.",
         });
       } else {
-        toast({
-          title: userHasRSVPed ? "RSVP Cancelled" : "RSVP Confirmed",
-          description: userHasRSVPed 
-            ? "You're no longer attending this event." 
-            : "You're now attending this event!",
-        });
+        // Send confirmation email if user just RSVP'd (not cancelled)
+        if (!userHasRSVPed && user.email) {
+          try {
+            // Get the full event data for the email
+            const { data: fullEventData, error: eventError } = await supabase
+              .from('posts')
+              .select('*')
+              .eq('id', eventId)
+              .single();
+
+            if (!eventError && fullEventData) {
+              const emailResult = await sendEventConfirmationEmail({
+                attendeeEmail: user.email,
+                attendeeName: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+                eventName: fullEventData.title || 'Event',
+                eventDate: fullEventData.event_date,
+                eventTime: fullEventData.event_time,
+                eventLocation: fullEventData.event_location?.address,
+                eventDescription: fullEventData.text,
+                eventLink: fullEventData.event_link,
+              });
+
+              if (emailResult.success) {
+                toast({
+                  title: "RSVP Confirmed & Email Sent!",
+                  description: "You're now attending this event. Check your email for details!",
+                });
+              } else {
+                console.error('Failed to send event confirmation email:', emailResult.error);
+                toast({
+                  title: "RSVP Confirmed",
+                  description: "You're now attending this event!",
+                });
+              }
+            } else {
+              console.error('Error fetching event data for email:', eventError);
+              toast({
+                title: "RSVP Confirmed",
+                description: "You're now attending this event!",
+              });
+            }
+          } catch (emailError) {
+            console.error('Error sending RSVP email:', emailError);
+            toast({
+              title: "RSVP Confirmed",
+              description: "You're now attending this event!",
+            });
+          }
+        } else {
+          // User cancelled RSVP or no email available
+          toast({
+            title: userHasRSVPed ? "RSVP Cancelled" : "RSVP Confirmed",
+            description: userHasRSVPed 
+              ? "You're no longer attending this event." 
+              : "You're now attending this event!",
+          });
+        }
       }
     } catch (error) {
       console.error('Error handling RSVP:', error);
@@ -426,6 +479,16 @@ export function V0EventsScreen({ className }: V0EventsScreenProps) {
           title: "Error",
           description: "Failed to like event. Please try again.",
         });
+      } else {
+        // Trigger notification if user just liked the event
+        if (!userHasLiked) {
+          try {
+            const { NotificationTriggers } = await import('@/lib/notification-triggers');
+            await NotificationTriggers.onPostLiked(eventId, user.id);
+          } catch (error) {
+            console.error('Error creating event like notification:', error);
+          }
+        }
       }
     } catch (error) {
       console.error('Error handling like:', error);

@@ -134,13 +134,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
                 // Business search
                 const { data: businessesData, error: businessesError } = await supabase
                     .from('businesses')
-                    .select(`
-                        *,
-                        users!businesses_owner_id_fkey(
-                            name,
-                            avatar_url
-                        )
-                    `)
+                    .select('*')
                     .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,category.ilike.%${searchTerm}%`);
                 
                 if (!businessesError && businessesData) {
@@ -161,8 +155,8 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
                             phone: business.phone,
                             email: business.email,
                             website: business.website,
-                            owner_name: business.users?.name || "Unknown Owner",
-                            owner_avatar: business.users?.avatar_url,
+                            owner_name: business.owner_name || "Unknown Owner",
+                            owner_avatar: business.owner_avatar,
                             cover_image: business.image_urls?.[0],
                             logo: business.image_urls?.[0],
                             distance: "0.5 km away", // This would be calculated based on user location

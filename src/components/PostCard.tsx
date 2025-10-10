@@ -35,6 +35,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { CreatePostDialog } from "./CreatePostDialog";
+import { CreateEventDialog } from "./CreateEventDialog";
 import { useToast } from "@/hooks/use-toast";
 import { CommentSection } from "./CommentSection";
 import { timeAgo, formatPrice } from "@/lib/utils";
@@ -45,9 +46,11 @@ import { ImageSwiper } from "./ImageSwiper";
 
 interface PostCardProps {
   post: Post;
+  onDelete?: (postId: string) => void;
+  onCreatePost?: (postData: any, postId?: string, imageFiles?: FileList) => Promise<void>;
 }
 
-export function PostCard({ post }: PostCardProps) {
+export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
@@ -60,6 +63,7 @@ export function PostCard({ post }: PostCardProps) {
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [isImageSwiperOpen, setIsImageSwiperOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isEventEditDialogOpen, setIsEventEditDialogOpen] = useState(false);
 
   useEffect(() => {
     // Since we're using Supabase, the post already contains author information
@@ -69,20 +73,15 @@ export function PostCard({ post }: PostCardProps) {
       id: post.user_id || 'unknown',
       uid: post.user_id || 'unknown',
       name: post.author_name || 'Anonymous User', 
-      avatarUrl: post.author_image || 'https://placehold.co/100x100.png'
+      avatarUrl: post.author_image || 'https://placehold.co/100x100.png',
+      timestamp: (post.user as any)?.created_at || post.timestamp // Use user creation date, fallback to post date
     });
-  }, [post.user_id, post.author_name, post.author_image]);
+  }, [post.user_id, post.author_name, post.author_image, (post.user as any)?.created_at, post.timestamp]);
 
   useEffect(() => {
     if (!post.id) return;
     
     // Set initial values from post data
-    console.log('PostCard: Setting initial values', {
-      postId: post.id,
-      liked_by: post.liked_by,
-      comment_count: post.comment_count,
-      currentUser: currentUser?.id
-    });
     setLikes(post.liked_by?.length || 0);
     setCommentCount(post.comment_count || 0);
     if (currentUser && post.liked_by) {
@@ -111,9 +110,7 @@ export function PostCard({ post }: PostCardProps) {
           }
         }
       )
-      .subscribe((status) => {
-        console.log('Post subscription status:', status);
-      });
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -175,6 +172,16 @@ export function PostCard({ post }: PostCardProps) {
         // Update local state immediately for better UX
         setLikes(newLikedBy.length);
         setIsLiked(!userHasLiked);
+        
+        // Trigger notification if user just liked the post
+        if (!userHasLiked) {
+          try {
+            const { NotificationTriggers } = await import('@/lib/notification-triggers');
+            await NotificationTriggers.onPostLiked(post.id, currentUser.id);
+          } catch (error) {
+            console.error('Error creating post like notification:', error);
+          }
+        }
       }
     } catch (error) {
       console.error('Error handling like:', error);
@@ -193,19 +200,8 @@ export function PostCard({ post }: PostCardProps) {
 
   const handleDelete = async () => {
     if (!currentUser || !post.id || currentUser.id !== post.user_id) return;
-    try {
-        const { error } = await supabase
-          .from('posts')
-          .delete()
-          .eq('id', post.id);
-        
-        if (error) {
-          throw error;
-        }
-        toast({ title: "Post deleted", description: "Your post has been successfully removed." });
-    } catch (error) {
-        console.error("Error deleting post:", error);
-        toast({ variant: "destructive", title: "Error", description: "Failed to delete post." });
+    if (onDelete) {
+      await onDelete(post.id);
     }
   }
 
@@ -410,6 +406,14 @@ export function PostCard({ post }: PostCardProps) {
     </CardContent>
   );
 
+  const handleEventEdit = () => {
+    setIsEventEditDialogOpen(true);
+  };
+
+  const handleEventEditDialogClose = (open: boolean) => {
+    setIsEventEditDialogOpen(open);
+  };
+
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent navigation when clicking on interactive elements
     if ((e.target as HTMLElement).closest('button, a, [role="dialog"], [role="menu"]')) {
@@ -446,13 +450,15 @@ export function PostCard({ post }: PostCardProps) {
                         <AvatarFallback>{author.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                 </button>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 mr-2">
                     <button onClick={openProfile} className="cursor-pointer">
-                        <p className="font-semibold hover:underline truncate">{author.name}</p>
+                        <p className="font-semibold hover:underline truncate max-w-[120px]">{author.name}</p>
                     </button>
                     <p className="text-xs text-muted-foreground">{timeAgo(post.timestamp ? new Date(post.timestamp) : null)}</p>
                 </div>
-                {getCategoryBadge(post.category)}
+                <div className="flex-shrink-0 self-start pt-1">
+                    {getCategoryBadge(post.category)}
+                </div>
             </>
         ) : null}
         {currentUser?.id === post.user_id && (
@@ -464,12 +470,16 @@ export function PostCard({ post }: PostCardProps) {
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                         <CreatePostDialog postToEdit={post}>
+                         <CreateEventDialog 
+                            postToEdit={post}
+                            open={isEventEditDialogOpen}
+                            onOpenChange={handleEventEditDialogClose}
+                         >
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 <span>Edit</span>
                             </DropdownMenuItem>
-                        </CreatePostDialog>
+                        </CreateEventDialog>
                          <AlertDialogTrigger asChild>
                             <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
                                 <Trash2 className="mr-2 h-4 w-4" />
@@ -562,7 +572,10 @@ export function PostCard({ post }: PostCardProps) {
         </CardFooter>
         <CollapsibleContent>
             <div className="p-4 pt-0">
-                <CommentSection postId={post.id} />
+                <CommentSection 
+                    postId={post.id} 
+                    onCommentCountChange={setCommentCount}
+                />
             </div>
         </CollapsibleContent>
       </Collapsible>

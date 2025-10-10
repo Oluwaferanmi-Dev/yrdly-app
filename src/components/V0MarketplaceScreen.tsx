@@ -354,7 +354,13 @@ export function V0MarketplaceScreen({ onItemClick, onMessageSeller }: V0Marketpl
       {editingItem && (
         <CreateItemDialog 
           postToEdit={editingItem}
-          onOpenChange={setIsEditDialogOpen}
+          open={isEditDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditDialogOpen(open);
+            if (!open) {
+              setEditingItem(null);
+            }
+          }}
         />
       )}
     </div>
