@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { YrdlyLogo } from '@/components/ui/yrdly-logo';
+import { PasswordStrength } from '@/components/ui/password-strength';
 
 // Force dynamic rendering to avoid prerender issues
 export const dynamic = 'force-dynamic';
@@ -57,20 +58,16 @@ export default function SignupPage() {
       if (error) {
         setError(error.message);
       } else if (user) {
-        console.log('Signup successful, user:', user);
         // Check if user needs email confirmation
         if (user.email_confirmed_at) {
           router.push('/home');
         } else {
-          // Wait a moment for the session to be established, then redirect
-          setTimeout(() => {
-            router.push(`/onboarding/verify-email?email=${encodeURIComponent(email)}`);
-          }, 1000);
+          // Redirect to email verification immediately
+          router.push(`/onboarding/verify-email?email=${encodeURIComponent(email)}`);
         }
       }
     } catch (err) {
-      console.error('Signup error:', err);
-      setError('An unexpected error occurred');
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -130,6 +127,8 @@ export default function SignupPage() {
                   onChange={(e) => setName(e.target.value)}
                   className="pl-10"
                   required
+                  aria-label="Full name"
+                  aria-describedby="name-error"
                 />
               </div>
             </div>
@@ -146,6 +145,8 @@ export default function SignupPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
                   required
+                  aria-label="Email address"
+                  aria-describedby="email-error"
                 />
               </div>
             </div>
@@ -162,16 +163,20 @@ export default function SignupPage() {
                          onChange={(e) => setPassword(e.target.value)}
                          className="pl-10 pr-10"
                          required
+                         aria-label="Password"
+                         aria-describedby="password-error"
                        />
                        <button
                          type="button"
                          onClick={() => setShowPassword(!showPassword)}
                          className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600"
+                         aria-label={showPassword ? "Hide password" : "Show password"}
+                         aria-pressed={showPassword}
                        >
                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                        </button>
                      </div>
-                     <p className="text-xs text-muted-foreground">Must be at least 6 characters long</p>
+                     <PasswordStrength password={password} />
                    </div>
 
             <Button type="submit" className="w-full" disabled={loading}>

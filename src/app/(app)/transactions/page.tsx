@@ -16,13 +16,18 @@ import {
   CheckCircle, 
   Clock,
   AlertTriangle,
-  XCircle 
+  XCircle,
+  Loader2
 } from 'lucide-react';
+import { PAGINATION_CONSTANTS } from '@/lib/constants';
 
 export default function TransactionsPage() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<EscrowTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const [activeTab, setActiveTab] = useState('all');
 
   const loadTransactions = useCallback(async () => {
@@ -41,12 +46,20 @@ export default function TransactionsPage() {
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
       setTransactions(allTransactions);
+      setHasMore(false); // No pagination for now since backend doesn't support it
     } catch (error) {
       console.error('Failed to load transactions:', error);
     } finally {
       setIsLoading(false);
     }
   }, [user]);
+
+  // Remove loadMore since pagination is not supported yet
+  // const loadMore = useCallback(() => {
+  //   if (!isLoadingMore && hasMore) {
+  //     loadTransactions(currentPage + 1, true);
+  //   }
+  // }, [loadTransactions, currentPage, isLoadingMore, hasMore]);
 
   useEffect(() => {
     if (user) {
@@ -255,6 +268,27 @@ export default function TransactionsPage() {
                   </CardContent>
                 </Card>
               ))}
+              
+              {/* Load More Button - Disabled until backend supports pagination */}
+              {/* {hasMore && (
+                <div className="flex justify-center mt-6">
+                  <Button 
+                    onClick={loadMore} 
+                    disabled={isLoadingMore}
+                    variant="outline"
+                    className="min-w-[120px]"
+                  >
+                    {isLoadingMore ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      'Load More'
+                    )}
+                  </Button>
+                </div>
+              )} */}
             </div>
           )}
         </TabsContent>

@@ -15,31 +15,29 @@ export default function Splash() {
     const [fade, setFade] = useState(false);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
+        const fadeTimer = setTimeout(() => {
             setFade(true);
         }, 100);
 
-        const redirectTimer = setTimeout(() => {
-            // Always redirect after 3 seconds, regardless of loading state
-            if (user) {
-                router.replace('/home');
-            } else {
-                router.replace('/login');
-            }
-        }, 3000);
-
-        // Also redirect immediately if we have a definitive auth state
-        if (!loading) {
-            if (user) {
-                router.replace('/home');
-            } else {
-                router.replace('/login');
-            }
-        }
-
         return () => {
-            clearTimeout(timer);
-            clearTimeout(redirectTimer);
+            clearTimeout(fadeTimer);
+        }
+    }, []);
+
+    useEffect(() => {
+        // Only redirect once loading is complete
+        if (!loading) {
+            const redirectTimer = setTimeout(() => {
+                if (user) {
+                    router.replace('/home');
+                } else {
+                    router.replace('/login');
+                }
+            }, 2000); // Reduced from 3s to 2s for better UX
+
+            return () => {
+                clearTimeout(redirectTimer);
+            }
         }
     }, [user, loading, router]);
 

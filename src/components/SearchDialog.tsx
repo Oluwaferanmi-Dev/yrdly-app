@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { User, Post, FriendRequest, Business } from "../types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2, User as UserIcon, Calendar, Map, ShoppingCart, FileText, Image as ImageIcon, Briefcase, Star } from 'lucide-react';
 import { UserProfileDialog } from './UserProfileDialog';
 import { useAuth } from '@/hooks/use-supabase-auth';
+import { useKeyboardNavigation, useFocusManagement } from '@/hooks/use-keyboard-navigation';
 import Image from 'next/image';
 
 
@@ -34,9 +35,12 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
     const [searchTerm, setSearchTerm] = useState('');
     const [results, setResults] = useState<SearchResult[]>([]);
     const [loading, setLoading] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState(0);
     const router = useRouter();
     const { user: currentUser, profile: userDetails } = useAuth();
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const resultsRef = useRef<HTMLDivElement>(null);
+    const { focusFirstElement } = useFocusManagement();
 
     const handleResultClick = (result: SearchResult) => {
         onOpenChange(false);
@@ -52,6 +56,34 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
             router.push(`/businesses/${result.data.id}`);
         }
     };
+
+    // Keyboard navigation
+    useKeyboardNavigation({
+        onArrowDown: () => {
+            if (results.length > 0) {
+                setSelectedIndex(prev => (prev + 1) % results.length);
+            }
+        },
+        onArrowUp: () => {
+            if (results.length > 0) {
+                setSelectedIndex(prev => prev === 0 ? results.length - 1 : prev - 1);
+            }
+        },
+        onEnter: () => {
+            if (results.length > 0 && selectedIndex < results.length) {
+                handleResultClick(results[selectedIndex]);
+            }
+        },
+        onEscape: () => {
+            onOpenChange(false);
+        },
+        enabled: open,
+    });
+
+    // Reset selected index when results change
+    useEffect(() => {
+        setSelectedIndex(0);
+    }, [results]);
 
     useEffect(() => {
         const performSearch = async () => {
@@ -156,7 +188,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
         return () => clearTimeout(debounceTimeout);
     }, [searchTerm]);
     
-    const renderResult = (result: SearchResult) => {
+    const renderResult = (result: SearchResult, index?: number) => {
         switch(result.type) {
             case 'user':
                 const user = result.data;
@@ -306,8 +338,23 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean, onOpenChan
                 <div className="p-4 min-h-[200px]">
                     {loading && <div className="flex justify-center items-center h-full"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}
                     {!loading && results.length > 0 && (
-                        <div className="space-y-2">
-                            {results.map(renderResult)}
+                        <div className="space-y-2" ref={resultsRef}>
+                            {results.map((result, index) => (
+                                <div
+                                    key={`${result.type}-${result.type === 'page' ? result.data.path : result.data.id || index}`}
+                                    className={`rounded-md cursor-pointer transition-colors ${
+                                        index === selectedIndex 
+                                            ? 'bg-primary/10 border border-primary/20' 
+                                            : 'hover:bg-muted'
+                                    }`}
+                                    onClick={() => handleResultClick(result)}
+                                    role="option"
+                                    tabIndex={0}
+                                    aria-selected={index === selectedIndex}
+                                >
+                                    {renderResult(result, index)}
+                                </div>
+                            ))}
                         </div>
                     )}
                     {!loading && results.length === 0 && searchTerm.length > 1 && (

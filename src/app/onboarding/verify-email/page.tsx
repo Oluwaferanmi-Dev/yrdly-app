@@ -35,6 +35,8 @@ function VerifyEmailContent() {
   const [timeSinceSent, setTimeSinceSent] = useState(0);
   const [currentTip, setCurrentTip] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
+  const [checkRetryCount, setCheckRetryCount] = useState(0);
+  const [lastCheckTime, setLastCheckTime] = useState<number | null>(null);
 
   const email = searchParams.get('email') || user?.email || '';
   const token = searchParams.get('token');
@@ -52,18 +54,12 @@ function VerifyEmailContent() {
     if (loading) return; // Don't redirect while loading
 
     if (!user) {
-      console.log('No user found, setting up auth state listener...');
-      
       // Listen for auth state changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
-          console.log('Auth state changed:', event, !!session?.user);
-          
           if (event === 'SIGNED_IN' && session?.user) {
-            console.log('User signed in via auth state change');
             // User is now authenticated, component will re-render
           } else if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
-            console.log('User signed out or no session, redirecting to signup');
             router.push('/signup');
           }
         }
@@ -72,7 +68,6 @@ function VerifyEmailContent() {
       // If still no user after a reasonable time, redirect
       const fallbackTimer = setTimeout(() => {
         if (!user) {
-          console.log('Still no user after auth listener setup, redirecting to signup');
           router.push('/signup');
         }
       }, 5000);
@@ -118,7 +113,7 @@ function VerifyEmailContent() {
       } else {
         throw new Error('Invalid verification token');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Token verification error:', error);
       toast({
         variant: "destructive",
@@ -165,25 +160,32 @@ function VerifyEmailContent() {
     return () => clearInterval(interval);
   }, [tips.length]);
 
-  // Visibility detection for auto-check
+  // Visibility detection for auto-check (with debounce)
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && !isChecking) {
         setIsVisible(true);
-        // Auto-check verification when tab becomes visible
-        setTimeout(() => {
-          if (user && !isEmailVerified) {
+        // Auto-check verification when tab becomes visible (debounced)
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          if (user && !isEmailVerified && checkRetryCount < 5) {
             handleCheckVerification();
           }
-        }, 1000);
+        }, 2000); // 2 second debounce
       } else {
         setIsVisible(false);
+        clearTimeout(timeoutId);
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [user, isEmailVerified, isChecking]);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearTimeout(timeoutId);
+    };
+  }, [user, isEmailVerified, isChecking, checkRetryCount, lastCheckTime]);
 
   // Page load animation
   useEffect(() => {
@@ -192,7 +194,6 @@ function VerifyEmailContent() {
   }, []);
 
   const handleResendVerification = async () => {
-    console.log('Resend verification clicked', { user: !!user, cooldownTime, loading });
     if (!user || cooldownTime > 0 || loading) return;
 
     triggerHaptic('medium');
@@ -208,20 +209,17 @@ function VerifyEmailContent() {
         // Send verification email via Brevo
         await BrevoEmailService.sendVerificationEmail(email, verificationLink, user.user_metadata?.name || user.email?.split('@')[0]);
         
-        console.log('Verification email sent via Brevo');
         onboardingAnalytics.trackEmailVerificationSent(email);
-      } catch (error: any) {
-        console.log('Brevo email failed:', error.message);
-        
+      } catch (error: unknown) {
         // Handle different types of Brevo errors
-        if (error.message === 'BREVO_NOT_CONFIGURED') {
-          console.log('Brevo not configured, showing manual instructions');
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        if (errorMessage === 'BREVO_NOT_CONFIGURED') {
           setError('Email service is not configured. Please contact support or use the manual verification link below.');
-        } else if (error.message === 'BREVO_AUTH_FAILED') {
+        } else if (errorMessage === 'BREVO_AUTH_FAILED') {
           setError('Email service authentication failed. Please contact support.');
-        } else if (error.message === 'BREVO_RATE_LIMITED') {
+        } else if (errorMessage === 'BREVO_RATE_LIMITED') {
           setError('Too many emails sent. Please wait a few minutes before trying again.');
-        } else if (error.message === 'BREVO_SERVER_ERROR') {
+        } else if (errorMessage === 'BREVO_SERVER_ERROR') {
           setError('Email service is temporarily unavailable. Please try again later or contact support.');
         } else {
           setError('Failed to send verification email. Please try again or contact support.');
@@ -238,8 +236,8 @@ function VerifyEmailContent() {
         title: "Verification Email Sent",
         description: "Please check your inbox and spam folder for the verification link.",
       });
-    } catch (error: any) {
-      const errorMessage = error.message || "Failed to send verification email. Please try again.";
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to send verification email. Please try again.";
       setError(errorMessage);
       setRetryCount(prev => prev + 1);
       
@@ -285,17 +283,32 @@ function VerifyEmailContent() {
   };
 
   const handleCheckVerification = useCallback(async () => {
-    console.log('Check verification clicked', { user: !!user, emailConfirmed: user?.email_confirmed_at, loading });
     if (!user || loading) return;
+    
+    // Check retry limits
+    const now = Date.now();
+    const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+    
+    if (lastCheckTime && (now - lastCheckTime) < oneHour) {
+      if (checkRetryCount >= 5) {
+        setError('Too many verification checks. Please wait an hour before trying again.');
+        return;
+      }
+    } else {
+      // Reset counter if more than an hour has passed
+      setCheckRetryCount(0);
+    }
     
     triggerHaptic('light');
     setIsChecking(true);
+    setLastCheckTime(now);
+    setCheckRetryCount(prev => prev + 1);
+    
     try {
       // Check verification status - refresh user data first
       const { data: { user: refreshedUser }, error } = await supabase.auth.getUser();
       
       if (error) {
-        console.error('Error getting user:', error);
         throw error;
       }
       

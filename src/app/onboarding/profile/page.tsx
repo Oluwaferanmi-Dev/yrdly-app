@@ -202,19 +202,11 @@ export default function OnboardingProfilePage() {
       onboardingAnalytics.trackProfileSetupStarted(!!data.location.state);
 
       // Update user profile
-      console.log('Onboarding: Saving profile data:', {
-        name: data.fullName,
-        username: data.username,
-        location: data.location
-      });
-      
       await updateProfile({
         name: data.fullName,
         username: data.username,
         location: data.location,
       });
-      
-      console.log('Onboarding: Profile update completed');
 
       // Complete profile setup
       await completeProfile();
@@ -330,6 +322,7 @@ export default function OnboardingProfilePage() {
                     {...form.register('username')}
                     onFocus={() => setShowSuggestions(usernameSuggestions.length > 0)}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    maxLength={20}
                   />
                   
                   {/* Character counter */}

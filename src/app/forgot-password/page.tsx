@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { YrdlyLogo } from "@/components/ui/yrdly-logo";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, Mail, Clock } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -29,6 +29,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
+import { AUTH_CONSTANTS } from '@/lib/constants';
 
 const passwordResetSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -40,6 +41,8 @@ function ForgotPasswordForm() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [redirectCountdown, setRedirectCountdown] = useState(0);
 
   const form = useForm<z.infer<typeof passwordResetSchema>>({
     resolver: zodResolver(passwordResetSchema),
@@ -56,7 +59,31 @@ function ForgotPasswordForm() {
     }
   }, [searchParams, form]);
 
+  // Handle resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => {
+        setResendCooldown(resendCooldown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  // Handle auto-redirect after successful submission
+  useEffect(() => {
+    if (isSubmitted && redirectCountdown > 0) {
+      const timer = setTimeout(() => {
+        setRedirectCountdown(redirectCountdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (isSubmitted && redirectCountdown === 0) {
+      router.push('/login');
+    }
+  }, [isSubmitted, redirectCountdown, router]);
+
   const onSubmit = async (values: z.infer<typeof passwordResetSchema>) => {
+    if (resendCooldown > 0) return; // Prevent spam
+    
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
@@ -66,6 +93,8 @@ function ForgotPasswordForm() {
       if (error) throw error;
       
       setIsSubmitted(true);
+      setResendCooldown(AUTH_CONSTANTS.EMAIL_RESEND_COOLDOWN / 1000); // Convert to seconds
+      setRedirectCountdown(10); // Start 10-second countdown
       toast({
         title: "Password Reset Email Sent",
         description: "Please check your inbox for instructions to reset your password.",
@@ -81,6 +110,11 @@ function ForgotPasswordForm() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    await onSubmit(form.getValues());
   };
 
   if (isSubmitted) {
@@ -111,16 +145,42 @@ function ForgotPasswordForm() {
                   Didn&apos;t receive the email? Check your spam folder or try again.
                 </p>
 
-                <Button variant="outline" onClick={() => setIsSubmitted(false)} className="w-full h-11">
-                  Try again
-                </Button>
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleResend} 
+                    disabled={resendCooldown > 0}
+                    className="w-full h-11"
+                  >
+                    {resendCooldown > 0 ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-2" />
+                        Try again in {resendCooldown}s
+                      </>
+                    ) : (
+                      'Resend email'
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => setIsSubmitted(false)} 
+                    className="w-full h-10"
+                  >
+                    Use different email
+                  </Button>
+                </div>
               </div>
 
               <div className="text-center text-sm text-muted-foreground">
-                <Link href="/login" className="text-primary hover:underline font-medium inline-flex items-center gap-1">
-                  <ArrowLeft className="w-3 h-3" />
-                  Back to sign in
-                </Link>
+                {redirectCountdown > 0 ? (
+                  <p>Redirecting to login in {redirectCountdown}s...</p>
+                ) : (
+                  <Link href="/login" className="text-primary hover:underline font-medium inline-flex items-center gap-1">
+                    <ArrowLeft className="w-3 h-3" />
+                    Back to sign in
+                  </Link>
+                )}
               </div>
             </CardContent>
           </Card>

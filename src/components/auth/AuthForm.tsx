@@ -1,5 +1,4 @@
-
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -13,13 +12,15 @@ import { Loader2, Mail, Lock, User, Eye, EyeOff, AlertTriangle } from 'lucide-re
 import { YrdlyLogo } from '@/components/ui/yrdly-logo';
 import { AUTH_CONSTANTS, ERROR_MESSAGES } from '@/lib/constants';
 import { ErrorMessageFormatter } from '@/lib/error-messages';
+import { PasswordStrength } from '@/components/ui/password-strength';
 
-// Force dynamic rendering to avoid prerender issues
-export const dynamic = 'force-dynamic';
+interface AuthFormProps {
+  mode: 'login' | 'signup';
+  onToggleMode: () => void;
+  onSuccess?: () => void;
+}
 
-
-export default function LoginPage() {
-  const [isSignUp, setIsSignUp] = useState(false);
+export function AuthForm({ mode, onToggleMode, onSuccess }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -85,7 +86,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      if (isSignUp) {
+      if (mode === 'signup') {
         const { user, error } = await signUp(email, password, name);
         if (error) {
           setError(error.message);
@@ -96,6 +97,7 @@ export default function LoginPage() {
           
           // Check if user needs email confirmation
           if (user.email_confirmed_at) {
+            onSuccess?.();
             router.push('/home');
           } else {
             // Redirect to onboarding email verification
@@ -123,6 +125,7 @@ export default function LoginPage() {
           // Reset login attempts on successful login
           setLoginAttempts(0);
           setLockoutUntil(null);
+          onSuccess?.();
           router.push('/home');
         }
       }
@@ -143,13 +146,11 @@ export default function LoginPage() {
         setError(error.message);
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      setError(ERROR_MESSAGES.GENERIC);
     } finally {
       setLoading(false);
     }
   };
-
-
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -160,10 +161,10 @@ export default function LoginPage() {
           </div>
           <div className="space-y-2">
             <CardTitle className="text-2xl font-bold text-center">
-              {isSignUp ? 'Create Account' : 'Welcome Back'}
+              {mode === 'signup' ? 'Create Account' : 'Welcome Back'}
             </CardTitle>
             <CardDescription className="text-center">
-              {isSignUp 
+              {mode === 'signup' 
                 ? 'Sign up to join your neighborhood community' 
                 : 'Sign in to your Yrdly account'
               }
@@ -188,7 +189,7 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
+            {mode === 'signup' && (
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <div className="relative">
@@ -201,6 +202,8 @@ export default function LoginPage() {
                     onChange={(e) => setName(e.target.value)}
                     className="pl-10"
                     required
+                    aria-label="Full name"
+                    aria-describedby="name-error"
                   />
                 </div>
               </div>
@@ -224,38 +227,39 @@ export default function LoginPage() {
               </div>
             </div>
 
-                   <div className="space-y-2">
-                     <Label htmlFor="password">Password</Label>
-                     <div className="relative">
-                       <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                       <Input
-                         id="password"
-                         type={showPassword ? "text" : "password"}
-                         placeholder="Enter your password"
-                         value={password}
-                         onChange={(e) => setPassword(e.target.value)}
-                         className="pl-10 pr-10"
-                         required
-                         aria-label="Password"
-                         aria-describedby="password-error"
-                       />
-                       <button
-                         type="button"
-                         onClick={() => setShowPassword(!showPassword)}
-                         className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600"
-                         aria-label={showPassword ? "Hide password" : "Show password"}
-                         aria-pressed={showPassword}
-                       >
-                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                       </button>
-                     </div>
-                   </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={mode === 'signup' ? "Create a password" : "Enter your password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10 pr-10"
+                  required
+                  aria-label="Password"
+                  aria-describedby="password-error"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {mode === 'signup' && <PasswordStrength password={password} />}
+            </div>
 
             <Button type="submit" className="w-full" disabled={loading || (!!lockoutUntil && Date.now() < lockoutUntil)}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {lockoutUntil && Date.now() < lockoutUntil 
                 ? `Locked (${remainingTime}s)` 
-                : isSignUp ? 'Create Account' : 'Sign In'
+                : mode === 'signup' ? 'Create Account' : 'Sign In'
               }
             </Button>
           </form>
@@ -301,29 +305,14 @@ export default function LoginPage() {
           </div>
 
           <div className="text-center text-sm">
-            {isSignUp ? (
-              <>
-                Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(false)}
-                  className="text-blue-600 hover:text-blue-500 font-medium"
-                >
-                  Sign in
-                </button>
-              </>
-            ) : (
-              <>
-                Don&apos;t have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(true)}
-                  className="text-blue-600 hover:text-blue-500 font-medium"
-                >
-                  Sign up
-                </button>
-              </>
-            )}
+            {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}{' '}
+            <button
+              type="button"
+              onClick={onToggleMode}
+              className="text-blue-600 hover:text-blue-500 font-medium"
+            >
+              {mode === 'signup' ? 'Sign in' : 'Sign up'}
+            </button>
           </div>
         </CardContent>
       </Card>

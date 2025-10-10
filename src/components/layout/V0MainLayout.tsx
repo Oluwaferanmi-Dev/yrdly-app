@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/use-supabase-auth";
 import { ProfileDropdown } from "@/components/ProfileDropdown";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { SearchDialog } from "@/components/SearchDialog";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@/types";
 import Image from "next/image";
@@ -168,7 +169,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
             
             // For marketplace conversations, since chat_messages doesn't have is_read column,
             // we'll check if there are any messages from other users
-            hasUnreadMessages = chatMessages?.some((msg: any) => 
+            hasUnreadMessages = chatMessages?.some((msg: { sender_id: string }) => 
               msg.sender_id !== user.id
             ) || false;
             
@@ -184,7 +185,7 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
             }
             
             // Otherwise, check if there are unread messages from other users
-            hasUnreadMessages = conv.messages?.some((msg: any) => 
+            hasUnreadMessages = conv.messages?.some((msg: { sender_id: string; is_read?: boolean; read_by?: string[] }) => 
               msg.sender_id !== user.id && 
               (!msg.is_read || !msg.read_by?.includes(user.id))
             ) || false;
@@ -314,17 +315,19 @@ export function V0MainLayout({ children }: V0MainLayoutProps) {
 
       {/* Screen Content */}
       <div className={`min-h-screen ${isChatPage ? 'pt-0 pb-0' : 'pt-16 pb-16 sm:pt-20 sm:pb-20'}`}>
-        {isChatPage ? (
-          <div className="w-full h-full">
-            {children}
-          </div>
-        ) : (
-          <div className="w-full max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto">
-            <div className="px-3 sm:px-4 md:px-6">
+        <ErrorBoundary>
+          {isChatPage ? (
+            <div className="w-full h-full">
               {children}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="w-full max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto">
+              <div className="px-3 sm:px-4 md:px-6">
+                {children}
+              </div>
+            </div>
+          )}
+        </ErrorBoundary>
       </div>
 
       {/* Fixed Bottom Navigation - Hidden in chat */}
