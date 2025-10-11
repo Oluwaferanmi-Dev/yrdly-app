@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { usePosts } from "@/hooks/use-posts";
-import { usePullToRefresh } from "@/hooks/use-pull-to-refresh";
 import { useHaptics } from "@/hooks/use-haptics";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyFeed } from "@/components/EmptyFeed";
@@ -21,20 +20,10 @@ export function V0HomeScreen({ onViewProfile }: V0HomeScreenProps) {
   const { triggerHaptic } = useHaptics();
   const { posts, loading, refreshPosts, deletePost, createPost } = usePosts();
 
-  // Pull-to-refresh functionality
-  const { containerRef, isRefreshing } = usePullToRefresh({
-    onRefresh: async () => {
-      triggerHaptic('medium');
-      await refreshPosts();
-      triggerHaptic('success');
-    },
-    threshold: 80,
-    enabled: true
-  });
 
 
   return (
-    <div ref={containerRef} className="p-3 sm:p-4 space-y-3 sm:space-y-4 pb-20 sm:pb-24 max-w-2xl mx-auto">
+    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 pb-20 sm:pb-24 max-w-2xl mx-auto">
       {/* Email verification banner removed - users verify during registration */}
 
       {/* Welcome banner removed as requested */}
