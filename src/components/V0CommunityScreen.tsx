@@ -70,6 +70,8 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
   const [userSearchLoading, setUserSearchLoading] = useState(false);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [friendshipStatus, setFriendshipStatus] = useState<Record<string, 'friends' | 'request_sent' | 'request_received' | 'none'>>({});
+  const [pendingFriendRequests, setPendingFriendRequests] = useState<any[]>([]);
+  const [friendRequestsLoading, setFriendRequestsLoading] = useState(true);
   const [stats, setStats] = useState({
     totalUsers: 0,
     activeToday: 0,
@@ -198,6 +200,49 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showUserSearch]);
+
+  // Fetch pending friend requests
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const fetchPendingFriendRequests = async () => {
+      try {
+        setFriendRequestsLoading(true);
+        
+        // Get friend requests where current user is the recipient
+        const { data: requests, error } = await supabase
+          .from('friend_requests')
+          .select(`
+            id,
+            from_user_id,
+            created_at,
+            users!friend_requests_from_user_id_fkey (
+              id,
+              name,
+              avatar_url,
+              bio,
+              location
+            )
+          `)
+          .eq('to_user_id', currentUser.id)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching friend requests:', error);
+          return;
+        }
+
+        setPendingFriendRequests(requests || []);
+      } catch (error) {
+        console.error('Error fetching friend requests:', error);
+      } finally {
+        setFriendRequestsLoading(false);
+      }
+    };
+
+    fetchPendingFriendRequests();
+  }, [currentUser]);
 
   const filteredPosts = useMemo(() => {
     if (!searchQuery) return posts;
@@ -461,6 +506,86 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
     }
   };
 
+  const handleFriendRequestAction = async (requestId: string, fromUserId: string, action: 'accept' | 'decline') => {
+    if (!currentUser) return;
+
+    try {
+      if (action === 'accept') {
+        // Accept friend request
+        const { error: updateError } = await supabase
+          .from('friend_requests')
+          .update({ status: 'accepted', updated_at: new Date().toISOString() })
+          .eq('id', requestId);
+
+        if (updateError) throw updateError;
+
+        // Update friends lists
+        const { data: currentUserData } = await supabase
+          .from('users')
+          .select('friends')
+          .eq('id', currentUser.id)
+          .single();
+
+        const { data: senderUserData } = await supabase
+          .from('users')
+          .select('friends')
+          .eq('id', fromUserId)
+          .single();
+
+        const currentUserFriends = currentUserData?.friends || [];
+        const senderUserFriends = senderUserData?.friends || [];
+
+        const updatedCurrentUserFriends = [...currentUserFriends, fromUserId];
+        await supabase
+          .from('users')
+          .update({ friends: updatedCurrentUserFriends })
+          .eq('id', currentUser.id);
+
+        const updatedSenderFriends = [...senderUserFriends, currentUser.id];
+        await supabase
+          .from('users')
+          .update({ friends: updatedSenderFriends })
+          .eq('id', fromUserId);
+
+        // Create notification for the sender
+        try {
+          const { NotificationTriggers } = await import('@/lib/notification-triggers');
+          await NotificationTriggers.onFriendRequestAccepted(fromUserId, currentUser.id);
+        } catch (error) {
+          console.error('Error creating friend request accepted notification:', error);
+        }
+
+        toast({
+          title: "Friend Request Accepted",
+          description: "You are now friends with this user.",
+        });
+      } else if (action === 'decline') {
+        // Decline friend request
+        const { error } = await supabase
+          .from('friend_requests')
+          .delete()
+          .eq('id', requestId);
+
+        if (error) throw error;
+
+        toast({
+          title: "Friend Request Declined",
+          description: "Friend request has been declined.",
+        });
+      }
+
+      // Remove the request from the pending list
+      setPendingFriendRequests(prev => prev.filter(req => req.id !== requestId));
+    } catch (error) {
+      console.error('Error handling friend request action:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to process friend request. Please try again.",
+      });
+    }
+  };
+
   const handleMessageUser = async (userId: string) => {
     if (!currentUser) return;
 
@@ -652,6 +777,64 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
           <div className="text-xs text-muted-foreground">New Posts</div>
         </Card>
       </div>
+
+      {/* Pending Friend Requests */}
+      {pendingFriendRequests.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="font-semibold text-foreground flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-primary" />
+            Friend Requests ({pendingFriendRequests.length})
+          </h3>
+          <div className="space-y-2">
+            {pendingFriendRequests.map((request) => {
+              const sender = request.users;
+              return (
+                <Card key={request.id} className="p-4 yrdly-shadow">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={sender?.avatar_url || "/placeholder.svg"} />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {sender?.name?.substring(0, 2).toUpperCase() || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-foreground truncate">
+                        {sender?.name || "Unknown User"}
+                      </h4>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {sender?.bio || "No bio available"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(request.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleFriendRequestAction(request.id, request.from_user_id, 'accept')}
+                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                      >
+                        <Check className="w-4 h-4 mr-1" />
+                        Accept
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleFriendRequestAction(request.id, request.from_user_id, 'decline')}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Decline
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* User Search Results */}
       {showUserSearch && (
