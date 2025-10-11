@@ -294,9 +294,8 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
         table: 'messages',
         filter: `read_by.cs.{${user.id}}`
       }, (payload) => {
-        console.log('📨 Message read status updated:', payload);
         // Refresh conversations to update unread counts
-        fetchConversations();
+        // Note: This would need to be implemented to refresh the conversations list
       })
       .subscribe();
 
