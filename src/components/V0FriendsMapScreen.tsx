@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -68,7 +68,7 @@ export function V0FriendsMapScreen({ onBack }: V0FriendsMapScreenProps) {
   }, [profile?.shareLocation, toast, updateUserLocation]);
 
   // Fetch friends' locations
-  const fetchFriendsLocations = async () => {
+  const fetchFriendsLocations = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -93,10 +93,10 @@ export function V0FriendsMapScreen({ onBack }: V0FriendsMapScreenProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toast]);
 
   // Update user's location in database
-  const updateUserLocation = async (lat: number, lng: number) => {
+  const updateUserLocation = useCallback(async (lat: number, lng: number) => {
     if (!user || !profile?.shareLocation) return;
 
     try {
@@ -116,7 +116,7 @@ export function V0FriendsMapScreen({ onBack }: V0FriendsMapScreenProps) {
     } catch (error) {
       console.error('Error updating location:', error);
     }
-  };
+  }, [user, profile?.shareLocation]);
 
   // Simple geocoding (you might want to use a proper geocoding service)
   const getAddressFromCoordinates = async (lat: number, lng: number): Promise<string> => {

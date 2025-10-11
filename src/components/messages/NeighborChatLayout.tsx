@@ -505,7 +505,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
               onClick={() => router.push(`/profile/${otherParticipant.id}`)}
             >
               <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600">
-            <AvatarImage src={otherParticipant.avatarUrl} alt={otherParticipant.name} />
+            <AvatarImage src={otherParticipant.avatar_url} alt={otherParticipant.name} />
                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
                   {otherParticipant.name.charAt(0)}
                 </AvatarFallback>
