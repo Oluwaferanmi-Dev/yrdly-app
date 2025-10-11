@@ -82,7 +82,6 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
     useMemo(() => {
         if (!postId) return;
         
-        console.log('Setting up real-time subscription for post:', postId);
         
         // Set up real-time subscription for comments
         const channel = supabase
@@ -93,13 +92,7 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
                 table: 'comments',
                 filter: `post_id=eq.${postId}`
             }, (payload) => {
-                console.log('Comment real-time update:', payload);
-                console.log('Event type:', payload.eventType);
-                console.log('Payload new:', payload.new);
-                console.log('Payload old:', payload.old);
-                
                 if (payload.eventType === 'INSERT' && payload.new) {
-                    console.log('Handling INSERT event');
                     const dbComment = payload.new as any;
                     
                     const newComment: Comment = {
@@ -114,14 +107,12 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
                     };
                     
                     setComments(prev => {
-                        console.log('Adding new comment:', newComment.id);
                         const existing = prev.filter(c => c.id !== newComment.id);
                         return [...existing, newComment].sort((a, b) => 
                             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
                         );
                     });
                 } else if (payload.eventType === 'UPDATE' && payload.new) {
-                    console.log('Handling UPDATE event');
                     const dbComment = payload.new as any;
                     
                     const updatedComment: Comment = {
@@ -136,29 +127,20 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
                     };
                     
                     setComments(prev => {
-                        console.log('Updating comment:', updatedComment.id);
                         return prev.map(c => c.id === updatedComment.id ? updatedComment : c);
                     });
                 } else if (payload.eventType === 'DELETE' && payload.old) {
-                    console.log('Handling DELETE event');
                     const oldComment = payload.old as any;
-                    console.log('Deleting comment:', oldComment.id);
                     setComments(prev => {
                         const filtered = prev.filter(c => c.id !== oldComment.id);
-                        console.log('Comments after deletion:', filtered.length);
                         return filtered;
                     });
                 }
             })
             .subscribe((status) => {
-                console.log('Comments subscription status:', status);
-                if (status === 'SUBSCRIBED') {
-                    console.log('✅ Successfully subscribed to comments real-time updates');
-                } else if (status === 'CHANNEL_ERROR') {
+                if (status === 'CHANNEL_ERROR') {
                     console.error('❌ Error subscribing to comments real-time updates');
-                    console.log('Falling back to polling mode for comments');
                 } else if (status === 'CLOSED') {
-                    console.log('Comments subscription closed');
                 }
             });
 
@@ -189,21 +171,14 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
         fetchComments();
 
         return () => {
-            console.log('Cleaning up comments subscription for post:', postId);
             supabase.removeChannel(channel);
         };
     }, [postId]);
 
     const handlePostComment = useCallback(async (e: FormEvent) => {
         e.preventDefault();
-        console.log('Comment submission attempt:', { currentUser, userDetails, newComment, loading, authTimeout });
         
         if (!currentUser || !userDetails || !newComment.trim()) {
-            console.log('Missing requirements:', { 
-                hasCurrentUser: !!currentUser, 
-                hasUserDetails: !!userDetails, 
-                hasComment: !!newComment.trim() 
-            });
             return;
         }
 
@@ -277,7 +252,6 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
                             reactions: comment.reactions || {}
                         }));
                         setComments(mappedComments);
-                        console.log('Refreshed comments after posting');
                     }
                 };
                 refreshComments();
@@ -328,7 +302,6 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
                             reactions: comment.reactions || {}
                         }));
                         setComments(mappedComments);
-                        console.log('Refreshed comments after editing');
                     }
                 };
                 refreshComments();
@@ -394,7 +367,6 @@ export function CommentSection({ postId, onCommentCountChange }: CommentSectionP
                             reactions: comment.reactions || {}
                         }));
                         setComments(mappedComments);
-                        console.log('Refreshed comments after deletion');
                     }
                 };
                 refreshComments();
