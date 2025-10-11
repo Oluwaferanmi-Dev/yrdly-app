@@ -133,10 +133,12 @@ export class StorageService {
 
   // Get public URL for a file
   static getPublicUrl(bucket: string, path: string): string {
+    console.log('🔗 getPublicUrl called with bucket:', bucket, 'path:', path);
     const { data } = supabase.storage
       .from(bucket)
       .getPublicUrl(path);
     
+    console.log('🔗 Generated URL:', data.publicUrl);
     return data.publicUrl;
   }
 
@@ -281,8 +283,10 @@ export class StorageService {
       console.log('✅ File uploaded successfully');
       console.log('📤 Upload response data:', data);
 
+      console.log('📤 About to generate public URL with bucket: chat-images and path:', path);
       const publicUrl = this.getPublicUrl('chat-images', path);
       console.log('📤 Generated public URL:', publicUrl);
+      console.log('📤 URL should contain chat-images, not post-images');
       return { url: publicUrl, error: null };
     } catch (error) {
       console.error('❌ Upload chat image error:', error);
