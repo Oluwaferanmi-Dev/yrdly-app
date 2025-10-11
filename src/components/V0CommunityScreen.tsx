@@ -520,32 +520,63 @@ export function V0CommunityScreen({ className }: V0CommunityScreenProps) {
         if (updateError) throw updateError;
 
         // Update friends lists
-        const { data: currentUserData } = await supabase
+        console.log('🔍 Fetching current user friends for:', currentUser.id);
+        const { data: currentUserData, error: currentUserError } = await supabase
           .from('users')
           .select('friends')
           .eq('id', currentUser.id)
           .single();
 
-        const { data: senderUserData } = await supabase
+        if (currentUserError) {
+          console.error('❌ Error fetching current user data:', currentUserError);
+          throw currentUserError;
+        }
+
+        console.log('🔍 Fetching sender user friends for:', fromUserId);
+        const { data: senderUserData, error: senderUserError } = await supabase
           .from('users')
           .select('friends')
           .eq('id', fromUserId)
           .single();
 
+        if (senderUserError) {
+          console.error('❌ Error fetching sender user data:', senderUserError);
+          throw senderUserError;
+        }
+
         const currentUserFriends = currentUserData?.friends || [];
         const senderUserFriends = senderUserData?.friends || [];
 
+        console.log('📊 Current user friends before update:', currentUserFriends);
+        console.log('📊 Sender user friends before update:', senderUserFriends);
+
         const updatedCurrentUserFriends = [...currentUserFriends, fromUserId];
-        await supabase
+        console.log('📊 Updated current user friends:', updatedCurrentUserFriends);
+        
+        const { error: updateCurrentUserError } = await supabase
           .from('users')
           .update({ friends: updatedCurrentUserFriends })
           .eq('id', currentUser.id);
 
+        if (updateCurrentUserError) {
+          console.error('❌ Error updating current user friends:', updateCurrentUserError);
+          throw updateCurrentUserError;
+        }
+        console.log('✅ Current user friends updated successfully');
+
         const updatedSenderFriends = [...senderUserFriends, currentUser.id];
-        await supabase
+        console.log('📊 Updated sender friends:', updatedSenderFriends);
+        
+        const { error: updateSenderError } = await supabase
           .from('users')
           .update({ friends: updatedSenderFriends })
           .eq('id', fromUserId);
+
+        if (updateSenderError) {
+          console.error('❌ Error updating sender friends:', updateSenderError);
+          throw updateSenderError;
+        }
+        console.log('✅ Sender friends updated successfully');
 
         // Create notification for the sender
         try {

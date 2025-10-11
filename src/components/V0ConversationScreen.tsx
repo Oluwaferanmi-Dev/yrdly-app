@@ -201,6 +201,21 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
           }
         }
 
+        // Update conversation's unread count to 0
+        const { error: conversationUpdateError } = await supabase
+          .from('conversations')
+          .update({ 
+            unread_count: 0,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', selectedConversation.id);
+
+        if (conversationUpdateError) {
+          console.error('Error updating conversation unread count:', conversationUpdateError);
+        } else {
+          console.log('✅ Conversation unread count updated to 0');
+        }
+
       } catch (error) {
         console.error('Error in markMessagesAsRead:', error);
       }
@@ -248,37 +263,59 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
 
   const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedConversation || !newMessage.trim() && !selectedFile) return;
+    console.log('📤 Send message triggered');
+    console.log('📤 User:', user?.id);
+    console.log('📤 Selected conversation:', selectedConversation?.id);
+    console.log('📤 New message:', newMessage);
+    console.log('📤 Selected file:', selectedFile?.name, selectedFile?.size);
+    
+    if (!user || !selectedConversation || !newMessage.trim() && !selectedFile) {
+      console.log('❌ Send message validation failed');
+      return;
+    }
 
     setSending(true);
     try {
       let imageUrl = null;
       
       if (selectedFile) {
+        console.log('📷 Starting image upload...');
+        console.log('📷 File details:', {
+          name: selectedFile.name,
+          size: selectedFile.size,
+          type: selectedFile.type
+        });
+        
         const { url, error } = await StorageService.uploadChatImage(selectedConversation.id, selectedFile);
         if (error) {
-          console.error('Error uploading image:', error);
+          console.error('❌ Error uploading image:', error);
           return;
         }
+        console.log('✅ Image uploaded successfully:', url);
         imageUrl = url;
       }
 
+      console.log('💬 Inserting message to database...');
+      const messageData = {
+        conversation_id: selectedConversation.id,
+        sender_id: user.id,
+        text: newMessage.trim() || (imageUrl ? 'Image' : ''),
+        image_url: imageUrl,
+        created_at: new Date().toISOString(),
+        is_read: true, // Mark as read for the sender
+        read_by: [user.id], // Add sender to read_by array
+      };
+      console.log('💬 Message data:', messageData);
+
       const { error } = await supabase
         .from('messages')
-        .insert({
-          conversation_id: selectedConversation.id,
-          sender_id: user.id,
-          text: newMessage.trim() || (imageUrl ? 'Image' : ''),
-          image_url: imageUrl,
-          created_at: new Date().toISOString(),
-          is_read: true, // Mark as read for the sender
-          read_by: [user.id], // Add sender to read_by array
-        });
+        .insert(messageData);
 
       if (error) {
-        console.error('Error sending message:', error);
+        console.error('❌ Error sending message:', error);
         return;
       }
+      console.log('✅ Message inserted successfully');
 
       // Update conversation timestamp
       await supabase
@@ -302,11 +339,35 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
   }, [user, selectedConversation, newMessage, selectedFile]);
 
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📷 Image selection triggered');
     const file = e.target.files?.[0];
+    console.log('📷 Selected file:', file);
+    
     if (file) {
+      console.log('📷 File details:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified
+      });
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        console.error('❌ Invalid file type:', file.type);
+        return;
+      }
+      
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        console.error('❌ File too large:', file.size, 'bytes');
+        return;
+      }
+      
       setSelectedFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
+        console.log('📷 Image preview loaded');
         setImagePreview(e.target?.result as string);
       };
       reader.readAsDataURL(file);

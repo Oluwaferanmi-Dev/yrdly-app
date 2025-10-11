@@ -144,6 +144,11 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
 
         // Calculate stats with real data
         const friendsCount = userData?.friends?.length || 0;
+        console.log('👥 Profile friends data:', {
+          userId: targetUser?.id,
+          friends: userData?.friends,
+          friendsCount: friendsCount
+        });
         
         // Count events created by this user
         const { data: eventsCountData } = await supabase
@@ -166,6 +171,52 @@ export function V0ProfileScreen({ onBack, user, isOwnProfile = true, targetUserI
 
     fetchProfileData();
   }, [targetUser, targetProfile]);
+
+  // Real-time subscription for user data updates (including friends list)
+  useEffect(() => {
+    if (!targetUser) return;
+
+    console.log('🔄 Setting up real-time subscription for user:', targetUser.id);
+    
+    const channel = supabase
+      .channel(`user_${targetUser.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'users',
+        filter: `id=eq.${targetUser.id}`
+      }, (payload) => {
+        console.log('🔄 User data updated via real-time:', payload);
+        // Refresh the profile data when user data changes
+        const refreshData = async () => {
+          try {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', targetUser.id)
+              .single();
+
+            if (userData) {
+              console.log('🔄 Refreshed user data:', userData);
+              const friendsCount = userData?.friends?.length || 0;
+              setStats(prev => ({
+                ...prev,
+                friends: friendsCount
+              }));
+            }
+          } catch (error) {
+            console.error('Error refreshing user data:', error);
+          }
+        };
+        refreshData();
+      })
+      .subscribe();
+
+    return () => {
+      console.log('🔄 Cleaning up real-time subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [targetUser]);
 
   // Refresh data when user returns to the page (e.g., after editing profile)
   useEffect(() => {

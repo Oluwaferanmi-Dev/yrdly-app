@@ -236,19 +236,56 @@ export class StorageService {
     file: File
   ): Promise<{ url: string | null; error: any }> {
     try {
-      const fileName = `${Date.now()}_${file.name}`;
-      const path = `chat_images/${conversationId}/${fileName}`;
+      console.log('📤 StorageService.uploadChatImage called');
+      console.log('📤 Conversation ID:', conversationId);
+      console.log('📤 File details:', {
+        name: file.name,
+        size: file.size,
+        type: file.type
+      });
 
+      const fileName = `${Date.now()}_${file.name}`;
+      const path = `${conversationId}/${fileName}`;
+      console.log('📤 Generated path:', path);
+      console.log('📤 Bucket name: chat-images');
+
+      console.log('📤 Calling uploadFile...');
       const { data, error } = await this.uploadFile('chat-images', path, file);
       
       if (error) {
-        return { url: null, error };
+        console.error('❌ Upload file error:', error);
+        console.error('❌ Error details:', {
+          message: error.message,
+          statusCode: error.statusCode,
+          error: error.error,
+          data: error.data
+        });
+        
+        // Try with a different path structure as fallback
+        console.log('🔄 Trying fallback upload with different path...');
+        const fallbackPath = `chat/${conversationId}/${fileName}`;
+        console.log('📤 Fallback path:', fallbackPath);
+        
+        const { data: fallbackData, error: fallbackError } = await this.uploadFile('chat-images', fallbackPath, file);
+        
+        if (fallbackError) {
+          console.error('❌ Fallback upload also failed:', fallbackError);
+          return { url: null, error: fallbackError };
+        }
+        
+        console.log('✅ Fallback upload successful');
+        const fallbackUrl = this.getPublicUrl('chat-images', fallbackPath);
+        console.log('📤 Fallback public URL:', fallbackUrl);
+        return { url: fallbackUrl, error: null };
       }
+      console.log('✅ File uploaded successfully');
+      console.log('📤 Upload response data:', data);
 
       const publicUrl = this.getPublicUrl('chat-images', path);
+      console.log('📤 Generated public URL:', publicUrl);
       return { url: publicUrl, error: null };
     } catch (error) {
-      console.error('Upload chat image error:', error);
+      console.error('❌ Upload chat image error:', error);
       return { url: null, error };
     }
   }

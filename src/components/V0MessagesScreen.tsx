@@ -282,6 +282,29 @@ export function V0MessagesScreen({ onOpenChat, selectedConversationId }: V0Messa
     };
   }, [user]);
 
+  // Real-time subscription for message updates to refresh unread counts
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('messages-updates')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `read_by.cs.{${user.id}}`
+      }, (payload) => {
+        console.log('📨 Message read status updated:', payload);
+        // Refresh conversations to update unread counts
+        fetchConversations();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   // Handle selected conversation ID
   useEffect(() => {
     if (selectedConversationId && conversations.length > 0) {
