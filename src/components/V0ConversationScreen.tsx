@@ -266,6 +266,27 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
     return otherId ? participants[otherId] : null;
   }, [user?.id, participants]);
 
+  // Get activity status based on last_seen timestamp
+  const getActivityStatus = useCallback((lastSeen: string | null) => {
+    if (!lastSeen) return "Last seen recently";
+    
+    const lastSeenTime = new Date(lastSeen);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - lastSeenTime.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return "Online";
+    if (diffInMinutes < 5) return "Last seen just now";
+    if (diffInMinutes < 60) return `Last seen ${diffInMinutes} minutes ago`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `Last seen ${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `Last seen ${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+    
+    return "Last seen recently";
+  }, []);
+
   const handleSendMessage = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     console.log('📤 Send message triggered');
@@ -451,6 +472,80 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
     setReplyingTo(null);
   }, []);
 
+  // Update user activity status
+  const updateUserActivity = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .from('users')
+        .update({ 
+          last_seen: new Date().toISOString(),
+          is_online: true
+        })
+        .eq('id', user.id);
+    } catch (error) {
+      console.error('Error updating user activity:', error);
+    }
+  }, [user]);
+
+  // Update activity on component mount and periodically
+  useEffect(() => {
+    if (!user) return;
+
+    // Update immediately
+    updateUserActivity();
+
+    // Update every 30 seconds
+    const interval = setInterval(updateUserActivity, 30000);
+
+    // Update on page visibility change
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        updateUserActivity();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user, updateUserActivity]);
+
+  // Real-time subscription for user activity updates
+  useEffect(() => {
+    if (!selectedConversation) return;
+
+    const otherParticipant = getOtherParticipant(selectedConversation);
+    if (!otherParticipant) return;
+
+    const channel = supabase
+      .channel(`user-activity-${otherParticipant.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'users',
+        filter: `id=eq.${otherParticipant.id}`
+      }, (payload) => {
+        console.log('🔄 User activity updated:', payload);
+        // Update the participant data
+        setParticipants(prev => ({
+          ...prev,
+          [otherParticipant.id]: {
+            ...prev[otherParticipant.id],
+            ...payload.new
+          }
+        }));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedConversation, getOtherParticipant]);
+
   if (loading) {
     return (
       <div className="flex flex-col h-full">
@@ -574,7 +669,7 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
               {otherParticipant.name}
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {otherParticipant.isOnline ? "Online" : "Last seen recently"}
+              {getActivityStatus(otherParticipant.last_seen)}
             </p>
           </div>
         </div>
@@ -757,16 +852,15 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
                 </Button>
               </div>
             )}
-            <textarea
+            <Input
               ref={messageInputRef}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type a message..."
-              className="flex-1 min-h-[40px] max-h-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              className="pr-12"
               disabled={sending}
-              rows={1}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === 'Enter') {
                   e.preventDefault();
                   handleSendMessage(e);
                 }
