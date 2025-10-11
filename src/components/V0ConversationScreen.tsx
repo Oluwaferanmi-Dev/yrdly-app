@@ -34,6 +34,7 @@ interface ChatMessage {
   content?: string;
   image_url: string | null;
   created_at: string;
+  updated_at?: string;
   is_read: boolean;
 }
 
@@ -53,8 +54,12 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Scroll to bottom when new messages arrive
   const scrollToBottom = useCallback(() => {
@@ -331,6 +336,7 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
       setNewMessage("");
       setSelectedFile(null);
       setImagePreview(null);
+      setReplyingTo(null);
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -380,6 +386,69 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  }, []);
+
+  // Message editing functions
+  const startEditing = useCallback((messageId: string, currentText: string) => {
+    setEditingMessage(messageId);
+    setEditText(currentText);
+  }, []);
+
+  const cancelEditing = useCallback(() => {
+    setEditingMessage(null);
+    setEditText("");
+  }, []);
+
+  const saveEdit = useCallback(async (messageId: string) => {
+    if (!editText.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ 
+          text: editText.trim(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', messageId);
+
+      if (error) {
+        console.error('Error updating message:', error);
+        return;
+      }
+
+      // Update local state
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, text: editText.trim(), updated_at: new Date().toISOString() }
+          : msg
+      ));
+
+      setEditingMessage(null);
+      setEditText("");
+    } catch (error) {
+      console.error('Error saving edit:', error);
+    }
+  }, [editText]);
+
+  const canEditMessage = useCallback((message: ChatMessage) => {
+    if (message.sender_id !== user?.id) return false;
+    
+    const messageTime = new Date(message.created_at);
+    const now = new Date();
+    const timeDiff = now.getTime() - messageTime.getTime();
+    const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
+    
+    return timeDiff <= thirtyMinutes;
+  }, [user?.id]);
+
+  // Reply functions
+  const startReply = useCallback((message: ChatMessage) => {
+    setReplyingTo(message);
+    messageInputRef.current?.focus();
+  }, []);
+
+  const cancelReply = useCallback(() => {
+    setReplyingTo(null);
   }, []);
 
   if (loading) {
@@ -531,7 +600,7 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
                 <div
                   key={message.id}
                   className={cn(
-                    "flex gap-3",
+                    "flex gap-3 mb-4 px-2",
                     isOwnMessage ? "justify-end" : "justify-start"
                   )}
                 >
@@ -545,10 +614,10 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
                   )}
                   <div
                     className={cn(
-                      "max-w-[70%] rounded-lg px-3 py-2",
+                      "max-w-[60%] rounded-2xl px-4 py-3 shadow-sm relative group",
                       isOwnMessage
-                        ? "bg-blue-500 text-white"
-                        : "bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        ? "bg-blue-500 text-white ml-auto"
+                        : "bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 mr-auto"
                     )}
                   >
                     {message.image_url && (
@@ -562,13 +631,76 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
                         />
                       </div>
                     )}
-                    <p className="text-sm break-words">{message.text || message.content}</p>
-                    <p className="text-xs opacity-70 mt-1">
-                      {new Date(message.created_at).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </p>
+                    {editingMessage === message.id ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          className="w-full p-2 text-sm bg-white/10 border border-white/20 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-white/30"
+                          rows={2}
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveEdit(message.id)}
+                            className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-xs transition-colors"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-xs transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm break-words leading-relaxed">{message.text || message.content}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs opacity-60">
+                              {new Date(message.created_at).toLocaleTimeString([], { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </p>
+                            {message.updated_at && message.updated_at !== message.created_at && (
+                              <span className="text-xs opacity-50 italic">edited</span>
+                            )}
+                          </div>
+                          {isOwnMessage && (
+                            <div className="flex items-center gap-1">
+                              <div className="w-1 h-1 bg-white/60 rounded-full"></div>
+                              <div className="w-1 h-1 bg-white/60 rounded-full"></div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                          {isOwnMessage && canEditMessage(message) && !message.image_url && (
+                            <button
+                              onClick={() => startEditing(message.id, message.text || message.content || '')}
+                              className="p-1 hover:bg-white/10 rounded"
+                              title="Edit message"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => startReply(message)}
+                            className="p-1 hover:bg-white/10 rounded"
+                            title="Reply to message"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                            </svg>
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               );
@@ -580,6 +712,29 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
 
       {/* Message Input - Fixed at bottom */}
       <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm flex-shrink-0">
+        {/* Reply Preview */}
+        {replyingTo && (
+          <div className="mb-3 p-3 bg-slate-100 dark:bg-slate-700 rounded-lg border-l-4 border-blue-500">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                Replying to {participants[replyingTo.sender_id]?.name || 'Unknown'}
+              </span>
+              <button
+                type="button"
+                onClick={cancelReply}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-300 truncate">
+              {replyingTo.text || replyingTo.content || 'Image'}
+            </p>
+          </div>
+        )}
+        
         <form onSubmit={handleSendMessage} className="flex items-end gap-2">
           <div className="flex-1 relative">
             {imagePreview && (
@@ -602,12 +757,20 @@ export function V0ConversationScreen({ conversationId }: V0ConversationScreenPro
                 </Button>
               </div>
             )}
-            <Input
+            <textarea
+              ref={messageInputRef}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Type a message..."
-              className="pr-12"
+              className="flex-1 min-h-[40px] max-h-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               disabled={sending}
+              rows={1}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage(e);
+                }
+              }}
             />
             <input
               ref={fileInputRef}
