@@ -355,7 +355,7 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
     } finally {
       setSending(false);
     }
-  }, [user, selectedConversation, newMessage, selectedFile]);
+  }, [user, selectedConversation, newMessage, selectedFile, stopTyping]);
 
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

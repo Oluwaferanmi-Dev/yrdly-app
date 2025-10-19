@@ -94,7 +94,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
     if (targetUser) {
       refreshProfileData();
     }
-  }, [targetUser?.id]);
+  }, [targetUser?.id, refreshProfileData]);
 
   useEffect(() => {
     if (!targetUser) return;

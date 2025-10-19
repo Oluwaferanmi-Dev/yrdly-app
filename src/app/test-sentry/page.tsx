@@ -155,7 +155,7 @@ export default function TestSentryPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
-              Test various Sentry features to ensure they're working correctly.
+              Test various Sentry features to ensure they&apos;re working correctly.
               Check your Sentry dashboard to see the captured events.
             </p>
             

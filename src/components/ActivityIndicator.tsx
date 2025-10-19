@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { timeAgo } from '@/lib/utils';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 interface ActivityIndicatorProps {
@@ -182,9 +183,11 @@ export function AvatarWithActivity({
   return (
     <div className={cn("relative", className)}>
       <div className={cn("rounded-full overflow-hidden", avatarSizeClasses[size])}>
-        <img 
+        <Image 
           src={avatarUrl || "/placeholder.svg"} 
           alt={name}
+          width={64}
+          height={64}
           className="w-full h-full object-cover"
         />
       </div>
