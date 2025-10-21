@@ -67,6 +67,8 @@ export class NotificationService {
    */
   static async createNotification(params: CreateNotificationParams): Promise<string> {
     try {
+      console.log('Creating notification:', params);
+      
       // Try using the RPC function first
       const { data, error } = await supabase.rpc('create_notification', {
         p_user_id: params.userId,
@@ -84,6 +86,8 @@ export class NotificationService {
         throw error;
       }
 
+      console.log('Notification created successfully via RPC:', data);
+
       // Send push notification
       try {
         await PushNotificationService.sendToUser(params.userId, {
@@ -99,6 +103,7 @@ export class NotificationService {
 
       return data;
     } catch (rpcError) {
+      console.log('RPC function failed, falling back to direct insert:', rpcError);
       
       // Fallback to direct insert if RPC function doesn't exist
       const { data, error } = await supabase
@@ -120,6 +125,8 @@ export class NotificationService {
         console.error('Error creating notification via direct insert:', error);
         throw error;
       }
+
+      console.log('Notification created successfully via direct insert:', data);
 
       // Send push notification
       try {

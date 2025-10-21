@@ -30,6 +30,8 @@ export function useTypingDetection(conversationId: string) {
           user_id: user.id,
           is_typing: typing,
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'conversation_id,user_id'
         });
     } catch (error) {
       console.error('Error sending typing status:', error);

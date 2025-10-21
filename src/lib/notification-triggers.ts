@@ -75,6 +75,8 @@ export class NotificationTriggers {
     messageContent: string
   ) {
     try {
+      console.log('Creating message notification:', { toUserId, fromUserId, conversationId, messageContent });
+      
       // Get sender's name
       const { data: senderData } = await supabase
         .from('users')
@@ -86,6 +88,9 @@ export class NotificationTriggers {
         const messagePreview = messageContent.length > 50 
           ? messageContent.substring(0, 50) + '...' 
           : messageContent;
+
+        console.log('Sender data found:', senderData);
+        console.log('Creating notification for user:', toUserId);
 
         await NotificationService.createNotification({
           userId: toUserId,
@@ -101,6 +106,8 @@ export class NotificationTriggers {
             messagePreview 
           }
         });
+      } else {
+        console.log('No sender data found for user:', fromUserId);
       }
     } catch (error) {
       console.error('Error creating message notification:', error);

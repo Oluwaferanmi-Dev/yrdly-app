@@ -75,9 +75,12 @@ export const useNotifications = () => {
                 table: 'notifications',
                 filter: `user_id=eq.${user.id}`
             }, (payload) => {
+                console.log('Real-time notification received:', payload);
                 
                 if (payload.eventType === 'INSERT' && payload.new) {
                     const newNotification = payload.new as Notification;
+                    console.log('New notification:', newNotification);
+                    
                     setNotifications(prev => {
                         const existing = prev.filter(n => n.id !== newNotification.id);
                         const updated = [newNotification, ...existing].sort((a, b) => 
@@ -86,6 +89,7 @@ export const useNotifications = () => {
                         
                         // Show toast for new notifications
                         if (!newNotification.is_read) {
+                            console.log('Showing toast for new notification:', newNotification.title);
                             toast({
                                 title: newNotification.title,
                                 description: newNotification.message,
