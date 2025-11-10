@@ -25,8 +25,6 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 import * as Sentry from "@sentry/nextjs";
-import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/hooks/use-supabase-auth";
 
 interface NotificationsScreenProps {
   className?: string;
