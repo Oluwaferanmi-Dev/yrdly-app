@@ -23,6 +23,10 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNowStrict } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useRouter } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/use-supabase-auth";
 
 interface NotificationsScreenProps {
   className?: string;
@@ -66,22 +70,260 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: {
   onDelete: (id: string) => void;
 }) {
   const { toast } = useToast();
+  const router = useRouter();
+  const { user: currentUser } = useAuth();
 
   const handleAction = async (action: string) => {
     if (action === 'accept_friend') {
-      // TODO: Implement accept friend request
-      toast({ title: "Friend request accepted!" });
+      try {
+        await Sentry.startSpan(
+          { op: "http.client", name: "NotificationsScreen: Accept Friend" },
+          async (span) => {
+            span.setAttribute("notificationId", notification.id);
+            const toUserId = currentUser?.id || "";
+            // Use sender_id from notification (primary source) or fallback to data field
+            let fromUserId = notification.from_user_id || "";
+            
+            // If still missing, try to find the pending friend request for this notification
+            if (!fromUserId && toUserId) {
+              // First, try to find any pending request to this user (most recent)
+              const { data: pending } = await supabase
+                .from('friend_requests')
+                .select('id, from_user_id')
+                .eq('to_user_id', toUserId)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false })
+                .limit(1);
+              if (pending && pending.length >= 1) {
+                fromUserId = pending[0].from_user_id;
+              }
+            }
+            span.setAttribute("fromUserId", fromUserId || "");
+            span.setAttribute("toUserId", toUserId);
+
+            if (!currentUser) {
+              throw new Error("You must be logged in to accept a friend request.");
+            }
+            if (!fromUserId || !toUserId) {
+              throw new Error("Invalid friend request. Missing sender information.");
+            }
+
+            // Check if already friends
+            const { data: me } = await supabase
+              .from('users')
+              .select('friends')
+              .eq('id', currentUser.id)
+              .single();
+
+            if (me?.friends?.includes(fromUserId)) {
+              toast({ title: "Already friends", description: "You are already friends with this user." });
+              return;
+            }
+
+            // Find friend request (check any status first, then specifically pending)
+            const { data: allRequests, error: allRequestsError } = await supabase
+              .from('friend_requests')
+              .select('*')
+              .eq('from_user_id', fromUserId)
+              .eq('to_user_id', toUserId)
+              .order('created_at', { ascending: false })
+              .limit(1);
+
+            if (allRequestsError) {
+              throw new Error("Failed to check friend request status.");
+            }
+
+            if (!allRequests || allRequests.length === 0) {
+              // No friend request exists - mark notification as read and inform user
+              onMarkAsRead(notification.id);
+              toast({ 
+                title: "Friend request not found", 
+                description: "This friend request may have been cancelled or already handled.",
+                variant: "destructive"
+              });
+              return;
+            }
+
+            const requestData = allRequests[0];
+
+            // If already accepted, just mark notification as read
+            if (requestData.status === 'accepted') {
+              onMarkAsRead(notification.id);
+              toast({ 
+                title: "Already accepted", 
+                description: "You are already friends with this user." 
+              });
+              return;
+            }
+
+            // If not pending, inform user
+            if (requestData.status !== 'pending') {
+              onMarkAsRead(notification.id);
+              toast({ 
+                title: "Request already handled", 
+                description: `This friend request was ${requestData.status}.`,
+                variant: "destructive"
+              });
+              return;
+            }
+
+            // Accept request
+            const { error: updateError } = await supabase
+              .from('friend_requests')
+              .update({ status: 'accepted', updated_at: new Date().toISOString() })
+              .eq('id', requestData.id);
+
+            if (updateError) throw updateError;
+
+            // Update both users' friends lists (dedupe)
+            const [{ data: meData }, { data: senderData }] = await Promise.all([
+              supabase.from('users').select('friends').eq('id', currentUser.id).single(),
+              supabase.from('users').select('friends').eq('id', fromUserId).single(),
+            ]);
+
+            const myFriends = Array.isArray(meData?.friends) ? meData!.friends : [];
+            const senderFriends = Array.isArray(senderData?.friends) ? senderData!.friends : [];
+
+            const updatedMyFriends = Array.from(new Set([...myFriends, fromUserId]));
+            const updatedSenderFriends = Array.from(new Set([...senderFriends, toUserId]));
+
+            await Promise.all([
+              supabase.from('users').update({ friends: updatedMyFriends }).eq('id', toUserId),
+              supabase.from('users').update({ friends: updatedSenderFriends }).eq('id', fromUserId),
+            ]);
+
+            // Mark as read (best-effort)
+            onMarkAsRead(notification.id);
+
+            // Notify sender
+            try {
+              const { NotificationTriggers } = await import('@/lib/notification-triggers');
+              await NotificationTriggers.onFriendRequestAccepted(fromUserId, toUserId);
+            } catch (notifyErr) {
+              // non-fatal
+            }
+
+            toast({ title: "Friend request accepted", description: "You are now friends." });
+          }
+        );
+      } catch (error: any) {
+        Sentry.captureException(error);
+        toast({
+          variant: "destructive",
+          title: "Unable to accept request",
+          description: error?.message || "Please try again.",
+        });
+      }
     } else if (action === 'decline_friend') {
-      // TODO: Implement decline friend request
-      toast({ title: "Friend request declined." });
+      try {
+        await Sentry.startSpan(
+          { op: "http.client", name: "NotificationsScreen: Decline Friend" },
+          async (span) => {
+            span.setAttribute("notificationId", notification.id);
+            span.setAttribute("fromUserId", notification.from_user_id || "");
+            span.setAttribute("toUserId", currentUser?.id || "");
+
+            if (!currentUser) {
+              throw new Error("You must be logged in to decline a friend request.");
+            }
+            if (!notification.from_user_id) {
+              throw new Error("Invalid friend request. Missing sender information.");
+            }
+
+            const { error } = await supabase
+              .from('friend_requests')
+              .delete()
+              .eq('from_user_id', notification.from_user_id)
+              .eq('to_user_id', currentUser.id)
+              .eq('status', 'pending');
+
+            if (error) throw error;
+
+            onMarkAsRead(notification.id);
+            toast({ title: "Friend request declined" });
+          }
+        );
+      } catch (error: any) {
+        Sentry.captureException(error);
+        toast({
+          variant: "destructive",
+          title: "Unable to decline request",
+          description: error?.message || "Please try again.",
+        });
+      }
     } else if (action === 'reply_message') {
       // TODO: Navigate to messages
       toast({ title: "Opening conversation..." });
     }
   };
 
+  const handleCardClick = () => {
+    Sentry.startSpan(
+      { op: "ui.click", name: "Notifications: Open From List" },
+      (span) => {
+        span.setAttribute("notificationId", notification.id);
+        span.setAttribute("notificationType", notification.type);
+        span.setAttribute("fromUserId", notification.from_user_id || "");
+
+        // Mark as read on click
+        if (!notification.is_read) {
+          onMarkAsRead(notification.id);
+        }
+
+        // Navigate based on type
+        switch (notification.type) {
+          case 'friend_request': {
+            const targetUserId = notification.from_user_id;
+            if (targetUserId) {
+              router.push(`/profile/${targetUserId}`);
+            } else {
+              router.push('/neighbors');
+            }
+            break;
+          }
+          case 'message': {
+            const conversationId = notification.data?.conversation_id;
+            if (conversationId) {
+              router.push(`/messages/${conversationId}`);
+            } else {
+              router.push('/messages');
+            }
+            break;
+          }
+          case 'post_like':
+          case 'post_comment': {
+            const postId = notification.data?.post_id || notification.data?.related_id;
+            if (postId) {
+              router.push(`/posts/${postId}`);
+            } else {
+              router.push('/home');
+            }
+            break;
+          }
+          case 'event_invite': {
+            const eventPostId = notification.data?.post_id || notification.data?.related_id;
+            if (eventPostId) {
+              router.push(`/posts/${eventPostId}`);
+            } else {
+              router.push('/events');
+            }
+            break;
+          }
+          default: {
+            router.push('/home');
+          }
+        }
+      }
+    );
+  };
+
   return (
-    <Card className={`yrdly-shadow hover:shadow-lg transition-all ${!notification.is_read ? 'border-primary/50 bg-primary/5' : ''}`}>
+    <Card 
+      className={`yrdly-shadow hover:shadow-lg transition-all cursor-pointer ${!notification.is_read ? 'border-primary/50 bg-primary/5' : ''}`}
+      onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           {/* Icon */}
@@ -127,7 +369,11 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: {
                 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -216,8 +462,8 @@ export function NotificationsScreen({ className }: NotificationsScreenProps) {
           data: notif.data,
           is_read: notif.is_read,
           created_at: notif.created_at,
-          from_user_id: notif.data?.from_user_id,
-          from_user_name: notif.data?.from_user_name,
+          from_user_id: notif.sender_id || notif.data?.from_user_id,
+          from_user_name: notif.data?.fromUserName || notif.data?.from_user_name,
           from_user_avatar: notif.data?.from_user_avatar,
         })) as Notification[];
 
@@ -267,8 +513,8 @@ export function NotificationsScreen({ className }: NotificationsScreenProps) {
             data: newNotification.data,
             is_read: newNotification.is_read,
             created_at: newNotification.created_at,
-            from_user_id: newNotification.data?.from_user_id,
-            from_user_name: newNotification.data?.from_user_name,
+            from_user_id: newNotification.sender_id || newNotification.data?.from_user_id,
+            from_user_name: newNotification.data?.fromUserName || newNotification.data?.from_user_name,
             from_user_avatar: newNotification.data?.from_user_avatar,
           }, ...prev]);
         } else if (payload.eventType === 'UPDATE') {

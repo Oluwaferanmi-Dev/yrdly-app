@@ -2,6 +2,7 @@
 
 import { Bell, CheckCheck, Trash2, X, MessageCircle, Heart, UserPlus, Calendar, ShoppingCart, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -19,6 +20,7 @@ import { Notification } from "@/hooks/use-notifications";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import * as Sentry from "@sentry/nextjs";
 
 export function NotificationsPanel() {
     const { notifications, unreadCount, markAsRead, markAllAsRead, clearAllNotifications } = useNotifications();
@@ -26,79 +28,87 @@ export function NotificationsPanel() {
     const isMobile = useIsMobile();
 
     const handleNotificationClick = (notification: Notification) => {
-        // Mark as read first
-        markAsRead(notification.id);
+        Sentry.startSpan(
+            { op: "ui.click", name: "Notifications: Open Notification" },
+            (span) => {
+                span.setAttribute("notificationId", notification.id);
+                span.setAttribute("notificationType", notification.type);
+                span.setAttribute("isRead", String(notification.is_read));
+                // Mark as read first
+                markAsRead(notification.id);
         
-        // Navigate to the related content based on type and related_type
-        switch (notification.type) {
-            case 'friend_request':
-            case 'friend_request_accepted':
-            case 'friend_request_declined':
-                router.push('/neighbors');
-                break;
-            case 'message':
-            case 'message_reaction':
-                if (notification.related_id) {
-                    router.push(`/messages/${notification.related_id}`);
-                } else {
-                    router.push('/messages');
+                // Navigate to the related content based on type and related_type
+                switch (notification.type) {
+                    case 'friend_request':
+                    case 'friend_request_accepted':
+                    case 'friend_request_declined':
+                        router.push('/neighbors');
+                        break;
+                    case 'message':
+                    case 'message_reaction':
+                        if (notification.related_id) {
+                            router.push(`/messages/${notification.related_id}`);
+                        } else {
+                            router.push('/messages');
+                        }
+                        break;
+                    case 'post_like':
+                    case 'post_comment':
+                    case 'post_share':
+                        if (notification.related_id) {
+                            router.push(`/posts/${notification.related_id}`);
+                        } else {
+                            router.push('/home');
+                        }
+                        break;
+                    case 'event_invite':
+                    case 'event_reminder':
+                    case 'event_cancelled':
+                    case 'event_updated':
+                        if (notification.related_id) {
+                            router.push(`/events`);
+                        } else {
+                            router.push('/events');
+                        }
+                        break;
+                    case 'marketplace_item_sold':
+                    case 'marketplace_item_interest':
+                    case 'marketplace_message':
+                        if (notification.related_id) {
+                            router.push(`/marketplace`);
+                        } else {
+                            router.push('/marketplace');
+                        }
+                        break;
+                    case 'community_update':
+                        router.push('/home');
+                        break;
+                    case 'system_announcement':
+                        router.push('/home');
+                        break;
+                    case 'welcome':
+                        router.push('/home');
+                        break;
+                    case 'profile_view':
+                        if (notification.sender_id) {
+                            router.push(`/neighbors`);
+                        } else {
+                            router.push('/neighbors');
+                        }
+                        break;
+                    case 'mention':
+                        if (notification.related_id) {
+                            router.push(`/posts/${notification.related_id}`);
+                        } else {
+                            router.push('/home');
+                        }
+                        break;
+                    default:
+                        router.push('/home');
+                        break;
                 }
-                break;
-            case 'post_like':
-            case 'post_comment':
-            case 'post_share':
-                if (notification.related_id) {
-                    router.push(`/posts/${notification.related_id}`);
-                } else {
-                    router.push('/home');
-                }
-                break;
-            case 'event_invite':
-            case 'event_reminder':
-            case 'event_cancelled':
-            case 'event_updated':
-                if (notification.related_id) {
-                    router.push(`/events`);
-                } else {
-                    router.push('/events');
-                }
-                break;
-            case 'marketplace_item_sold':
-            case 'marketplace_item_interest':
-            case 'marketplace_message':
-                if (notification.related_id) {
-                    router.push(`/marketplace`);
-                } else {
-                    router.push('/marketplace');
-                }
-                break;
-            case 'community_update':
-                router.push('/home');
-                break;
-            case 'system_announcement':
-                router.push('/home');
-                break;
-            case 'welcome':
-                router.push('/home');
-                break;
-            case 'profile_view':
-                if (notification.sender_id) {
-                    router.push(`/neighbors`);
-                } else {
-                    router.push('/neighbors');
-                }
-                break;
-            case 'mention':
-                if (notification.related_id) {
-                    router.push(`/posts/${notification.related_id}`);
-                } else {
-                    router.push('/home');
-                }
-                break;
-            default:
-                router.push('/home');
-                break;
-        }
+            }
+        );
     };
 
     const getNotificationIcon = (type: string) => {
@@ -178,24 +188,62 @@ export function NotificationsPanel() {
                     <span className="sr-only">Toggle notifications</span>
                 </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-                <DropdownMenuLabel className="flex justify-between items-center">
-                    <span>Notifications</span>
-                    <div className="flex items-center">
-                        {unreadCount > 0 && (
-                            <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-auto py-0 px-2">
-                                <CheckCheck className="h-4 w-4 mr-1" /> Mark all as read
-                            </Button>
-                        )}
-                        {isMobile && notifications.length > 0 && (
-                            <Button variant="ghost" size="sm" onClick={clearAllNotifications} className="h-auto py-0 px-2 text-red-500">
-                                <Trash2 className="h-4 w-4 mr-1" /> Clear All
-                            </Button>
-                        )}
+            <DropdownMenuContent
+                align="end"
+                className="w-[360px] sm:w-[380px] p-0 overflow-hidden rounded-xl shadow-xl border border-border z-50"
+            >
+                <DropdownMenuLabel className="p-0">
+                    <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-sm font-semibold truncate">Notifications</span>
+                            <Badge variant="secondary" className="text-xs shrink-0 whitespace-nowrap">
+                                {unreadCount} unread
+                            </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+                            {unreadCount > 0 && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs shrink-0 whitespace-nowrap"
+                                    onClick={() =>
+                                        Sentry.startSpan(
+                                            { op: "ui.click", name: "Notifications: Mark All Read" },
+                                            (span) => {
+                                                span.setAttribute("unreadCount", String(unreadCount));
+                                                markAllAsRead();
+                                            }
+                                        )
+                                    }
+                                >
+                                    <CheckCheck className="h-3 w-3 mr-1" />
+                                    Mark All Read
+                                </Button>
+                            )}
+                            {notifications.length > 0 && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive shrink-0 whitespace-nowrap"
+                                    onClick={() =>
+                                        Sentry.startSpan(
+                                            { op: "ui.click", name: "Notifications: Clear All" },
+                                            (span) => {
+                                                span.setAttribute("totalCount", String(notifications.length));
+                                                clearAllNotifications();
+                                            }
+                                        )
+                                    }
+                                >
+                                    <Trash2 className="h-3 w-3 mr-1" />
+                                    Clear All
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <ScrollArea className="h-96">
+                <ScrollArea className="max-h-80 overscroll-contain">
                     <DropdownMenuGroup>
                         {notifications.length > 0 ? (
                             notifications.map((notif) => (
@@ -221,13 +269,13 @@ export function NotificationsPanel() {
                                             </div>
                                             
                                             {/* Type badge */}
-                                            <Badge variant="outline" className="text-xs shrink-0">
+                                            <Badge variant="outline" className="text-xs shrink-0 whitespace-nowrap">
                                                 {notif.type.replace('_', ' ')}
                                             </Badge>
                                         </div>
                                         
                                         <div className="flex items-center justify-between mt-2">
-                                            <p className="text-xs text-muted-foreground">
+                                            <p className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
                                                 {timeAgo(new Date(notif.created_at))}
                                             </p>
                                             
@@ -240,7 +288,14 @@ export function NotificationsPanel() {
                                                         className="h-6 w-6 p-0"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            markAsRead(notif.id);
+                                                            Sentry.startSpan(
+                                                                { op: "ui.click", name: "Notifications: Mark One Read" },
+                                                                (span) => {
+                                                                    span.setAttribute("notificationId", notif.id);
+                                                                    span.setAttribute("notificationType", notif.type);
+                                                                    markAsRead(notif.id);
+                                                                }
+                                                            );
                                                         }}
                                                     >
                                                         <CheckCheck className="h-3 w-3" />
@@ -271,6 +326,14 @@ export function NotificationsPanel() {
                         )}
                     </DropdownMenuGroup>
                 </ScrollArea>
+                <DropdownMenuSeparator />
+                <div className="px-3 py-2">
+                    <Link href="/notifications" className="block">
+                        <Button variant="ghost" className="w-full justify-center text-sm whitespace-nowrap">
+                            View All Notifications
+                        </Button>
+                    </Link>
+                </div>
             </DropdownMenuContent>
         </DropdownMenu>
     );
