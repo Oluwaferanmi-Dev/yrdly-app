@@ -24,7 +24,6 @@ import {
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useTheme } from "@/components/ThemeProvider";
-import { TawkChat } from "@/components/TawkChat";
 
 interface SettingsScreenProps {
   onBack?: () => void;
@@ -264,20 +263,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
         </Card>
       </div>
 
-      {/* Live Chat Support */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-foreground">Live Chat</h3>
-        <Card className="yrdly-shadow p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <ChatBubbleLeftRightIcon className="w-5 h-5 text-primary" />
-            <span className="text-foreground font-medium">Need immediate help?</span>
-          </div>
-          <p className="text-sm text-muted-foreground mb-4">
-            Chat with our support team in real-time. We&apos;re here to help you with any questions or issues.
-          </p>
-          <TawkChat />
-        </Card>
-      </div>
+      {/* Live Chat Support - removed */}
 
       {/* Logout */}
       <div className="pt-4">

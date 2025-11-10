@@ -351,7 +351,14 @@ export function EventsScreen({ className }: EventsScreenProps) {
       try {
         const { data, error } = await supabase
           .from('posts')
-          .select('*, users(name, avatar_url)')
+          .select(`
+            *,
+            user:users!posts_user_id_fkey(
+              id,
+              name,
+              avatar_url
+            )
+          `)
           .eq('category', 'Event')
           .order('timestamp', { ascending: false });
 
@@ -362,8 +369,8 @@ export function EventsScreen({ className }: EventsScreenProps) {
 
         const formattedEvents = (data || []).map(event => ({
           ...event,
-          author_name: event.users?.name || 'Anonymous',
-          author_image: event.users?.avatar_url || '/placeholder.svg',
+          author_name: event.user?.name || 'Anonymous',
+          author_image: event.user?.avatar_url || '/placeholder.svg',
         })) as PostType[];
 
         setEvents(formattedEvents);
