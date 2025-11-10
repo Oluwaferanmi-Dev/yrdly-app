@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, FormEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
     DropdownMenu, 
@@ -22,20 +22,17 @@ import {
     AlertDialogTrigger 
 } from '@/components/ui/alert-dialog';
 import { 
-    Edit2, 
-    Trash2, 
     MoreHorizontal, 
-    Smile
+    Heart,
+    Trash2,
+    Edit2
 } from 'lucide-react';
-import { 
-    Popover, 
-    PopoverContent, 
-    PopoverTrigger 
-} from '@/components/ui/popover';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import type { Post, User } from '@/types';
+import Image from 'next/image';
 
 interface Comment {
     id: string;
@@ -44,27 +41,32 @@ interface Comment {
     authorImage: string;
     text: string;
     timestamp: string;
-    parentId?: string;
+    parentId?: string | null;
     reactions: Record<string, string[]>;
+    likedBy?: string[];
 }
 
 interface CommentSectionProps {
     postId: string;
+    post?: Post;
+    author?: User | null;
     onCommentCountChange?: (count: number) => void;
     onClose?: () => void;
 }
 
-const EMOJI_REACTIONS = ['👍', '❤️', '😂', '😡'];
-
-export function CommentSection({ postId, onCommentCountChange, onClose }: CommentSectionProps) {
+export function CommentSection({ postId, post, author, onCommentCountChange, onClose }: CommentSectionProps) {
     const { user: currentUser, profile: userDetails, loading } = useAuth();
     const { toast } = useToast();
+    const inputRef = useRef<HTMLInputElement>(null);
+    const commentsEndRef = useRef<HTMLDivElement>(null);
     
     const [comments, setComments] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState('');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [editingComment, setEditingComment] = useState<string | null>(null);
     const [editText, setEditText] = useState('');
+    const [expandedReplies, setExpandedReplies] = useState<Set<string>>(new Set());
+    const [likedComments, setLikedComments] = useState<Set<string>>(new Set());
 
     // Auth timeout fallback
     const [authTimeout, setAuthTimeout] = useState(false);
@@ -77,66 +79,13 @@ export function CommentSection({ postId, onCommentCountChange, onClose }: Commen
         return () => clearTimeout(timer);
     }, [loading]);
     
-    // Use timeout state if auth is stuck loading
     const isAuthLoading = loading && !authTimeout;
 
-    useMemo(() => {
+    // Fetch comments
+    useEffect(() => {
         if (!postId || !currentUser) return;
         
-        // Add a small delay to ensure authentication is complete
-        const setupSubscription = () => {
-            // Set up real-time subscription for comments with more specific event types
-            const channel = supabase
-                .channel(`comments_${postId}`)
-                .on('postgres_changes', {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'comments',
-                    filter: `post_id=eq.${postId}`
-                }, (payload) => {
-                    if (payload.new) {
-                        const dbComment = payload.new as any;
-                        
-                        const newComment: Comment = {
-                            id: dbComment.id,
-                            userId: dbComment.user_id,
-                            authorName: dbComment.author_name,
-                            authorImage: dbComment.author_image,
-                            text: dbComment.text,
-                            timestamp: dbComment.timestamp,
-                            parentId: dbComment.parent_id,
-                            reactions: dbComment.reactions || {}
-                        };
-                        
-                        setComments(prev => {
-                            const existing = prev.filter(c => c.id !== newComment.id);
-                            return [...existing, newComment].sort((a, b) => 
-                                new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-                            );
-                        });
-                    }
-            })
-            .subscribe((status, err) => {
-                if (status === 'CHANNEL_ERROR') {
-                    console.error('❌ Error subscribing to comments real-time updates:', err);
-                    // Set up polling as fallback
-                    const pollInterval = setInterval(() => {
-                        fetchComments();
-                    }, 3000); // Poll every 3 seconds
-                    
-                    // Store interval ID for cleanup
-                    (channel as any).pollInterval = pollInterval;
-                } else if (status === 'CLOSED') {
-                    // Clear polling if it was set up
-                    if ((channel as any).pollInterval) {
-                        clearInterval((channel as any).pollInterval);
-                    }
-                } else if (status === 'SUBSCRIBED') {
-                }
-            });
-
-            // Also fetch comments initially
-            const fetchComments = async () => {
+        const fetchComments = async () => {
             const { data, error } = await supabase
                 .from('comments')
                 .select('*')
@@ -144,7 +93,6 @@ export function CommentSection({ postId, onCommentCountChange, onClose }: Commen
                 .order('timestamp', { ascending: true });
             
             if (!error && data) {
-                // Map database fields to TypeScript interface
                 const mappedComments = data.map((comment: any) => ({
                     id: comment.id,
                     userId: comment.user_id,
@@ -153,30 +101,89 @@ export function CommentSection({ postId, onCommentCountChange, onClose }: Commen
                     text: comment.text,
                     timestamp: comment.timestamp,
                     parentId: comment.parent_id,
-                    reactions: comment.reactions || {}
+                    reactions: comment.reactions || {},
+                    likedBy: comment.reactions?.❤️ || []
                 }));
                 setComments(mappedComments);
+                
+                // Set liked comments
+                const liked = new Set<string>();
+                mappedComments.forEach(comment => {
+                    if (comment.likedBy?.includes(currentUser.id)) {
+                        liked.add(comment.id);
+                    }
+                });
+                setLikedComments(liked);
             }
-            };
-            
-            fetchComments();
-
-            return () => {
-                // Clear polling interval if it exists
-                if ((channel as any).pollInterval) {
-                    clearInterval((channel as any).pollInterval);
-                }
-                supabase.removeChannel(channel);
-            };
         };
-
-        // Call setupSubscription with a small delay to ensure auth is ready
-        const timeoutId = setTimeout(setupSubscription, 100);
         
+        fetchComments();
+
+        // Set up real-time subscription
+        const channel = supabase
+            .channel(`comments_${postId}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'comments',
+                filter: `post_id=eq.${postId}`
+            }, (payload) => {
+                if (payload.eventType === 'INSERT' && payload.new) {
+                    const dbComment = payload.new as any;
+                    const newComment: Comment = {
+                        id: dbComment.id,
+                        userId: dbComment.user_id,
+                        authorName: dbComment.author_name,
+                        authorImage: dbComment.author_image,
+                        text: dbComment.text,
+                        timestamp: dbComment.timestamp,
+                        parentId: dbComment.parent_id,
+                        reactions: dbComment.reactions || {},
+                        likedBy: dbComment.reactions?.❤️ || []
+                    };
+                    
+                    setComments(prev => {
+                        const existing = prev.filter(c => c.id !== newComment.id);
+                        return [...existing, newComment].sort((a, b) => 
+                            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                        );
+                    });
+                    
+                    // Scroll to bottom when new comment is added
+                    setTimeout(() => {
+                        commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                } else if (payload.eventType === 'UPDATE' && payload.new) {
+                    const dbComment = payload.new as any;
+                    setComments(prev => 
+                        prev.map(c => 
+                            c.id === dbComment.id 
+                                ? {
+                                    ...c,
+                                    text: dbComment.text,
+                                    reactions: dbComment.reactions || {},
+                                    likedBy: dbComment.reactions?.❤️ || []
+                                }
+                                : c
+                        )
+                    );
+                } else if (payload.eventType === 'DELETE') {
+                    setComments(prev => prev.filter(c => c.id !== payload.old.id));
+                }
+            })
+            .subscribe();
+
         return () => {
-            clearTimeout(timeoutId);
+            supabase.removeChannel(channel);
         };
     }, [postId, currentUser]);
+
+    // Focus input when replying
+    useEffect(() => {
+        if (replyingTo && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [replyingTo]);
 
     const handlePostComment = useCallback(async (e: FormEvent) => {
         e.preventDefault();
@@ -184,6 +191,31 @@ export function CommentSection({ postId, onCommentCountChange, onClose }: Commen
         if (!currentUser || !userDetails || !newComment.trim()) {
             return;
         }
+
+        const commentText = newComment.trim();
+        const parentId = replyingTo;
+
+        // Optimistic update
+        const optimisticComment: Comment = {
+            id: `temp-${Date.now()}`,
+            userId: currentUser.id,
+            authorName: userDetails.name || userDetails.email || 'Anonymous',
+            authorImage: userDetails.avatar_url || '',
+            text: commentText,
+            timestamp: new Date().toISOString(),
+            parentId: parentId || null,
+            reactions: {},
+            likedBy: []
+        };
+
+        setComments(prev => [...prev, optimisticComment]);
+        setNewComment('');
+        setReplyingTo(null);
+        
+        // Scroll to bottom
+        setTimeout(() => {
+            commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
 
         try {
             const { data, error } = await supabase
@@ -193,127 +225,131 @@ export function CommentSection({ postId, onCommentCountChange, onClose }: Commen
                     user_id: currentUser.id,
                     author_name: userDetails.name || userDetails.email || 'Anonymous',
                     author_image: userDetails.avatar_url || '',
-                    text: newComment.trim(),
-                    parent_id: replyingTo || null
+                    text: commentText,
+                    parent_id: parentId || null
                 })
                 .select()
                 .single();
 
             if (error) throw error;
 
-            setNewComment('');
-            setReplyingTo(null);
+            // Replace optimistic comment with real one
+            setComments(prev => 
+                prev.map(c => 
+                    c.id === optimisticComment.id 
+                        ? {
+                            id: data.id,
+                            userId: data.user_id,
+                            authorName: data.author_name,
+                            authorImage: data.author_image,
+                            text: data.text,
+                            timestamp: data.timestamp,
+                            parentId: data.parent_id,
+                            reactions: data.reactions || {},
+                            likedBy: data.reactions?.❤️ || []
+                        }
+                        : c
+                )
+            );
             
-            toast({ title: 'Success', description: 'Comment posted successfully.' });
-            
-            // Trigger notification for post comment
-            try {
-                const { NotificationTriggers } = await import('@/lib/notification-triggers');
-                await NotificationTriggers.onPostCommented(postId, currentUser.id, newComment.trim());
-            } catch (error) {
-                console.error('Error creating comment notification:', error);
-            }
-            
-            // Update comment count on the post
+            // Update comment count
             if (onCommentCountChange) {
-                const { data: postData, error: fetchError } = await supabase
+                const { data: postData } = await supabase
                     .from('posts')
                     .select('comment_count')
                     .eq('id', postId)
                     .single();
                 
-                if (!fetchError && postData) {
+                if (postData) {
                     const newCommentCount = (postData.comment_count || 0) + 1;
-                    
                     await supabase
                         .from('posts')
                         .update({ comment_count: newCommentCount })
                         .eq('id', postId);
-                    
                     onCommentCountChange(newCommentCount);
                 }
             }
             
-            // Temporary workaround: refresh comments if real-time doesn't work
-            setTimeout(() => {
-                const refreshComments = async () => {
-                    const { data, error } = await supabase
-                        .from('comments')
-                        .select('*')
-                        .eq('post_id', postId)
-                        .order('timestamp', { ascending: true });
-                    
-                    if (!error && data) {
-                        const mappedComments = data.map((comment: any) => ({
-                            id: comment.id,
-                            userId: comment.user_id,
-                            authorName: comment.author_name,
-                            authorImage: comment.author_image,
-                            text: comment.text,
-                            timestamp: comment.timestamp,
-                            parentId: comment.parent_id,
-                            reactions: comment.reactions || {}
-                        }));
-                        setComments(mappedComments);
-                    }
-                };
-                refreshComments();
-            }, 1000); // Wait 1 second for real-time to work, then refresh
+            // Trigger notification
+            try {
+                const { NotificationTriggers } = await import('@/lib/notification-triggers');
+                await NotificationTriggers.onPostCommented(postId, currentUser.id, commentText);
+            } catch (error) {
+                console.error('Error creating comment notification:', error);
+            }
             
         } catch (error) {
             console.error('Error posting comment:', error);
+            // Remove optimistic comment on error
+            setComments(prev => prev.filter(c => c.id !== optimisticComment.id));
             toast({ variant: 'destructive', title: 'Error', description: 'Could not post comment.' });
         }
     }, [currentUser, userDetails, newComment, postId, replyingTo, toast, onCommentCountChange]);
 
-    const handleEditComment = useCallback(async (commentId: string) => {
-        if (!currentUser || !editText.trim()) return;
+    const handleLikeComment = useCallback(async (commentId: string) => {
+        if (!currentUser) return;
+        
+        const comment = comments.find(c => c.id === commentId);
+        if (!comment) return;
+        
+        const isLiked = likedComments.has(commentId);
+        const currentReactions = comment.reactions || {};
+        const heartReactions = currentReactions['❤️'] || [];
+        
+        let newReactions = { ...currentReactions };
+        
+        if (isLiked) {
+            // Remove like
+            newReactions['❤️'] = heartReactions.filter(id => id !== currentUser.id);
+            if (newReactions['❤️'].length === 0) {
+                delete newReactions['❤️'];
+            }
+            setLikedComments(prev => {
+                const next = new Set(prev);
+                next.delete(commentId);
+                return next;
+            });
+        } else {
+            // Add like
+            newReactions['❤️'] = [...heartReactions, currentUser.id];
+            setLikedComments(prev => new Set(prev).add(commentId));
+        }
+        
+        // Optimistic update
+        setComments(prev => 
+            prev.map(c => 
+                c.id === commentId 
+                    ? { ...c, reactions: newReactions, likedBy: newReactions['❤️'] || [] }
+                    : c
+            )
+        );
         
         try {
             const { error } = await supabase
                 .from('comments')
-                .update({ 
-                    text: editText.trim()
-                })
-                .eq('id', commentId)
-                .eq('user_id', currentUser.id);
+                .update({ reactions: newReactions })
+                .eq('id', commentId);
             
             if (error) throw error;
-            
-            setEditingComment(null);
-            setEditText('');
-            toast({ title: 'Success', description: 'Comment updated successfully.' });
-            
-            // Temporary workaround: refresh comments if real-time doesn't work
-            setTimeout(() => {
-                const refreshComments = async () => {
-                    const { data, error } = await supabase
-                        .from('comments')
-                        .select('*')
-                        .eq('post_id', postId)
-                        .order('timestamp', { ascending: true });
-                    
-                    if (!error && data) {
-                        const mappedComments = data.map((comment: any) => ({
-                            id: comment.id,
-                            userId: comment.user_id,
-                            authorName: comment.author_name,
-                            authorImage: comment.author_image,
-                            text: comment.text,
-                            timestamp: comment.timestamp,
-                            parentId: comment.parent_id,
-                            reactions: comment.reactions || {}
-                        }));
-                        setComments(mappedComments);
-                    }
-                };
-                refreshComments();
-            }, 1000); // Wait 1 second for real-time to work, then refresh
         } catch (error) {
-            console.error('Error editing comment:', error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not edit comment.' });
+            console.error('Error liking comment:', error);
+            // Revert optimistic update
+            setComments(prev => 
+                prev.map(c => 
+                    c.id === commentId ? comment : c
+                )
+            );
+            if (isLiked) {
+                setLikedComments(prev => new Set(prev).add(commentId));
+            } else {
+                setLikedComments(prev => {
+                    const next = new Set(prev);
+                    next.delete(commentId);
+                    return next;
+                });
+            }
         }
-    }, [currentUser, editText, toast, postId]);
+    }, [currentUser, comments, likedComments]);
 
     const handleDeleteComment = useCallback(async (commentId: string) => {
         if (!currentUser) return;
@@ -327,113 +363,30 @@ export function CommentSection({ postId, onCommentCountChange, onClose }: Commen
             
             if (error) throw error;
             
-            // Update comment count on the post
-            const { data: postData, error: fetchError } = await supabase
-                .from('posts')
-                .select('comment_count')
-                .eq('id', postId)
-                .single();
-            
-            if (!fetchError && postData) {
-                const newCommentCount = Math.max((postData.comment_count || 0) - 1, 0);
-                
-                await supabase
+            // Update comment count
+            if (onCommentCountChange) {
+                const { data: postData } = await supabase
                     .from('posts')
-                    .update({ comment_count: newCommentCount })
-                    .eq('id', postId);
+                    .select('comment_count')
+                    .eq('id', postId)
+                    .single();
                 
-                if (onCommentCountChange) {
+                if (postData) {
+                    const newCommentCount = Math.max((postData.comment_count || 0) - 1, 0);
+                    await supabase
+                        .from('posts')
+                        .update({ comment_count: newCommentCount })
+                        .eq('id', postId);
                     onCommentCountChange(newCommentCount);
                 }
             }
             
             toast({ title: 'Success', description: 'Comment deleted successfully.' });
-            
-            // Temporary workaround: refresh comments if real-time doesn't work
-            setTimeout(() => {
-                const refreshComments = async () => {
-                    const { data, error } = await supabase
-                        .from('comments')
-                        .select('*')
-                        .eq('post_id', postId)
-                        .order('timestamp', { ascending: true });
-                    
-                    if (!error && data) {
-                        const mappedComments = data.map((comment: any) => ({
-                            id: comment.id,
-                            userId: comment.user_id,
-                            authorName: comment.author_name,
-                            authorImage: comment.author_image,
-                            text: comment.text,
-                            timestamp: comment.timestamp,
-                            parentId: comment.parent_id,
-                            reactions: comment.reactions || {}
-                        }));
-                        setComments(mappedComments);
-                    }
-                };
-                refreshComments();
-            }, 1000); // Wait 1 second for real-time to work, then refresh
         } catch (error) {
             console.error('Error deleting comment:', error);
             toast({ variant: 'destructive', title: 'Error', description: 'Could not delete comment.' });
         }
     }, [currentUser, postId, toast, onCommentCountChange]);
-
-    const handleReaction = useCallback(async (commentId: string, emoji: string) => {
-        if (!currentUser) return;
-        
-        try {
-            const comment = comments.find(c => c.id === commentId);
-            if (!comment) return;
-            
-            const currentReactions = comment.reactions || {};
-            const userReactions = currentReactions[emoji] || [];
-            const hasReacted = userReactions.includes(currentUser.id);
-            
-            let newReactions = { ...currentReactions };
-            
-            if (hasReacted) {
-                // Remove reaction
-                newReactions[emoji] = userReactions.filter(id => id !== currentUser.id);
-                if (newReactions[emoji].length === 0) {
-                    delete newReactions[emoji];
-                }
-            } else {
-                // Add reaction
-                newReactions[emoji] = [...userReactions, currentUser.id];
-            }
-            
-            const { error } = await supabase
-                .from('comments')
-                .update({ reactions: newReactions })
-                .eq('id', commentId);
-            
-            if (error) throw error;
-            
-            // Update local state immediately for better UX
-            setComments(prev => 
-                prev.map(c => 
-                    c.id === commentId 
-                        ? { ...c, reactions: newReactions }
-                        : c
-                )
-            );
-            
-        } catch (error) {
-            console.error('Error handling reaction:', error);
-        }
-    }, [currentUser, comments]);
-
-    const startEditing = useCallback((comment: Comment) => {
-        setEditingComment(comment.id);
-        setEditText(comment.text);
-    }, []);
-
-    const cancelEditing = useCallback(() => {
-        setEditingComment(null);
-        setEditText('');
-    }, []);
 
     const timeAgo = useCallback((date: Date | null) => {
         if (!date) return '';
@@ -446,191 +399,236 @@ export function CommentSection({ postId, onCommentCountChange, onClose }: Commen
         return `${Math.floor(diffInSeconds / 86400)}d`;
     }, []);
 
+    const toggleReplies = useCallback((commentId: string) => {
+        setExpandedReplies(prev => {
+            const next = new Set(prev);
+            if (next.has(commentId)) {
+                next.delete(commentId);
+            } else {
+                next.add(commentId);
+            }
+            return next;
+        });
+    }, []);
+
+    // Organize comments into parent and replies
+    const parentComments = comments.filter(c => !c.parentId);
+    const repliesByParent = comments.reduce((acc, comment) => {
+        if (comment.parentId) {
+            if (!acc[comment.parentId]) {
+                acc[comment.parentId] = [];
+            }
+            acc[comment.parentId].push(comment);
+        }
+        return acc;
+    }, {} as Record<string, Comment[]>);
+
     const renderComment = useCallback((comment: Comment, isReply: boolean = false) => {
+        const replies = repliesByParent[comment.id] || [];
+        const hasReplies = replies.length > 0;
+        const showReplies = expandedReplies.has(comment.id);
+        const isLiked = likedComments.has(comment.id);
+        const likeCount = comment.reactions?.['❤️']?.length || 0;
+
         return (
-            <div key={comment.id} className={cn("flex flex-col gap-2", isReply ? "ml-6" : "")}>
-                <div className="flex gap-3">
-                    <button onClick={() => {}} className="cursor-pointer">
-                        <Avatar className="h-8 w-8">
-                            <AvatarImage src={comment.authorImage} />
-                            <AvatarFallback>{comment.authorName?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                    </button>
-                    <div className="flex-1 bg-muted/50 rounded-lg p-3">
-                        <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => {}} className="cursor-pointer">
-                                    <span className="font-semibold text-sm hover:underline">{comment.authorName}</span>
-                                </button>
+            <div key={comment.id} className={cn("flex gap-3 py-2", isReply && "ml-11")}>
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                    <AvatarImage src={comment.authorImage} />
+                    <AvatarFallback className="text-xs">{comment.authorName?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-2 flex-wrap">
+                                <span className="font-semibold text-sm">{comment.authorName}</span>
+                                <span className="text-sm">{comment.text}</span>
+                            </div>
+                            <div className="flex items-center gap-4 mt-1">
                                 <span className="text-xs text-muted-foreground">{timeAgo(new Date(comment.timestamp))}</span>
-                            </div>
-                            {currentUser && currentUser.id === comment.userId && (
-                                <AlertDialog>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => startEditing(comment)}>
-                                                <Edit2 className="mr-2 h-4 w-4" />
-                                                <span>Edit</span>
-                                            </DropdownMenuItem>
-                                            <AlertDialogTrigger asChild>
-                                                <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    <span>Delete</span>
-                                                </DropdownMenuItem>
-                                            </AlertDialogTrigger>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This action cannot be undone. This will permanently delete your comment.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction 
-                                                onClick={() => handleDeleteComment(comment.id)} 
-                                                className="bg-destructive hover:bg-destructive/90"
-                                            >
-                                                Delete
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
-                        </div>
-                        
-                        {editingComment === comment.id ? (
-                            <div className="mt-2 space-y-2">
-                                <Textarea
-                                    value={editText}
-                                    onChange={(e) => setEditText(e.target.value)}
-                                    className="min-h-[60px]"
-                                    placeholder="Edit your comment..."
-                                />
-                                <div className="flex gap-2">
-                                    <Button 
-                                        size="sm" 
-                                        onClick={() => handleEditComment(comment.id)}
-                                        disabled={!editText.trim()}
+                                {!isReply && (
+                                    <button
+                                        onClick={() => setReplyingTo(comment.id)}
+                                        className="text-xs text-muted-foreground hover:text-foreground font-medium"
                                     >
-                                        Save
-                                    </Button>
-                                    <Button size="sm" variant="outline" onClick={cancelEditing}>
-                                        Cancel
-                                    </Button>
-                                </div>
+                                        Reply
+                                    </button>
+                                )}
+                                {currentUser?.id === comment.userId && (
+                                    <AlertDialog>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button className="text-xs text-muted-foreground hover:text-foreground">
+                                                    <MoreHorizontal className="h-3 w-3" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => {
+                                                    setEditingComment(comment.id);
+                                                    setEditText(comment.text);
+                                                }}>
+                                                    <Edit2 className="mr-2 h-4 w-4" />
+                                                    <span>Edit</span>
+                                                </DropdownMenuItem>
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        <span>Delete</span>
+                                                    </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action cannot be undone. This will permanently delete your comment.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction 
+                                                    onClick={() => handleDeleteComment(comment.id)} 
+                                                    className="bg-destructive hover:bg-destructive/90"
+                                                >
+                                                    Delete
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
                             </div>
-                        ) : (
-                            <p className="text-sm mt-1">{comment.text}</p>
-                        )}
-                        
-                        {editingComment !== comment.id && (
-                            <div className="flex gap-1 mt-2 flex-wrap">
-                                {comment.reactions && Object.entries(comment.reactions).map(([emoji, uids]) => (
-                                    (uids && uids.length > 0) && (
-                                        <button 
-                                            key={emoji} 
-                                            onClick={() => handleReaction(comment.id, emoji)}
-                                            className={cn(
-                                                "flex items-center bg-background px-2 py-0.5 rounded-full text-xs border transition-colors",
-                                                currentUser && uids.includes(currentUser.id) ? "border-primary bg-primary/10" : "border-transparent hover:border-border"
-                                            )}
-                                        >
-                                            <span>{emoji}</span>
-                                            <span className="ml-1 font-medium">{uids.length}</span>
-                                        </button>
-                                    )
-                                ))}
-                            </div>
-                        )}
+                        </div>
+                        <button
+                            onClick={() => handleLikeComment(comment.id)}
+                            className="flex-shrink-0 mt-1"
+                        >
+                            <Heart 
+                                className={cn(
+                                    "h-4 w-4 transition-colors",
+                                    isLiked ? "text-red-500 fill-current" : "text-muted-foreground"
+                                )} 
+                            />
+                        </button>
                     </div>
+                    {likeCount > 0 && (
+                        <div className="mt-1">
+                            <span className="text-xs font-semibold text-foreground">{likeCount}</span>
+                        </div>
+                    )}
+                    {hasReplies && !isReply && (
+                        <button
+                            onClick={() => toggleReplies(comment.id)}
+                            className="text-xs text-muted-foreground hover:text-foreground mt-2 font-medium"
+                        >
+                            {showReplies ? 'Hide' : 'View'} {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
+                        </button>
+                    )}
+                    {showReplies && hasReplies && (
+                        <div className="mt-2 space-y-0">
+                            {replies.map(reply => renderComment(reply, true))}
+                        </div>
+                    )}
                 </div>
-                
-                {editingComment !== comment.id && (
-                    <div className="ml-11 flex gap-2 items-center">
-                        <Button variant="ghost" size="sm" className="text-xs h-auto py-1 px-2" onClick={() => setReplyingTo(comment.id)}>Reply</Button>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-xs h-8 w-8"><Smile className="h-4 w-4" /></Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-1">
-                                <div className="flex gap-1">
-                                    {EMOJI_REACTIONS.map(emoji => (
-                                        <Button key={emoji} variant="ghost" size="icon" className="h-8 w-8 text-lg" onClick={() => handleReaction(comment.id, emoji)}>
-                                            {emoji}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                )}
             </div>
         );
-    }, [currentUser, editingComment, editText, handleEditComment, handleDeleteComment, handleReaction, startEditing, cancelEditing, timeAgo]);
+    }, [repliesByParent, expandedReplies, likedComments, currentUser, timeAgo, handleLikeComment, handleDeleteComment, toggleReplies, setReplyingTo]);
 
     if (isAuthLoading) {
         return (
-            <div className="p-4 text-center text-muted-foreground">
-                Loading comments...
+            <div className="flex-1 flex items-center justify-center p-4">
+                <div className="text-center text-muted-foreground">Loading comments...</div>
             </div>
         );
     }
 
     if (!currentUser) {
         return (
-            <div className="p-4 text-center text-muted-foreground">
-                Please sign in to view comments
+            <div className="flex-1 flex items-center justify-center p-4">
+                <div className="text-center text-muted-foreground">Please sign in to view comments</div>
             </div>
         );
     }
 
     return (
-        <div className="space-y-4">
-            <form onSubmit={handlePostComment} className="space-y-3">
-                <div className="flex gap-3">
-                    <Avatar className="h-8 w-8">
+        <div className="flex flex-col h-full min-h-0">
+            {/* Post Preview */}
+            {post && author && (
+                <div className="p-4 border-b flex-shrink-0">
+                    <div className="flex gap-3">
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                            <AvatarImage src={author.avatar_url} />
+                            <AvatarFallback>{author.name?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-2 flex-wrap">
+                                <span className="font-semibold text-sm">{author.name}</span>
+                                <span className="text-sm line-clamp-2">{post.text}</span>
+                            </div>
+                        </div>
+                        {post.image_urls && post.image_urls.length > 0 && (
+                            <div className="w-12 h-12 flex-shrink-0 rounded overflow-hidden">
+                                <Image
+                                    src={post.image_urls[0]}
+                                    alt="Post thumbnail"
+                                    width={48}
+                                    height={48}
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Comments List */}
+            <div className="flex-1 overflow-y-auto px-4 py-2">
+                {parentComments.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-8">
+                        No comments yet. Be the first to comment!
+                    </div>
+                ) : (
+                    <div className="space-y-0">
+                        {parentComments.map(comment => renderComment(comment))}
+                    </div>
+                )}
+                <div ref={commentsEndRef} />
+            </div>
+
+            {/* Fixed Input Field */}
+            <div className="p-4 border-t bg-background flex-shrink-0 safe-area-bottom">
+                {replyingTo && (
+                    <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Replying to {comments.find(c => c.id === replyingTo)?.authorName}</span>
+                        <button
+                            onClick={() => setReplyingTo(null)}
+                            className="hover:text-foreground"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                )}
+                <form onSubmit={handlePostComment} className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8 flex-shrink-0">
                         <AvatarImage src={userDetails?.avatar_url} />
-                        <AvatarFallback>{userDetails?.name?.charAt(0) || 'U'}</AvatarFallback>
+                        <AvatarFallback className="text-xs">{userDetails?.name?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
-                    <Textarea
+                    <Input
+                        ref={inputRef}
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
-                        placeholder="Write a comment..."
-                        className="min-h-[80px] resize-none"
+                        placeholder={replyingTo ? "Add a reply..." : "Add a comment..."}
+                        className="flex-1 h-9"
                     />
-                </div>
-                <div className="flex justify-end gap-2">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                            setNewComment('');
-                            onClose?.();
-                        }}
-                    >
-                        Cancel
-                    </Button>
                     <Button
                         type="submit"
                         size="sm"
                         disabled={!newComment.trim()}
+                        className="text-primary hover:text-primary"
+                        variant="ghost"
                     >
                         Post
                     </Button>
-                </div>
-            </form>
-
-            <div className="space-y-4">
-                {comments.map(comment => renderComment(comment))}
+                </form>
             </div>
         </div>
     );

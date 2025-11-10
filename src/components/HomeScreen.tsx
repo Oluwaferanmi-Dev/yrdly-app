@@ -21,45 +21,45 @@ export function HomeScreen({ onViewProfile }: HomeScreenProps) {
 
 
   return (
-    <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 pb-20 sm:pb-24 max-w-2xl mx-auto">
-      {/* Email verification banner removed - users verify during registration */}
+    <div className="w-full pb-14 md:pb-16">
+      {/* Create Post Card - Minimal Header Style */}
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
+        <Card className="rounded-none border-0 border-b border-border shadow-none">
+          <div className="flex items-center gap-2 px-3 py-2">
+            <Avatar className="w-8 h-8 flex-shrink-0">
+              <AvatarImage src={profile?.avatar_url || "/diverse-user-avatars.png"} />
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                {profile?.name?.charAt(0) || "U"}
+              </AvatarFallback>
+            </Avatar>
+            <CreatePostDialog createPost={createPost}>
+              <Button
+                variant="outline"
+                className="flex-1 justify-start text-muted-foreground bg-transparent text-left px-3 py-2 h-auto min-h-[32px] text-sm"
+              >
+                <span className="truncate">What&apos;s happening in your neighborhood?</span>
+              </Button>
+            </CreatePostDialog>
+          </div>
+        </Card>
+      </div>
 
-      {/* Welcome banner removed as requested */}
-
-      {/* Create Post Card */}
-      <Card className="p-3 sm:p-4 yrdly-shadow">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
-            <AvatarImage src={profile?.avatar_url || "/diverse-user-avatars.png"} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
-              {profile?.name?.charAt(0) || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <CreatePostDialog createPost={createPost}>
-            <Button
-              variant="outline"
-              className="flex-1 justify-start text-muted-foreground bg-transparent text-left px-2 sm:px-3 py-2 h-auto min-h-[36px] sm:min-h-[40px]"
-            >
-              <span className="truncate text-xs sm:text-sm">What&apos;s happening in your neighborhood?</span>
-            </Button>
-          </CreatePostDialog>
-        </div>
-      </Card>
-
-      {/* Feed Posts */}
-      <div className="space-y-3 sm:space-y-4">
+      {/* Feed Posts - Full Width */}
+      <div className="w-full">
         {loading ? (
-          <div className="space-y-3 sm:space-y-4">
-            <Skeleton className="h-40 sm:h-48 w-full rounded-lg" />
-            <Skeleton className="h-40 sm:h-48 w-full rounded-lg" />
-            <Skeleton className="h-40 sm:h-48 w-full rounded-lg" />
+          <div className="w-full">
+            <Skeleton className="h-[60vh] w-full rounded-none" />
+            <Skeleton className="h-[60vh] w-full rounded-none" />
+            <Skeleton className="h-[60vh] w-full rounded-none" />
           </div>
         ) : posts.length > 0 ? (
           posts.map((post) => (
             <PostCard key={post.id} post={post} onDelete={deletePost} onCreatePost={createPost} />
           ))
         ) : (
-          <EmptyFeed createPost={createPost} />
+          <div className="px-4 py-8">
+            <EmptyFeed createPost={createPost} />
+          </div>
         )}
       </div>
 

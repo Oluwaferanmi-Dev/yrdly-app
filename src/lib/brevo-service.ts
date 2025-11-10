@@ -31,7 +31,7 @@ export class BrevoEmailService {
    * Generate a manual verification link as fallback
    */
   static generateManualVerificationLink(userId: string, email: string): string {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yrdly-app.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app-yrdly.vercel.app';
     return `${baseUrl}/onboarding/verify-email?token=${userId}&email=${encodeURIComponent(email)}`;
   }
 

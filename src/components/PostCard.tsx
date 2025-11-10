@@ -7,7 +7,6 @@ import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Heart, MessageCircle, Share2, MapPin, Briefcase, MoreHorizontal, Trash2, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
@@ -30,10 +29,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { CreatePostDialog } from "./CreatePostDialog";
 import { CreateEventDialog } from "./CreateEventDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -62,6 +62,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
   const [isImageSwiperOpen, setIsImageSwiperOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isEventEditDialogOpen, setIsEventEditDialogOpen] = useState(false);
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
 
   useEffect(() => {
     const fetchAuthorData = async () => {
@@ -503,105 +504,101 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
 
   return (
     <>
-    <Card className="overflow-hidden mb-4">
+    <div className="w-full bg-background border-b border-border">
        <div onClick={handleCardClick} className="cursor-pointer">
-      <CardHeader className="flex flex-row items-center gap-3 p-3 pb-2">
+      {/* Minimal Header */}
+      <div className="flex flex-row items-center gap-2 px-3 py-2">
         {loadingAuthor ? (
-            <div className="flex items-center gap-3 w-full">
-                <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="flex items-center gap-2 w-full">
+                <Skeleton className="h-8 w-8 rounded-full" />
                 <div className="space-y-1">
-                    <Skeleton className="h-4 w-[150px]" />
-                    <Skeleton className="h-3 w-[100px]" />
+                    <Skeleton className="h-3 w-[120px]" />
                 </div>
             </div>
         ) : author ? (
             <>
                 <button onClick={openProfile} className="cursor-pointer">
-                    <Avatar className="h-10 w-10">
+                    <Avatar className="h-8 w-8">
                         <AvatarImage src={author.avatar_url} alt={author.name} data-ai-hint="person portrait" />
-                        <AvatarFallback>{author.name?.charAt(0)}</AvatarFallback>
+                        <AvatarFallback className="text-xs">{author.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                 </button>
-                <div className="flex-1 min-w-0 mr-2">
+                <div className="flex-1 min-w-0">
                     <button onClick={openProfile} className="cursor-pointer">
-                        <p className="font-semibold hover:underline truncate max-w-[120px]">{author.name}</p>
+                        <p className="font-semibold text-sm hover:underline truncate">{author.name}</p>
                     </button>
-                    <p className="text-xs text-muted-foreground">{timeAgo(post.timestamp ? new Date(post.timestamp) : null)}</p>
                 </div>
-                <div className="flex-shrink-0 self-start pt-1">
+                <div className="flex-shrink-0 self-center">
                     {getCategoryBadge(post.category)}
                 </div>
+                {currentUser?.id === post.user_id && (
+                     <AlertDialog>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                 <CreateEventDialog 
+                                    postToEdit={post}
+                                    open={isEventEditDialogOpen}
+                                    onOpenChange={handleEventEditDialogClose}
+                                 >
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        <span>Edit</span>
+                                    </DropdownMenuItem>
+                                </CreateEventDialog>
+                                 <AlertDialogTrigger asChild>
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        <span>Delete</span>
+                                    </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete your post and all its comments.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
             </>
         ) : null}
-        {currentUser?.id === post.user_id && (
-             <AlertDialog>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="ml-auto">
-                            <MoreHorizontal className="h-5 w-5" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                         <CreateEventDialog 
-                            postToEdit={post}
-                            open={isEventEditDialogOpen}
-                            onOpenChange={handleEventEditDialogClose}
-                         >
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                <span>Edit</span>
-                            </DropdownMenuItem>
-                        </CreateEventDialog>
-                         <AlertDialogTrigger asChild>
-                            <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Delete</span>
-                            </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete your post and all its comments.
-                    </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        )}
-      </CardHeader>
+      </div>
 
-      <Collapsible open={isCommentsOpen} onOpenChange={setIsCommentsOpen}>
+        {/* Full-width Media */}
         {post.image_urls && post.image_urls.length > 0 && (
-            <div className="px-3 pb-2">
+            <div className="w-full">
               {post.image_urls.length === 1 ? (
                 <div 
-                  className="relative w-full rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                  className="relative w-full cursor-pointer"
                   onClick={() => handleImageClick(0)}
                 >
                   <Image
                     src={post.image_urls[0]}
                     alt="Post image"
-                    width={400}
-                    height={300}
-                    className="w-full h-auto object-contain max-h-96"
-                    style={{ height: "auto" }}
+                    width={800}
+                    height={600}
+                    className="w-full h-auto object-cover"
+                    style={{ aspectRatio: 'auto' }}
                   />
                 </div>
               ) : (
-                <div className="grid gap-1" style={{ 
-                  gridTemplateColumns: post.image_urls.length === 2 ? '1fr 1fr' : '1fr 1fr', 
-                  gridTemplateRows: post.image_urls.length > 2 ? '1fr 1fr' : '1fr' 
-                }}>
+                <div className="grid grid-cols-2 gap-0.5">
                   {post.image_urls.slice(0, 4).map((imageUrl, index) => (
                     <div 
                       key={index} 
-                      className="relative aspect-square rounded-lg overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                      className="relative aspect-square cursor-pointer"
                       onClick={() => handleImageClick(index)}
                     >
                       <Image
@@ -612,7 +609,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
                       />
                       {index === 3 && post.image_urls && post.image_urls.length > 4 && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                          <span className="text-white font-semibold">+{post.image_urls.length - 4}</span>
+                          <span className="text-white font-semibold text-sm">+{post.image_urls.length - 4}</span>
                         </div>
                       )}
                     </div>
@@ -622,40 +619,117 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
             </div>
         )}
         
-        <div className="px-3 pb-2">
-          {post.category === 'For Sale' ? renderMarketplaceContent() : renderDefaultContent()}
+        {/* Compact Interaction Row */}
+        <div className="px-3 py-2">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={handleLike}>
+                <Heart className={`h-6 w-6 ${isLiked ? "text-red-500 fill-current" : ""}`} />
+              </Button>
+              {likes > 0 && <span className="text-sm font-semibold text-foreground">{likes}</span>}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={() => setIsCommentsOpen(true)}>
+                <MessageCircle className="h-6 w-6" />
+              </Button>
+              {commentCount > 0 && <span className="text-sm font-semibold text-foreground">{commentCount}</span>}
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8 p-0" onClick={handleShare}>
+              <Share2 className="h-6 w-6" />
+            </Button>
+          </div>
         </div>
 
-        <CardFooter className="p-3 pt-2 bg-background/50">
-            <div className="flex justify-around w-full">
-            <Button variant="ghost" className="flex-1 gap-2" onClick={handleLike}>
-                <Heart className={`h-5 w-5 ${isLiked ? "text-red-500 fill-current" : ""}`} />
-                <span className="text-sm">{likes}</span>
-            </Button>
-             <CollapsibleTrigger asChild>
-                 <Button variant="ghost" className="flex-1 gap-2">
-                    <MessageCircle className="h-5 w-5" />
-                    <span className="text-sm">{commentCount}</span>
-                </Button>
-             </CollapsibleTrigger>
-            <Button variant="ghost" className="flex-1 gap-2" onClick={handleShare}>
-                <Share2 className="h-5 w-5" />
-                <span className="text-sm">Share</span>
-            </Button>
+        {/* Caption Section */}
+        <div className="px-3 pb-3">
+          {post.category === 'For Sale' ? (
+            <div className="space-y-1">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="font-semibold text-sm">{author?.name}</span>
+                {(() => {
+                  const text = post.text || '';
+                  const maxLength = 150;
+                  const shouldTruncate = text.length > maxLength;
+                  const displayText = isTextExpanded || !shouldTruncate ? text : text.slice(0, maxLength) + '...';
+                  
+                  return (
+                    <>
+                      <span className="text-sm">{displayText}</span>
+                      {shouldTruncate && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsTextExpanded(!isTextExpanded);
+                          }}
+                          className="text-sm text-muted-foreground hover:text-foreground font-medium"
+                        >
+                          {isTextExpanded ? 'see less' : 'see more'}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+              {post.price && (
+                <p className="text-sm font-semibold text-primary">{formatPrice(post.price)}</p>
+              )}
             </div>
-        </CardFooter>
-        <CollapsibleContent>
-            <div className="p-4 pt-0">
-                <CommentSection 
-                    postId={post.id} 
-                    onCommentCountChange={setCommentCount}
-                    onClose={() => setIsCommentsOpen(false)}
-                />
+          ) : (
+            <div className="space-y-1">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="font-semibold text-sm">{author?.name}</span>
+                {(() => {
+                  const text = post.text || '';
+                  const maxLength = 150;
+                  const shouldTruncate = text.length > maxLength;
+                  const displayText = isTextExpanded || !shouldTruncate ? text : text.slice(0, maxLength) + '...';
+                  
+                  return (
+                    <>
+                      <span className="text-sm whitespace-pre-wrap">{displayText}</span>
+                      {shouldTruncate && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsTextExpanded(!isTextExpanded);
+                          }}
+                          className="text-sm text-muted-foreground hover:text-foreground font-medium"
+                        >
+                          {isTextExpanded ? 'see less' : 'see more'}
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+              {post.event_location && (
+                <div className="flex items-center text-xs text-muted-foreground mt-1">
+                  <MapPin className="h-3 w-3 mr-1"/>
+                  <span>{post.event_location.address}</span>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">{timeAgo(post.timestamp ? new Date(post.timestamp) : null)}</p>
             </div>
-        </CollapsibleContent>
-      </Collapsible>
+          )}
+        </div>
+
+      {/* Instagram-style Comment Modal */}
+      <Sheet open={isCommentsOpen} onOpenChange={setIsCommentsOpen}>
+        <SheetContent side="bottom" className="p-0 flex flex-col h-[90vh] max-h-screen rounded-t-2xl">
+          <SheetHeader className="p-4 border-b flex-shrink-0">
+            <SheetTitle className="text-center">Comments</SheetTitle>
+          </SheetHeader>
+          <CommentSection 
+            postId={post.id}
+            post={post}
+            author={author}
+            onCommentCountChange={setCommentCount}
+            onClose={() => setIsCommentsOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
-    </Card>
+    </div>
     
     {/* Image Swiper Modal */}
     {post.image_urls && post.image_urls.length > 0 && (

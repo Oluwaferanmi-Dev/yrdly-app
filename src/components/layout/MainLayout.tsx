@@ -312,57 +312,57 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Fixed Bottom Navigation - Hidden in chat */}
       {!isChatPage && (
         <Suspense fallback={<div>Loading...</div>}>
-          <div className="fixed bottom-0 left-0 right-0 w-full bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm border-t border-border z-50 h-16 sm:h-20">
-            <div className="max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto">
-              <div className="flex items-center justify-around py-2 sm:py-3">
-                <Link href="/" className="flex-1">
+          <div className="fixed bottom-0 left-0 right-0 w-full bg-background/80 dark:bg-background/80 backdrop-blur-md border-t border-border/50 z-50 h-12 safe-area-bottom">
+            <div className="max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-7xl mx-auto h-full">
+              <div className="flex items-center justify-around h-full px-1">
+                <Link href="/" className="flex-1 flex items-center justify-center h-full">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex flex-col gap-1 w-full py-2 ${pathname === "/" ? "text-primary" : "text-muted-foreground"}`}
+                    className={`flex flex-col gap-0.5 w-full h-full py-1 px-1 ${pathname === "/" ? "text-primary" : "text-muted-foreground"}`}
                   >
-                    <HomeIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-xs">Home</span>
+                    <HomeIcon className="w-5 h-5" />
+                    <span className="text-[10px] leading-tight">Home</span>
                   </Button>
                 </Link>
-                <Link href="/neighbors" className="flex-1">
+                <Link href="/neighbors" className="flex-1 flex items-center justify-center h-full">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex flex-col gap-1 w-full py-2 ${pathname === "/neighbors" ? "text-primary" : "text-muted-foreground"}`}
+                    className={`flex flex-col gap-0.5 w-full h-full py-1 px-1 ${pathname === "/neighbors" ? "text-primary" : "text-muted-foreground"}`}
                   >
-                    <UsersIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-xs">Community</span>
+                    <UsersIcon className="w-5 h-5" />
+                    <span className="text-[10px] leading-tight">Community</span>
                   </Button>
                 </Link>
-                <Link href="/marketplace" className="flex-1">
+                <Link href="/marketplace" className="flex-1 flex items-center justify-center h-full">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex flex-col gap-1 w-full py-2 ${pathname === "/marketplace" ? "text-primary" : "text-muted-foreground"}`}
+                    className={`flex flex-col gap-0.5 w-full h-full py-1 px-1 ${pathname === "/marketplace" ? "text-primary" : "text-muted-foreground"}`}
                   >
-                    <ShoppingCartIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-xs">Market</span>
+                    <ShoppingCartIcon className="w-5 h-5" />
+                    <span className="text-[10px] leading-tight">Market</span>
                   </Button>
                 </Link>
-                <Link href="/events" className="flex-1">
+                <Link href="/events" className="flex-1 flex items-center justify-center h-full">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex flex-col gap-1 w-full py-2 ${pathname === "/events" ? "text-primary" : "text-muted-foreground"}`}
+                    className={`flex flex-col gap-0.5 w-full h-full py-1 px-1 ${pathname === "/events" ? "text-primary" : "text-muted-foreground"}`}
                   >
-                    <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-xs">Events</span>
+                    <CalendarIcon className="w-5 h-5" />
+                    <span className="text-[10px] leading-tight">Events</span>
                   </Button>
                 </Link>
-                <Link href="/businesses" className="flex-1">
+                <Link href="/businesses" className="flex-1 flex items-center justify-center h-full">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`flex flex-col gap-1 w-full py-2 ${pathname === "/businesses" ? "text-primary" : "text-muted-foreground"}`}
+                    className={`flex flex-col gap-0.5 w-full h-full py-1 px-1 ${pathname === "/businesses" ? "text-primary" : "text-muted-foreground"}`}
                   >
-                    <BriefcaseIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-xs">Businesses</span>
+                    <BriefcaseIcon className="w-5 h-5" />
+                    <span className="text-[10px] leading-tight">Businesses</span>
                   </Button>
                 </Link>
               </div>
