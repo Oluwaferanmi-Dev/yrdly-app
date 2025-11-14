@@ -15,6 +15,50 @@ import { ActivityIndicator } from "@/components/ActivityIndicator";
 import type { User } from "@/types";
 import Image from "next/image";
 
+// Helper function to deduplicate conversations
+function deduplicateConversations(conversations: Conversation[]): Conversation[] {
+  const seen = new Map<string, Conversation>();
+  
+  for (const conv of conversations) {
+    let key: string;
+    
+    if (conv.type === 'business') {
+      // For business conversations, create a unique key based on business_id and catalog_item_id
+      const context = conv.context as any;
+      const catalogItemId = context?.catalog_item_id || undefined;
+      if (catalogItemId) {
+        // Catalog item conversation - key by business_id + catalog_item_id
+        key = `business:${conv.participantId}:catalog:${catalogItemId}`;
+      } else {
+        // General business conversation - key by business_id only
+        key = `business:${conv.participantId}`;
+      }
+    } else if (conv.type === 'marketplace') {
+      // For marketplace, key by participant and item
+      const itemId = conv.context?.itemId || 'general';
+      key = `marketplace:${conv.participantId}:item:${itemId}`;
+    } else {
+      // For friend conversations, key by participant
+      key = `friend:${conv.participantId}`;
+    }
+    
+    // If we've seen this key before, keep the one with the most recent timestamp
+    const existing = seen.get(key);
+    if (!existing) {
+      seen.set(key, conv);
+    } else {
+      // Compare timestamps - keep the more recent one
+      const existingDate = new Date(existing.timestamp);
+      const currentDate = new Date(conv.timestamp);
+      if (currentDate > existingDate) {
+        seen.set(key, conv);
+      }
+    }
+  }
+  
+  return Array.from(seen.values());
+}
+
 interface Conversation {
   id: string;
   type: "friend" | "marketplace" | "business";
@@ -33,6 +77,7 @@ interface Conversation {
     businessId?: string;
     businessName?: string;
     businessLogo?: string;
+    catalog_item_id?: string; // For catalog item conversations
   };
 }
 
@@ -146,6 +191,10 @@ export function MessagesScreen({ onOpenChat, selectedConversationId }: MessagesS
           const otherParticipantId = conv.participant_ids?.find((id: string) => id !== user.id);
           
           if (conv.type === 'business') {
+            // Extract catalog_item_id from context JSONB if present
+            const contextData = conv.context as { catalog_item_id?: string; catalog_item_business_id?: string } | null;
+            const catalogItemId = contextData?.catalog_item_id || undefined; // Convert null to undefined
+            
             return {
               id: conv.id,
               type: conv.type as "friend" | "marketplace" | "business",
@@ -157,9 +206,11 @@ export function MessagesScreen({ onOpenChat, selectedConversationId }: MessagesS
               unreadCount: conv.unread_count || 0,
               isOnline: false,
               context: {
+                businessId: conv.business_id,
                 businessName: conv.business_name,
                 businessLogo: conv.business_logo,
                 // Include catalog item context if present
+                catalog_item_id: catalogItemId, // Store catalog item ID for deduplication
                 itemId: conv.item_id,
                 itemTitle: conv.item_title,
                 itemImage: conv.item_image,
@@ -201,7 +252,10 @@ export function MessagesScreen({ onOpenChat, selectedConversationId }: MessagesS
           };
         });
 
-        setConversations(transformedConversations);
+        // Deduplicate conversations - especially important for business conversations
+        const deduplicatedConversations = deduplicateConversations(transformedConversations);
+        
+        setConversations(deduplicatedConversations);
         
         const fetchParticipantDetails = async () => {
           const participantIds = transformedConversations

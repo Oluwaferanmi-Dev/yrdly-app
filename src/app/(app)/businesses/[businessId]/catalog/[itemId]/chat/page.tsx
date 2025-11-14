@@ -2,7 +2,7 @@
 
 import { BusinessChatScreen } from "@/components/BusinessChatScreen";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import type { Business, CatalogItem } from "@/types";
@@ -90,59 +90,108 @@ export default function ItemChatPage() {
   }, [businessId, itemId]);
 
   // Create or get conversation entry for catalog item chat
+  // Use ref to prevent multiple simultaneous creations
+  const conversationCreationRef = useRef(false);
+  
   useEffect(() => {
     if (!business || !catalogItem || !user) return;
+    
+    // Prevent duplicate creation attempts
+    if (conversationCreationRef.current) return;
+    conversationCreationRef.current = true;
 
     const createOrGetConversation = async () => {
       try {
         // Check if conversation already exists for this catalog item
+        // Note: item_id references posts table, so for catalog items we use context JSONB
+        // Query all business conversations for this user and business, then filter by context
         const { data: existingConversations, error: fetchError } = await supabase
           .from('conversations')
-          .select('id, participant_ids')
+          .select('id, participant_ids, context')
           .contains('participant_ids', [user.id])
           .eq('type', 'business')
-          .eq('business_id', businessId)
-          .eq('item_id', itemId);
-
+          .eq('business_id', businessId);
+        
         if (fetchError) {
           console.error('Error fetching catalog item conversations:', fetchError);
+          conversationCreationRef.current = false;
           return;
         }
 
-        if (!existingConversations || existingConversations.length === 0) {
+        // Filter to find conversations with matching catalog_item_id in context
+        // Also check that item_id is null (catalog items don't use item_id)
+        const matchingConversations = existingConversations?.filter(conv => {
+          const context = conv.context as { catalog_item_id?: string } | null;
+          return context?.catalog_item_id === itemId;
+        }) || [];
+
+        if (matchingConversations.length > 0) {
+          console.log('Using existing catalog item conversation:', matchingConversations[0].id);
+          conversationCreationRef.current = false;
+          return;
+        }
+
+        // Only create if no matching conversation exists
+        if (matchingConversations.length === 0) {
           // Create new business conversation with catalog item context
+          // Note: item_id references posts table, so we omit it entirely for catalog items
+          // and store catalog item info in context JSONB instead
+          // Build insert data, explicitly setting item_id to null for catalog items
+          // (item_id foreign key references posts table, not catalog_items)
+          const insertData = {
+            participant_ids: [user.id, business.owner_id],
+            type: 'business' as const,
+            business_id: businessId,
+            business_name: business.name,
+            business_logo: business.logo,
+            item_id: null, // Explicitly null - references posts table, not catalog_items
+            item_title: catalogItem.title,
+            item_image: catalogItem.images?.[0] || "/placeholder.svg",
+            item_price: catalogItem.price,
+            context: {
+              catalog_item_id: itemId, // Store catalog item ID in context
+              catalog_item_business_id: businessId
+            },
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          
+          console.log('Inserting conversation with item_id explicitly set to null:', {
+            ...insertData,
+            context: insertData.context
+          });
+          
           const { data: newConv, error: createError } = await supabase
             .from('conversations')
-            .insert({
-              participant_ids: [user.id, business.owner_id],
-              type: 'business',
-              business_id: businessId,
-              business_name: business.name,
-              business_logo: business.logo,
-              item_id: itemId,
-              item_title: catalogItem.title,
-              item_image: catalogItem.images?.[0] || "/placeholder.svg",
-              item_price: catalogItem.price,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
+            .insert(insertData)
             .select('id')
             .single();
 
           if (createError) {
             console.error('Error creating catalog item conversation:', createError);
+            console.error('Insert data (without item_id):', { ...insertData, context: insertData.context });
+            // Show user-friendly error
+            if (createError.code === '23503') {
+              console.error('Foreign key constraint violation - item_id field may have been included incorrectly');
+            }
+            conversationCreationRef.current = false;
           } else {
             console.log('Created catalog item conversation:', newConv.id);
+            conversationCreationRef.current = false;
           }
-        } else {
-          console.log('Using existing catalog item conversation:', existingConversations[0].id);
         }
       } catch (error) {
         console.error('Error in createOrGetConversation:', error);
+        conversationCreationRef.current = false;
       }
     };
 
     createOrGetConversation();
+    
+    // Reset ref when dependencies change
+    return () => {
+      conversationCreationRef.current = false;
+    };
   }, [business, catalogItem, user, businessId, itemId]);
 
   const handleBack = () => {

@@ -114,38 +114,37 @@ export function EventCard({ event }: EventCardProps) {
         
       if (error) throw error;
         
-        // Send them a nice confirmation email if user just RSVP'd (not cancelled)
-        if (!userHasRSVPed && user.email) {
-          const emailResult = await sendEventConfirmationEmail({
-            attendeeEmail: user.email,
-            attendeeName: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-            eventName: event.title || 'Event',
-            eventDate: event.event_date,
-            eventTime: event.event_time,
-            eventLocation: event.event_location?.address,
-            eventDescription: event.text,
-            eventLink: event.event_link,
-          });
+      // Send them a nice confirmation email if user just RSVP'd (not cancelled)
+      if (!userHasRSVPed && user.email) {
+        const emailResult = await sendEventConfirmationEmail({
+          attendeeEmail: user.email,
+          attendeeName: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+          eventName: event.title || 'Event',
+          eventDate: event.event_date,
+          eventTime: event.event_time,
+          eventLocation: event.event_location?.address,
+          eventDescription: event.text,
+          eventLink: event.event_link,
+        });
 
-          if (emailResult.success) {
-            toast({
-              title: "Event confirmation sent!",
-              description: "Check your email for event details.",
-            });
-          } else {
-            console.error('Failed to send event confirmation email:', emailResult.error);
-            toast({
-              title: "Interest confirmed",
-              description: "You're now interested in this event!",
-              variant: "default",
-            });
-          }
+        if (emailResult.success) {
+          toast({
+            title: "Event confirmation sent!",
+            description: "Check your email for event details.",
+          });
         } else {
-            toast({
-              title: "Interest confirmed",
-              description: "You're now interested in this event!",
-            });
+          console.error('Failed to send event confirmation email:', emailResult.error);
+          toast({
+            title: "Interest confirmed",
+            description: "You're now interested in this event!",
+            variant: "default",
+          });
         }
+      } else {
+        toast({
+          title: "Interest confirmed",
+          description: "You're now interested in this event!",
+        });
       }
     } catch (error) {
       console.error("Error updating attendance:", error);

@@ -46,19 +46,35 @@ export function ActivityIndicator({
           .from('users')
           .select('is_online, last_seen')
           .eq('id', userId)
-          .single();
+          .maybeSingle(); // Use maybeSingle() to handle cases where user doesn't exist
 
         if (error) {
-          console.error('Error fetching user status:', error);
+          // Only log non-404 errors (user not found is expected for some users)
+          if (error.code !== 'PGRST116') {
+            console.error('Error fetching user status:', error);
+          }
           return;
         }
 
-        setStatus({
-          is_online: data?.is_online || false,
-          last_seen: data?.last_seen
-        });
+        // If user exists, update status; otherwise use defaults
+        if (data) {
+          setStatus({
+            is_online: data.is_online || false,
+            last_seen: data.last_seen
+          });
+        } else {
+          // User doesn't exist in users table, use default offline status
+          setStatus({
+            is_online: false,
+            last_seen: null
+          });
+        }
       } catch (error) {
-        console.error('Error fetching user status:', error);
+        // Silently handle errors - user might not exist in users table
+        setStatus({
+          is_online: false,
+          last_seen: null
+        });
       }
     };
 
