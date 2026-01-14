@@ -161,7 +161,8 @@ export class FlutterwaveService {
           paid_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', transactionId);
+        .eq('id', transactionId)
+        .eq('status', 'pending'); // 🛡️ Guard: Only update if still pending
 
       if (error) {
         console.error('Error updating escrow transaction:', error);

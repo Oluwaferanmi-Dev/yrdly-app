@@ -139,7 +139,8 @@ export interface Comment {
 
 export interface User {
   id: string;
-  uid: string;
+  /** @deprecated Use `id` instead. Legacy field from Firebase migration */
+  uid?: string;
   name: string;
   email?: string;
   avatar_url?: string;

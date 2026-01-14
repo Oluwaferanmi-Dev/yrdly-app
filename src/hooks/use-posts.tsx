@@ -72,9 +72,8 @@ export const usePosts = (options?: UsePostsOptions) => {
         event: '*', 
         schema: 'public', 
         table: 'posts',
-        filter: filterState 
-          ? LocationScopeService.buildLocationOrFilter(filterState)
-          : 'state=is.null'
+        // Filter removed: Supabase Realtime doesn't support COMMA-based OR filters
+        // Filtering is now handled on the client-side below
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
           // Add new post to the beginning of the list
@@ -117,6 +116,16 @@ export const usePosts = (options?: UsePostsOptions) => {
           // Update existing post in the list
           const updatedPost = payload.new as Post;
           
+          // Check if post still matches current location filter
+          const postState = updatedPost.state ?? null;
+          const shouldInclude = LocationScopeService.shouldIncludeContent(postState, filterState);
+          
+          if (!shouldInclude) {
+            // Remove post if it no longer matches the filter (e.g., moved to another state)
+            setPosts(prevPosts => prevPosts.filter(post => post.id !== updatedPost.id));
+            return;
+          }
+          
           // Fetch user data for the updated post
           const fetchUserData = async () => {
             try {
@@ -156,7 +165,7 @@ export const usePosts = (options?: UsePostsOptions) => {
           fetchUserData();
         } else if (payload.eventType === 'DELETE') {
           // Remove deleted post from the list
-          const deletedId = payload.old.id;
+          const deletedId = (payload.old as any).id;
           setPosts(prevPosts => 
             prevPosts.filter(post => post.id !== deletedId)
           );

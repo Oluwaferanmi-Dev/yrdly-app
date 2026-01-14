@@ -130,15 +130,17 @@ export class LocationScopeService {
     // Simple extraction: look for common Nigerian state names in address
     // This is a basic implementation - can be enhanced with proper geocoding
     const nigerianStates = [
-      'Lagos', 'Abuja', 'Kano', 'Rivers', 'Kaduna', 'Ogun', 'Oyo', 'Edo',
+      'Lagos', 'Federal Capital Territory', 'Kano', 'Rivers', 'Kaduna', 'Ogun', 'Oyo', 'Edo',
       'Delta', 'Kwara', 'Osun', 'Enugu', 'Plateau', 'Akwa Ibom', 'Ondo',
       'Imo', 'Abia', 'Bauchi', 'Benue', 'Borno', 'Cross River', 'Ebonyi',
-      'Ekiti', 'Gombe', 'Jigawa', 'Katsina', 'Kebbi', 'Kogi', 'Nasarawa',
+      'Ekiti', 'Gombe', 'Jigawa', 'Katsina', 'Kebbi', 'Kogi', 'Nassarawa',
       'Niger', 'Sokoto', 'Taraba', 'Yobe', 'Zamfara', 'Bayelsa', 'Anambra'
     ];
 
     for (const state of nigerianStates) {
-      if (address.toLowerCase().includes(state.toLowerCase())) {
+      // Use word boundary to avoid partial matches (e.g., "Kano" matching "Kanon")
+      const regex = new RegExp(`\\b${state.toLowerCase()}\\b`, 'i');
+      if (regex.test(address)) {
         return state;
       }
     }

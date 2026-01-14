@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { SendHorizonal, Search, ArrowLeft, ShoppingBag, ImagePlus, X } from "lucide-react";
 import { Textarea } from "../ui/textarea";
-import { SupabaseChatService } from "@/lib/supabase-chat-service";
+import { SupabaseChatService } from "@/lib/chat-service";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -294,7 +294,8 @@ export function MarketplaceChatLayout({
         user?.id!,
         profile?.name || user?.user_metadata?.name || 'Anonymous',
         newMessage.trim(),
-        imageUrl
+        imageUrl ? 'image' : 'text',
+        imageUrl ? { imageUrl } : undefined
       );
       
       setNewMessage("");
@@ -432,7 +433,7 @@ export function MarketplaceChatLayout({
                   <AvatarFallback>{buyer.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <AvatarOnlineIndicator 
-                  isOnline={onlineStatuses[buyer.uid] || false} 
+                  isOnline={onlineStatuses[buyer.id] || false} 
                 />
               </div>
               <div>
