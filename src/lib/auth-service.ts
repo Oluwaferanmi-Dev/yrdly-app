@@ -84,8 +84,8 @@ export class AuthService {
   static async signInWithGoogle() {
     try {
       // Use the correct redirect URL based on environment
-      const redirectUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://app-yrdly.vercel.app/auth/callback'
+      const redirectUrl = process.env.NEXT_PUBLIC_APP_URL
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
         : `${window.location.origin}/auth/callback`;
         
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -108,8 +108,8 @@ export class AuthService {
   static async signInWithApple() {
     try {
       // Use the correct redirect URL based on environment
-      const redirectUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://app-yrdly.vercel.app/auth/callback'
+      const redirectUrl = process.env.NEXT_PUBLIC_APP_URL
+        ? `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`
         : `${window.location.origin}/auth/callback`;
         
       const { data, error } = await supabase.auth.signInWithOAuth({
