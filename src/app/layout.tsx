@@ -1,19 +1,11 @@
-
 import type { Metadata } from 'next';
+import Script from "next/script";
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/use-supabase-auth';
-// import { PT_Sans } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
 import { ThemeProvider } from "@/components/ThemeProvider";
-
-// const ptSans = PT_Sans({
-//   subsets: ['latin'],
-//   weight: ['400', '700'],
-//   style: ['normal', 'italic'],
-//   variable: '--font-pt-sans',
-// });
 
 export const metadata: Metadata = {
   title: 'Yrdly - Your Neighborhood Network',
@@ -28,22 +20,31 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7576498244677518"
-     crossorigin="anonymous"></script>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+
+        <Script
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7576498244677518"
+          strategy="afterInteractive"
+          crossOrigin="anonymous"
+        />
       </head>
+
       <body className={cn('font-body antialiased min-h-screen bg-background')}>
         <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
         >
-            <AuthProvider>
-                {children}
-            </AuthProvider>
-            <Toaster />
-            <Analytics />
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+
+          <Toaster />
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>
