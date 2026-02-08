@@ -110,10 +110,10 @@ export class ErrorBoundary extends Component<Props, State> {
             </CardHeader>
             
             <CardContent className="space-y-4">
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {this.state.error && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription className="font-mono text-xs">
+                  <AlertDescription className="font-mono text-xs whitespace-pre-wrap break-words">
                     {this.state.error.message}
                   </AlertDescription>
                 </Alert>

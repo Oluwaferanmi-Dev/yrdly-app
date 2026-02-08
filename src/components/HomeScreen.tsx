@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyFeed } from "@/components/EmptyFeed";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { PostCard } from "@/components/PostCard";
+import { useState, useEffect } from "react";
 
 interface HomeScreenProps {
   onViewProfile?: (user: any) => void;
@@ -24,8 +25,28 @@ export function HomeScreen({ onViewProfile }: HomeScreenProps) {
     lga: locationFilter.lga,
     ward: locationFilter.ward,
   });
+  const [error, setError] = useState<string | null>(null);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[v0] HomeScreen - user:', user?.id, 'profile:', profile?.id, 'loading:', loading);
+  }, [user, profile, loading]);
 
+  if (error) {
+    return (
+      <div className="w-full pb-14 md:pb-16 px-4 py-8">
+        <Card className="border-destructive/50 bg-destructive/5">
+          <div className="p-4">
+            <p className="font-semibold text-destructive mb-2">Error Loading Feed</p>
+            <p className="text-sm text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => setError(null)} size="sm">
+              Retry
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full pb-14 md:pb-16">

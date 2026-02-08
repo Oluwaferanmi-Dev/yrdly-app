@@ -40,6 +40,25 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [showSearch, setShowSearch] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [renderError, setRenderError] = useState<string | null>(null);
+
+  // Add error boundary for this component
+  if (renderError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-destructive mb-4">Error Loading Layout</p>
+          <p className="text-sm text-muted-foreground mb-4">{renderError}</p>
+          <Button onClick={() => {
+            setRenderError(null);
+            window.location.reload();
+          }}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleProfileAction = (action: string) => {
     setShowProfile(false);
@@ -53,7 +72,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Fetch unread notification count
   useEffect(() => {
-    if (!user) return;
+    if (!user || !user.id) return;
 
     const fetchUnreadCount = async () => {
       try {
@@ -64,12 +83,13 @@ export function MainLayout({ children }: MainLayoutProps) {
           .eq('is_read', false);
 
         if (error) {
+          console.error('[v0] Error fetching unread count:', error);
           return;
         }
 
         setUnreadCount(count || 0);
       } catch (error) {
-        // Error fetching unread count
+        console.error('[v0] Error fetching unread count:', error);
       }
     };
 
@@ -96,7 +116,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   // Fetch unread messages count
   useEffect(() => {
-    if (!user) return;
+    if (!user || !user.id) return;
 
     const fetchUnreadMessagesCount = async () => {
       try {
@@ -117,6 +137,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           .contains('participant_ids', [user.id]);
 
         if (conversationsError) {
+          console.error('[v0] Error fetching conversations:', conversationsError);
           return;
         }
 
