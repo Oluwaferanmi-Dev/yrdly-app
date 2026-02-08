@@ -19,9 +19,6 @@ import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-supabase-auth';
-import { useLocationFilter } from '@/hooks/use-location-filter';
-import { LocationScopeService } from '@/lib/location-scope-service';
-import { LocationFilter } from '@/components/LocationFilter';
 import type { Business, Post } from '@/types';
 import { Input } from '@/components/ui/input';
 
@@ -45,8 +42,6 @@ type MarkerData = {
 
 export function MapScreen({ className }: MapScreenProps) {
   const { user, profile } = useAuth();
-  const locationFilter = useLocationFilter();
-  const filterState = locationFilter.state;
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMarker, setSelectedMarker] = useState<MarkerData | null>(null);
@@ -61,21 +56,12 @@ export function MapScreen({ className }: MapScreenProps) {
       setLoading(true);
       const fetchedMarkers: MarkerData[] = [];
 
-      // Fetch events with location filter
-      let eventsQuery = supabase
+      // Fetch events
+      const { data: eventsData, error: eventsError } = await supabase
         .from('posts')
         .select('*')
         .eq('category', 'Event')
         .not('event_location', 'is', null);
-
-      // Apply location filter
-      if (filterState) {
-        eventsQuery = eventsQuery.or(LocationScopeService.buildLocationOrFilter(filterState));
-      } else {
-        eventsQuery = eventsQuery.is('state', null);
-      }
-
-      const { data: eventsData, error: eventsError } = await eventsQuery;
       
       if (!eventsError && eventsData) {
         eventsData.forEach(post => {
@@ -118,20 +104,11 @@ export function MapScreen({ className }: MapScreenProps) {
         });
       }
 
-      // Fetch businesses with location filter
-      let businessesQuery = supabase
+      // Fetch businesses
+      const { data: businessesData, error: businessesError } = await supabase
         .from('businesses')
         .select('*')
         .not('location', 'is', null);
-
-      // Apply location filter
-      if (filterState) {
-        businessesQuery = businessesQuery.or(LocationScopeService.buildLocationOrFilter(filterState));
-      } else {
-        businessesQuery = businessesQuery.is('state', null);
-      }
-
-      const { data: businessesData, error: businessesError } = await businessesQuery;
       
        if (!businessesError && businessesData) {
          businessesData.forEach(business => {
@@ -214,7 +191,7 @@ export function MapScreen({ className }: MapScreenProps) {
     };
 
     fetchData();
-  }, [user?.id, filterState]);
+  }, [user?.id]);
 
   const handleMarkerClick = (marker: MarkerData) => {
     setSelectedMarker(marker);
@@ -252,16 +229,6 @@ export function MapScreen({ className }: MapScreenProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 rounded-xl h-12"
-          />
-        </div>
-        <div className="bg-white p-2 rounded-md shadow-lg">
-          <LocationFilter
-            state={locationFilter.state}
-            lga={locationFilter.lga}
-            ward={locationFilter.ward}
-            onFilterChange={locationFilter.setFilter}
-            showReset={!locationFilter.isDefault}
-            showIndicator={true}
           />
         </div>
       </div>

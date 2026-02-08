@@ -19,12 +19,9 @@ import {
   MessageCircle
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
-import { useLocationFilter } from "@/hooks/use-location-filter";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { LocationScopeService } from "@/lib/location-scope-service";
-import { LocationFilter } from "@/components/LocationFilter";
 import Image from "next/image";
 import type { Post as PostType } from "@/types";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
@@ -213,8 +210,6 @@ export function EventsScreen({ className }: EventsScreenProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
-  const locationFilter = useLocationFilter();
-  const filterState = locationFilter.state;
   const [events, setEvents] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -354,7 +349,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        let query = supabase
+        const { data, error } = await supabase
           .from('posts')
           .select(`
             *,
@@ -364,16 +359,8 @@ export function EventsScreen({ className }: EventsScreenProps) {
               avatar_url
             )
           `)
-          .eq('category', 'Event');
-
-        // Apply location filter
-        if (filterState) {
-          query = query.or(LocationScopeService.buildLocationOrFilter(filterState));
-        } else {
-          query = query.is('state', null);
-        }
-
-        const { data, error } = await query.order('timestamp', { ascending: false });
+          .eq('category', 'Event')
+          .order('timestamp', { ascending: false });
 
         if (error) {
           console.error('Error fetching events:', error);
@@ -396,27 +383,17 @@ export function EventsScreen({ className }: EventsScreenProps) {
 
     fetchEvents();
 
-    // Set up real-time subscription with location filter
-    const channelName = `events-${filterState || 'null'}`;
+    // Set up real-time subscription for events
     const channel = supabase
-      .channel(channelName)
+      .channel('events-all')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'posts',
-        filter: filterState
-          ? `category=eq.Event.and(${LocationScopeService.buildLocationOrFilter(filterState)})`
-          : 'category=eq.Event.and(state=is.null)'
       }, async (payload) => {
         if (payload.eventType === 'INSERT') {
           const newEvent = payload.new as PostType;
-          
-          // Check if event matches location filter
-          const eventState = newEvent.state ?? null;
-          const shouldInclude = LocationScopeService.shouldIncludeContent(eventState, filterState);
-          if (!shouldInclude) {
-            return;
-          }
+          if (newEvent.category !== 'Event') return;
 
           const { data: userData, error: userError } = await supabase
             .from('users')
@@ -456,7 +433,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [filterState]);
+  }, []);
 
   // Handle like functionality
   const handleLike = async (eventId: string) => {
@@ -599,14 +576,6 @@ export function EventsScreen({ className }: EventsScreenProps) {
           />
         </div>
 
-        {/* Location Filter */}
-        <LocationFilter
-          state={locationFilter.state}
-          lga={locationFilter.lga}
-          ward={locationFilter.ward}
-          onFilterChange={locationFilter.setFilter}
-          showReset={!locationFilter.isDefault}
-        />
       </div>
 
       {/* Featured Event - Most Recent */}

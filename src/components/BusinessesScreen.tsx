@@ -25,10 +25,7 @@ import {
   Building
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
-import { useLocationFilter } from "@/hooks/use-location-filter";
 import { supabase } from "@/lib/supabase";
-import { LocationScopeService } from "@/lib/location-scope-service";
-import { LocationFilter } from "@/components/LocationFilter";
 import Image from "next/image";
 import type { Business } from "@/types";
 import { shortenAddress } from "@/lib/utils";
@@ -287,8 +284,6 @@ function EmptyBusinesses() {
 export function BusinessesScreen({ className }: BusinessesScreenProps) {
   const { user } = useAuth();
   const router = useRouter();
-  const locationFilter = useLocationFilter();
-  const filterState = locationFilter.state;
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -302,18 +297,10 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
   useEffect(() => {
     const fetchBusinesses = async () => {
       try {
-        let query = supabase
+        const { data, error } = await supabase
           .from('businesses')
-          .select('*');
-
-        // Apply location filter
-        if (filterState) {
-          query = query.or(LocationScopeService.buildLocationOrFilter(filterState));
-        } else {
-          query = query.is('state', null);
-        }
-
-        const { data, error } = await query.order('created_at', { ascending: false });
+          .select('*')
+          .order('created_at', { ascending: false });
 
         if (error) {
           console.error('Error fetching businesses:', error);
@@ -366,28 +353,16 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
 
     fetchBusinesses();
 
-    // Set up real-time subscription with location filter
-    const channelName = `businesses-${filterState || 'null'}`;
+    // Set up real-time subscription for businesses
     const channel = supabase
-      .channel(channelName)
+      .channel('businesses-all')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'businesses',
-        filter: filterState
-          ? LocationScopeService.buildLocationOrFilter(filterState)
-          : 'state=is.null'
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newBusiness = payload.new as Business;
-          
-          // Check if business matches location filter
-          const businessState = newBusiness.state ?? null;
-          const shouldInclude = LocationScopeService.shouldIncludeContent(businessState, filterState);
-          if (!shouldInclude) {
-            return;
-          }
-          
           setBusinesses(prevBusinesses => [newBusiness, ...prevBusinesses]);
         } else if (payload.eventType === 'UPDATE') {
           const updatedBusiness = payload.new as Business;
@@ -408,7 +383,7 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [filterState]);
+  }, []);
 
   const filteredBusinesses = useMemo(() => {
     if (!searchQuery) return businesses;
@@ -441,14 +416,6 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
           />
         </div>
 
-        {/* Location Filter */}
-        <LocationFilter
-          state={locationFilter.state}
-          lga={locationFilter.lga}
-          ward={locationFilter.ward}
-          onFilterChange={locationFilter.setFilter}
-          showReset={!locationFilter.isDefault}
-        />
       </div>
 
       {/* Featured Business */}

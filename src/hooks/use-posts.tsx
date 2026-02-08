@@ -21,15 +21,10 @@ export const usePosts = (options?: UsePostsOptions) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Determine the state to filter by (override or user's state)
-  const filterState = options?.state !== undefined 
-    ? options.state 
-    : LocationScopeService.getUserState(profile);
-
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        let query = supabase
+        const query = supabase
           .from('posts')
           .select(`
             *,
@@ -40,14 +35,6 @@ export const usePosts = (options?: UsePostsOptions) => {
               created_at
             )
           `);
-
-        // Apply location filter if state is specified
-        if (filterState) {
-          query = query.or(LocationScopeService.buildLocationOrFilter(filterState));
-        } else {
-          // If no state, only show grandfathered content (state IS NULL)
-          query = query.is('state', null);
-        }
 
         const { data, error } = await query.order('timestamp', { ascending: false });
 
@@ -64,29 +51,16 @@ export const usePosts = (options?: UsePostsOptions) => {
 
     fetchPosts();
 
-    // Set up real-time subscription with location filter
-    const channelName = `posts-${filterState || 'null'}`;
+    // Set up real-time subscription for all posts
     const channel = supabase
-      .channel(channelName)
+      .channel('posts-all')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'posts',
-        filter: filterState 
-          ? LocationScopeService.buildLocationOrFilter(filterState)
-          : 'state=is.null'
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          // Add new post to the beginning of the list
           const newPost = payload.new as Post;
-          
-          // Check if post matches current location filter
-          const postState = newPost.state ?? null;
-          const shouldInclude = LocationScopeService.shouldIncludeContent(postState, filterState);
-          
-          if (!shouldInclude) {
-            return; // Don't add post if it doesn't match filter
-          }
           
           // Fetch user data for the new post
           const fetchUserData = async () => {
@@ -167,7 +141,7 @@ export const usePosts = (options?: UsePostsOptions) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [filterState]);
+  }, []);
 
   // Listen for profile changes to refresh posts with updated user data
   useEffect(() => {
@@ -474,19 +448,10 @@ export const usePosts = (options?: UsePostsOptions) => {
 
   const refreshPosts = useCallback(async () => {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('posts')
-        .select('*');
-
-      // Apply location filter if state is specified
-      if (filterState) {
-        query = query.or(LocationScopeService.buildLocationOrFilter(filterState));
-      } else {
-        // If no state, only show grandfathered content (state IS NULL)
-        query = query.is('state', null);
-      }
-
-      const { data, error } = await query.order('timestamp', { ascending: false });
+        .select('*')
+        .order('timestamp', { ascending: false });
 
       if (error) {
         return;
@@ -496,7 +461,7 @@ export const usePosts = (options?: UsePostsOptions) => {
     } catch (error) {
       // Error fetching posts
     }
-  }, [filterState]);
+  }, []);
 
   return { posts, loading, createPost, createBusiness, deletePost, deleteBusiness, refreshPosts };
 };

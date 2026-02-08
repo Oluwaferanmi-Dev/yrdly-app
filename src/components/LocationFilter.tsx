@@ -54,7 +54,7 @@ export function LocationFilter({
     }
   }, [selectedState, loadLgas, state]);
 
-  // Load wards when LGA changes
+  // Load wards when LGA changes. 
   useEffect(() => {
     if (selectedState && selectedLga) {
       loadWards(selectedState, selectedLga);
@@ -72,15 +72,20 @@ export function LocationFilter({
     onFilterChange(newState || null, null, null);
   };
 
+  const ALL_LGAS_VALUE = '__all_lgas';
+  const ALL_WARDS_VALUE = '__all_wards';
+
   const handleLgaChange = (newLga: string) => {
-    setSelectedLga(newLga);
+    const value = newLga === ALL_LGAS_VALUE ? '' : newLga;
+    setSelectedLga(value);
     setSelectedWard('');
-    onFilterChange(selectedState || null, newLga || null, null);
+    onFilterChange(selectedState || null, value || null, null);
   };
 
   const handleWardChange = (newWard: string) => {
-    setSelectedWard(newWard);
-    onFilterChange(selectedState || null, selectedLga || null, newWard || null);
+    const value = newWard === ALL_WARDS_VALUE ? '' : newWard;
+    setSelectedWard(value);
+    onFilterChange(selectedState || null, selectedLga || null, value || null);
   };
 
   const handleReset = () => {
@@ -119,12 +124,12 @@ export function LocationFilter({
         {selectedState && lgas.length > 0 && (
           <div className="flex-1 min-w-[150px]">
             <label className="text-sm font-medium mb-1 block">LGA (Optional)</label>
-            <Select value={selectedLga} onValueChange={handleLgaChange}>
+            <Select value={selectedLga || ALL_LGAS_VALUE} onValueChange={handleLgaChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select LGA" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All LGAs</SelectItem>
+                <SelectItem value={ALL_LGAS_VALUE}>All LGAs</SelectItem>
                 {lgas.map((l) => (
                   <SelectItem key={l} value={l}>
                     {l}
@@ -138,12 +143,12 @@ export function LocationFilter({
         {selectedState && selectedLga && wards.length > 0 && (
           <div className="flex-1 min-w-[150px]">
             <label className="text-sm font-medium mb-1 block">Ward (Optional)</label>
-            <Select value={selectedWard} onValueChange={handleWardChange}>
+            <Select value={selectedWard || ALL_WARDS_VALUE} onValueChange={handleWardChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select ward" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Wards</SelectItem>
+                <SelectItem value={ALL_WARDS_VALUE}>All Wards</SelectItem>
                 {wards.map((w) => (
                   <SelectItem key={w} value={w}>
                     {w}
