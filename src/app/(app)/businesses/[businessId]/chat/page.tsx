@@ -7,9 +7,6 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import type { Business } from "@/types";
 
-// Force dynamic rendering to avoid prerender issues
-export const dynamic = 'force-dynamic';
-
 export default function BusinessChatPage() {
   const params = useParams();
   const router = useRouter();

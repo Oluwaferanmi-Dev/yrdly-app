@@ -14,10 +14,6 @@ import { YrdlyLogo } from '@/components/ui/yrdly-logo';
 import { AUTH_CONSTANTS, ERROR_MESSAGES } from '@/lib/constants';
 import { ErrorMessageFormatter } from '@/lib/error-messages';
 
-// Force dynamic rendering to avoid prerender issues
-export const dynamic = 'force-dynamic';
-
-
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');

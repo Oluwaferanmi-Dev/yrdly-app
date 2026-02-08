@@ -13,9 +13,6 @@ import { Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { YrdlyLogo } from '@/components/ui/yrdly-logo';
 import { PasswordStrength } from '@/components/ui/password-strength';
 
-// Force dynamic rendering to avoid prerender issues
-export const dynamic = 'force-dynamic';
-
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

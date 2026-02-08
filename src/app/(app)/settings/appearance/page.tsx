@@ -7,9 +7,6 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-// Force dynamic rendering to avoid prerender issues
-export const dynamic = 'force-dynamic';
-
 export default function AppearancePage() {
   return (
     <div className="pt-16 pb-20">

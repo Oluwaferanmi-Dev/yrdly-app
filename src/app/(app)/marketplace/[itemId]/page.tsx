@@ -30,9 +30,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
 
-// Force dynamic rendering to avoid prerender issues
-export const dynamic = 'force-dynamic';
-
 export default function MarketplaceItemPage() {
   const params = useParams();
   const router = useRouter();
