@@ -24,14 +24,6 @@ const nextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
-
-  // Webpack configuration for Sentry
-  webpack: {
-    treeshake: {
-      removeDebugLogging: true,
-    },
-    automaticVercelMonitors: true,
-  },
   
   // Ensure proper asset prefix for production
   assetPrefix: process.env.NODE_ENV === 'production' ? '' : '',
