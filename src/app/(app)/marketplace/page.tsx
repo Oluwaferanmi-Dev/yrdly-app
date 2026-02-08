@@ -8,9 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
 import type { Post as PostType } from "@/types";
 
-// Force dynamic rendering to avoid prerender issues
-export const dynamic = 'force-dynamic';
-
 export default function MarketplacePage() {
   const router = useRouter();
   const { user } = useAuth();

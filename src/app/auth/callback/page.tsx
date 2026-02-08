@@ -5,9 +5,6 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Loader2 } from 'lucide-react';
 
-// Force dynamic rendering to avoid cache issues
-export const dynamic = 'force-dynamic';
-
 export default function AuthCallback() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);

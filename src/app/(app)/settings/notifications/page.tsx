@@ -1,9 +1,6 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-
-// Force dynamic rendering to avoid prerender issues
-export const dynamic = 'force-dynamic';
 import { supabase } from '@/lib/supabase';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';

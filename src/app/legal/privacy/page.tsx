@@ -2,9 +2,6 @@
 
 import React from 'react';
 
-// Force dynamic rendering to avoid prerender issues
-export const dynamic = 'force-dynamic';
-
 const PrivacyPolicyPage = () => {
   return (
     <div className="container mx-auto px-4 py-8">

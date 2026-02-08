@@ -6,9 +6,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Business } from "@/types";
 
-// Force dynamic rendering to avoid prerender issues
-export const dynamic = 'force-dynamic';
-
 export default function BusinessDetailPage() {
   const params = useParams();
   const router = useRouter();
