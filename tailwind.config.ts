@@ -18,6 +18,9 @@ export default {
         body: ['var(--font-pt-sans)', ...fontFamily.sans],
         headline: ['var(--font-pt-sans)', ...fontFamily.sans],
         code: ['monospace'],
+        pacifico: ['var(--font-pacifico)', 'cursive'],
+        raleway: ['var(--font-raleway)', 'sans-serif'],
+        jersey25: ['var(--font-jersey25)', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',

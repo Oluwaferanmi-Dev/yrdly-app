@@ -1,18 +1,30 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Mail, Lock, User, Eye, EyeOff, AlertTriangle } from 'lucide-react';
-import { YrdlyLogo } from '@/components/ui/yrdly-logo';
+import Image from 'next/image';
+import { Loader2, Mail, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { AUTH_CONSTANTS, ERROR_MESSAGES } from '@/lib/constants';
 import { ErrorMessageFormatter } from '@/lib/error-messages';
+
+// Design tokens from Figma
+const colors = {
+  background: '#15181D',
+  blob: '#A154F2',
+  overlay: 'rgba(255, 255, 255, 0.05)',
+  border: '#388E3C',
+  inputBg: '#1B2B3A',
+  primary: '#388E3C',
+  text: '#FFFFFF',
+  textFaded: '#BBBBBB',
+  link: '#1976D2',
+  logoGreen: '#259907',
+};
 
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -22,48 +34,42 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [loginAttempts, setLoginAttempts] = useState(0);
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
   const [remainingTime, setRemainingTime] = useState(0);
-  
+
   const { user, signIn, signUp, signInWithGoogle, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  // Redirect already logged-in users to home
   useEffect(() => {
     if (!authLoading && user) {
       router.replace('/home');
     }
   }, [user, authLoading, router]);
 
-  // Handle rate limiting timer
   useEffect(() => {
     if (lockoutUntil) {
       const interval = setInterval(() => {
         const now = Date.now();
         const timeLeft = Math.max(0, lockoutUntil - now);
         setRemainingTime(Math.ceil(timeLeft / 1000));
-        
         if (timeLeft === 0) {
           setLockoutUntil(null);
           setLoginAttempts(0);
           clearInterval(interval);
         }
       }, 1000);
-
       return () => clearInterval(interval);
     }
   }, [lockoutUntil]);
 
-  // Show loading while checking authentication
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="h-16 w-16 mx-auto mb-4 animate-pulse">
-            <YrdlyLogo />
-          </div>
-          <p className="text-gray-600">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: colors.background }}>
+        <div className="text-center font-raleway text-white">
+          <div className="w-10 h-10 rounded-md mb-4 mx-auto animate-pulse" style={{ background: colors.logoGreen }} />
+          <p className="text-sm text-[#BBBBBB]">Loading...</p>
         </div>
       </div>
     );
@@ -71,58 +77,40 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Check if user is locked out
-    if (lockoutUntil && Date.now() < lockoutUntil) {
-      return; // Don't proceed if locked out
-    }
-    
+    if (lockoutUntil && Date.now() < lockoutUntil) return;
     setError('');
     setLoading(true);
 
     try {
       if (isSignUp) {
-        const { user, error } = await signUp(email, password, name);
-        if (error) {
-          setError(error.message);
-        } else if (user) {
-          // Reset login attempts on successful signup
+        const { user: newUser, error: err } = await signUp(email, password, name);
+        if (err) setError(err.message);
+        else if (newUser) {
           setLoginAttempts(0);
           setLockoutUntil(null);
-          
-          // Check if user needs email confirmation
-          if (user.email_confirmed_at) {
-            router.push('/home');
-          } else {
-            // Redirect to onboarding email verification
-            router.push(`/onboarding/verify-email?email=${encodeURIComponent(email)}`);
-          }
+          if (newUser.email_confirmed_at) router.push('/home');
+          else router.push(`/onboarding/verify-email?email=${encodeURIComponent(email)}`);
         }
       } else {
-        const { user, error } = await signIn(email, password);
-        if (error) {
-          // Increment login attempts on failed login
+        const { user: signedUser, error: err } = await signIn(email, password);
+        if (err) {
           const newAttempts = loginAttempts + 1;
           setLoginAttempts(newAttempts);
-          
-          // Lock out user after max attempts
           if (newAttempts >= AUTH_CONSTANTS.MAX_LOGIN_ATTEMPTS) {
-            const lockoutTime = Date.now() + AUTH_CONSTANTS.LOGIN_LOCKOUT_DURATION;
-            setLockoutUntil(lockoutTime);
+            setLockoutUntil(Date.now() + AUTH_CONSTANTS.LOGIN_LOCKOUT_DURATION);
             setError(`${ERROR_MESSAGES.TOO_MANY_ATTEMPTS} Please wait ${Math.ceil(AUTH_CONSTANTS.LOGIN_LOCKOUT_DURATION / 60000)} minutes.`);
           } else {
-            const friendlyError = ErrorMessageFormatter.formatAuthError(error.message);
-            const suggestion = ErrorMessageFormatter.getSuggestion(error.message);
-            setError(suggestion ? `${friendlyError} ${suggestion}` : friendlyError);
+            const friendly = ErrorMessageFormatter.formatAuthError(err.message);
+            const suggestion = ErrorMessageFormatter.getSuggestion(err.message);
+            setError(suggestion ? `${friendly} ${suggestion}` : friendly);
           }
-        } else if (user) {
-          // Reset login attempts on successful login
+        } else if (signedUser) {
           setLoginAttempts(0);
           setLockoutUntil(null);
           router.push('/home');
         }
       }
-    } catch (err) {
+    } catch {
       setError(ERROR_MESSAGES.GENERIC);
     } finally {
       setLoading(false);
@@ -132,197 +120,259 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setError('');
     setLoading(true);
-    
     try {
-      const { error } = await signInWithGoogle();
-      if (error) {
-        setError(error.message);
-      }
-    } catch (err) {
+      const { error: err } = await signInWithGoogle();
+      if (err) setError(err.message);
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
   };
 
-
+  const inputClass =
+    'w-full h-12 sm:h-14 pl-4 pr-11 sm:pl-5 sm:pr-12 rounded-full font-raleway font-light text-sm text-white placeholder:text-[#BBBBBB] bg-transparent border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition';
+  const borderStyle = { border: '0.5px solid #388E3C' };
+  const pillRound = 'rounded-full';
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md border-0 shadow-lg">
-        <CardHeader className="space-y-6 text-center pb-8">
-          <div className="flex justify-center">
-            <YrdlyLogo />
-          </div>
-          <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold text-center">
-              {isSignUp ? 'Create Account' : 'Welcome Back'}
-            </CardTitle>
-            <CardDescription className="text-center">
-              {isSignUp 
-                ? 'Sign up to join your neighborhood community' 
-                : 'Sign in to your Yrdly account'
-              }
-            </CardDescription>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="space-y-4">
-          {lockoutUntil && Date.now() < lockoutUntil && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                Too many login attempts. Please wait {remainingTime} seconds before trying again.
-              </AlertDescription>
-            </Alert>
+    <div
+      className="min-h-screen min-h-[100dvh] relative overflow-x-hidden overflow-y-auto flex flex-col items-center justify-center px-4 py-6 xs:py-8 sm:px-6 sm:py-10 md:px-8 md:py-12"
+      style={{ background: colors.background }}
+    >
+      {/* Decorative blobs - scale down on small screens */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute w-[10%] min-w-[40px] max-w-[80px] aspect-square rounded-full sm:w-[6%] sm:min-w-0 sm:max-w-none"
+          style={{ background: colors.blob, opacity: 0.55, left: '5.86%', top: '11.42%', transform: 'rotate(36deg)' }}
+        />
+        <div
+          className="absolute w-[8%] min-w-[32px] max-w-[64px] aspect-square rounded-full sm:w-[5%] sm:min-w-0 sm:max-w-none"
+          style={{ background: colors.blob, opacity: 0.55, left: '82%', top: '20%' }}
+        />
+        <div
+          className="absolute w-[8%] min-w-[32px] max-w-[64px] aspect-square rounded-full sm:w-[5%] sm:min-w-0 sm:max-w-none"
+          style={{ background: colors.blob, opacity: 0.55, left: '20%', top: '72%' }}
+        />
+        <div
+          className="absolute w-[8%] min-w-[32px] max-w-[64px] aspect-square rounded-full sm:w-[5%] sm:min-w-0 sm:max-w-none"
+          style={{ background: colors.blob, opacity: 0.55, right: '4.6%', bottom: '8.77%' }}
+        />
+      </div>
+
+      {/* Glass overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: colors.overlay,
+          border: '1px solid rgba(255,255,255,0.01)',
+          backdropFilter: 'blur(1.8px)',
+        }}
+      />
+
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-[471px] min-w-0 flex flex-col items-center py-4 sm:py-6">
+        {/* Header */}
+        <div className="text-center mb-5 sm:mb-8 w-full">
+          <h1
+            className="text-xl sm:text-2xl text-white leading-tight sm:leading-[42px] px-1"
+            style={{ fontFamily: '"Pacifico", cursive' }}
+          >
+            See what&apos;s happening
+          </h1>
+          <p className="font-raleway font-light italic text-xs text-[#BBBBBB] mt-1">
+            Sign in to your Yrdly account
+          </p>
+        </div>
+
+        {/* Logo */}
+        <div className="flex items-center gap-2 mb-4 sm:mb-6">
+          <Image
+            src="/yrdly-logo.png"
+            alt="Yrdly"
+            width={40}
+            height={40}
+            className="h-8 w-8 sm:h-9 sm:w-9 object-contain flex-shrink-0"
+          />
+          <span className="font-jersey25 text-xl sm:text-2xl leading-6 text-white">rdly</span>
+        </div>
+
+        {/* Sign in / Sign up toggle - selected tab has background card #1B2B3A */}
+        <div
+          className={`w-full h-12 sm:h-[52px] ${pillRound} p-1 flex relative mb-4 sm:mb-6`}
+          style={{ border: '0.5px solid #388E3C' }}
+        >
+          <button
+            type="button"
+            onClick={() => setIsSignUp(false)}
+            className={`flex-1 h-full rounded-full font-raleway text-sm transition ${
+              !isSignUp ? 'bg-[#1B2B3A] text-white shadow-sm' : 'text-white/80 hover:text-white'
+            }`}
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsSignUp(true)}
+            className={`flex-1 h-full rounded-full font-raleway text-sm transition ${
+              isSignUp ? 'bg-[#1B2B3A] text-white shadow-sm' : 'text-white/80 hover:text-white'
+            }`}
+          >
+            Sign up
+          </button>
+        </div>
+
+        {/* Alerts */}
+        {lockoutUntil && Date.now() < lockoutUntil && (
+          <Alert className="mb-3 sm:mb-4 border-red-500/50 bg-red-500/10 text-red-200 w-full text-sm">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+            <AlertDescription className="break-words">
+              Too many attempts. Wait {remainingTime}s before trying again.
+            </AlertDescription>
+          </Alert>
+        )}
+        {error && !lockoutUntil && (
+          <Alert className="mb-3 sm:mb-4 border-red-500/50 bg-red-500/10 text-red-200 w-full text-sm">
+            <AlertDescription className="break-words">{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="w-full space-y-4 sm:space-y-5">
+          {isSignUp && (
+            <div className={`relative ${pillRound}`} style={borderStyle}>
+              <Input
+                type="text"
+                placeholder="Enter your full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={inputClass}
+                required={isSignUp}
+              />
+            </div>
           )}
-          
-          {error && !lockoutUntil && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
+
+          <div className={`relative ${pillRound}`} style={borderStyle}>
+            <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 flex items-center justify-center h-6 w-6 pointer-events-none">
+              <Mail className="h-5 w-5 text-[#BBBBBB]" />
+            </div>
+            <Input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+              required
+            />
+          </div>
+
+          <div className={`relative ${pillRound}`} style={borderStyle}>
+            <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 flex items-center justify-center h-6 w-6">
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="flex items-center justify-center w-full h-full text-[#BBBBBB] hover:text-white"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+            <Input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+              required
+            />
+          </div>
+
+          {!isSignUp && (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label className="flex items-center gap-2 cursor-pointer group min-w-0">
+                <span
+                  className="w-[15px] h-[15px] rounded-full border flex items-center justify-center flex-shrink-0"
+                  style={{ borderColor: colors.border }}
+                  aria-hidden
+                >
+                  {rememberMe && <span className="w-2 h-2 rounded-full bg-white" />}
+                </span>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="sr-only"
+                />
+                <span className="font-raleway font-light text-xs text-white">Remember me</span>
+              </label>
+              <Link
+                href="/forgot-password"
+                className="font-raleway font-medium text-xs hover:underline"
+                style={{ color: colors.link }}
+              >
+                Forgot Password?
+              </Link>
+            </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="name"
-                    type="text"
-                    placeholder="Enter your full name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                </div>
-              </div>
-            )}
+          <Button
+            type="submit"
+            className={`w-full h-10 sm:h-11 ${pillRound} font-raleway font-medium text-sm text-white hover:opacity-90 transition mt-1`}
+            style={{ background: colors.primary }}
+            disabled={loading || (!!lockoutUntil && Date.now() < lockoutUntil)}
+          >
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {lockoutUntil && Date.now() < lockoutUntil
+              ? `Locked (${remainingTime}s)`
+              : isSignUp
+                ? 'Create Account'
+                : 'Sign in'}
+          </Button>
+        </form>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
-                  aria-label="Email address"
-                  aria-describedby="email-error"
-                />
-              </div>
-            </div>
+        {/* Divider - generous spacing, slightly reduced on small screens */}
+        <div className="relative w-full flex items-center gap-2 sm:gap-3 mt-10 mb-10 sm:mt-16 sm:mb-14 min-w-0">
+          <span className="flex-1 min-w-0 h-px bg-white/50" />
+          <span className="font-raleway font-light text-xs text-[#BBBBBB] uppercase tracking-wide whitespace-nowrap flex-shrink-0">
+            Or continue with
+          </span>
+          <span className="flex-1 min-w-0 h-px bg-white/50" />
+        </div>
 
-                   <div className="space-y-2">
-                     <Label htmlFor="password">Password</Label>
-                     <div className="relative">
-                       <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                       <Input
-                         id="password"
-                         type={showPassword ? "text" : "password"}
-                         placeholder="Enter your password"
-                         value={password}
-                         onChange={(e) => setPassword(e.target.value)}
-                         className="pl-10 pr-10"
-                         required
-                         aria-label="Password"
-                         aria-describedby="password-error"
-                       />
-                       <button
-                         type="button"
-                         onClick={() => setShowPassword(!showPassword)}
-                         className="absolute right-3 top-3 h-4 w-4 text-gray-400 hover:text-gray-600"
-                         aria-label={showPassword ? "Hide password" : "Show password"}
-                         aria-pressed={showPassword}
-                       >
-                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                       </button>
-                     </div>
-                   </div>
+        {/* Google */}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleGoogleSignIn}
+          disabled={loading}
+          className={`w-full h-10 sm:h-11 ${pillRound} font-raleway font-medium text-sm text-white border-[#388E3C] hover:bg-white/5`}
+        >
+          <svg className="mr-2 h-4 w-4 sm:h-[18px] sm:w-[18px] flex-shrink-0" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+          </svg>
+          Continue with Google
+        </Button>
 
-            <Button type="submit" className="w-full" disabled={loading || (!!lockoutUntil && Date.now() < lockoutUntil)}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {lockoutUntil && Date.now() < lockoutUntil 
-                ? `Locked (${remainingTime}s)` 
-                : isSignUp ? 'Create Account' : 'Sign In'
-              }
-            </Button>
-          </form>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          <div className="flex justify-center">
-            <Button
-              variant="outline"
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-              className="h-11 w-full max-w-sm"
-            >
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
-              </svg>
-              Continue with Google
-            </Button>
-          </div>
-
-          <div className="text-center text-sm">
-            {isSignUp ? (
-              <>
-                Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(false)}
-                  className="text-blue-600 hover:text-blue-500 font-medium"
-                >
-                  Sign in
-                </button>
-              </>
-            ) : (
-              <>
-                Don&apos;t have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(true)}
-                  className="text-blue-600 hover:text-blue-500 font-medium"
-                >
-                  Sign up
-                </button>
-              </>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+        <p className="font-raleway text-xs sm:text-sm text-[#BBBBBB] mt-4 sm:mt-6 text-center px-2 break-words">
+          {isSignUp ? (
+            <>
+              Already have an account?{' '}
+              <button type="button" onClick={() => setIsSignUp(false)} className="text-[#1976D2] font-medium hover:underline">
+                Sign in
+              </button>
+            </>
+          ) : (
+            <>
+              Don&apos;t have an account?{' '}
+              <button type="button" onClick={() => setIsSignUp(true)} className="text-[#1976D2] font-medium hover:underline">
+                Sign up
+              </button>
+            </>
+          )}
+        </p>
+      </div>
     </div>
   );
 }
