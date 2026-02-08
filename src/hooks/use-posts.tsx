@@ -52,12 +52,15 @@ export const usePosts = (options?: UsePostsOptions) => {
         const { data, error } = await query.order('timestamp', { ascending: false });
 
         if (error) {
+          console.error('[v0] Error fetching posts:', error);
+          setLoading(false);
           return;
         }
 
         setPosts(data as Post[]);
         setLoading(false);
       } catch (error) {
+        console.error('[v0] Exception while fetching posts:', error);
         setLoading(false);
       }
     };
