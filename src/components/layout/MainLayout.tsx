@@ -41,6 +41,13 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
+  // Check if we're on the home page
+  const isHomePage = pathname === "/home";
+  
+  // Check if we're in a chat conversation or business chat
+  const isChatPage = (pathname.startsWith("/messages/") && pathname !== "/messages") || 
+                     pathname.includes("/chat");
+
   const handleProfileAction = (action: string) => {
     setShowProfile(false);
     if (action === "profile") {
@@ -209,13 +216,6 @@ export function MainLayout({ children }: MainLayoutProps) {
       supabase.removeChannel(channel);
     };
   }, [user]);
-
-  // Check if we're on the home page
-  const isHomePage = pathname === "/home";
-  
-  // Check if we're in a chat conversation or business chat
-  const isChatPage = (pathname.startsWith("/messages/") && pathname !== "/messages") || 
-                     pathname.includes("/chat");
 
   return (
     <>
