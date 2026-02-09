@@ -1,209 +1,64 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  CalendarDays, 
-  Search, 
-  MapPin, 
-  Clock, 
-  Users, 
+import Link from "next/link";
+import Image from "next/image";
+import {
+  CalendarDays,
+  MapPin,
+  Share2,
+  ChevronDown,
   Plus,
-  Heart,
-  Share,
-  MessageCircle
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import Image from "next/image";
 import type { Post as PostType } from "@/types";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
-import { formatDistanceToNowStrict } from 'date-fns';
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
+import { formatPrice, timeAgo } from "@/lib/utils";
 import { sendEventConfirmationEmail } from "@/lib/email-actions";
+import { cn } from "@/lib/utils";
 
 interface EventsScreenProps {
   className?: string;
 }
 
-function EmptyEvents() {
-  return (
-    <div className="text-center py-16">
-      <div className="inline-block bg-muted p-4 rounded-full mb-4">
-        <CalendarDays className="h-12 w-12 text-muted-foreground" />
-      </div>
-      <h2 className="text-2xl font-bold">No upcoming events</h2>
-      <p className="text-muted-foreground mt-2 mb-6">Be the first to organize something in your neighborhood!</p>
-    </div>
-  );
+function formatEventDate(d: string | null | undefined): string {
+  if (!d) return "";
+  try {
+    const date = new Date(d);
+    return date.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return "";
+  }
 }
 
-function EventCard({ event, onLike, onComment, onShare, onClick, onRSVP, isRSVPLoading, currentUser }: { 
-  event: PostType; 
-  onLike: (eventId: string) => void;
-  onComment: (eventId: string) => void;
-  onShare: (eventId: string) => void;
-  onClick: (eventId: string) => void;
-  onRSVP: (eventId: string) => void;
-  isRSVPLoading: boolean;
-  currentUser: any;
-}) {
-  const router = useRouter();
-  
-  const getEventBadge = (eventDate: string | undefined) => {
-    if (!eventDate) return { text: "TBD", variant: "outline" as const, className: "text-muted-foreground border-muted-foreground" };
-    
-    const eventDateTime = new Date(eventDate);
-    const now = new Date();
-    const diffDays = Math.ceil((eventDateTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return { text: "Today", variant: "outline" as const, className: "text-accent border-accent bg-accent/10" };
-    if (diffDays === 1) return { text: "Tomorrow", variant: "outline" as const, className: "text-accent border-accent bg-accent/10" };
-    if (diffDays <= 7) return { text: "This Week", variant: "outline" as const, className: "text-primary border-primary bg-primary/10" };
-    if (diffDays <= 14) return { text: "Next Week", variant: "outline" as const, className: "text-muted-foreground border-muted-foreground" };
-    return { text: "Upcoming", variant: "outline" as const, className: "text-muted-foreground border-muted-foreground" };
-  };
+function formatEventDateTime(d: string | null | undefined, t?: string | null): string {
+  if (!d) return "";
+  const time = t || "9am";
+  try {
+    const date = new Date(d);
+    const day = date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+    return `${time}, ${day}`;
+  } catch {
+    return "";
+  }
+}
 
-  const badge = getEventBadge(event.event_date);
-  const isLiked = event.liked_by?.includes(currentUser?.id || '') || false;
-
-  return (
-    <Card className="p-4 yrdly-shadow cursor-pointer hover:shadow-lg transition-shadow" onClick={() => onClick(event.id)}>
-      {/* Event Image */}
-      {(event.image_url || (event.image_urls && event.image_urls.length > 0)) && (
-        <div className="mb-4">
-          <Image
-            src={event.image_url || event.image_urls?.[0] || "/placeholder.svg"}
-            alt={event.title || "Event image"}
-            width={400}
-            height={192}
-            className="w-full h-auto object-contain max-h-96 rounded-lg"
-            style={{ height: "auto" }}
-          />
-        </div>
-      )}
-      
-      <div className="space-y-3">
-        {/* Author info */}
-        <div className="flex items-center gap-3">
-          <Avatar 
-            className="w-8 h-8 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => {
-              if (event.user_id) {
-                router.push(`/profile/${event.user_id}`);
-              }
-            }}
-          >
-            <AvatarImage src={event.author_image || "/placeholder.svg"} />
-            <AvatarFallback className="bg-accent text-accent-foreground text-xs">
-              {event.author_name?.slice(0, 2).toUpperCase() || "U"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p 
-              className="text-sm font-medium text-foreground truncate cursor-pointer hover:underline"
-              onClick={() => {
-                if (event.user_id) {
-                  router.push(`/profile/${event.user_id}`);
-                }
-              }}
-            >
-              {event.author_name || "Unknown"}
-            </p>
-            <p className="text-xs text-muted-foreground">Event Organizer</p>
-          </div>
-        </div>
-
-        {/* Event details */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <h4 className="font-semibold text-foreground text-base leading-tight">{event.title || "Event"}</h4>
-            <Badge variant={badge.variant} className={badge.className}>
-              {badge.text}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">{event.text || "No description available"}</p>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            {event.event_location?.address && (
-              <div className="flex items-center gap-1 min-w-0 flex-1">
-                <MapPin className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{event.event_location.address}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Users className="w-3 h-3" />
-              <span>{event.attendees?.length || 0} attending</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              className={`border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent ${
-                currentUser && event.attendees?.includes(currentUser.id) 
-                  ? 'bg-primary text-primary-foreground' 
-                  : ''
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRSVP(event.id);
-              }}
-              disabled={isRSVPLoading}
-            >
-              {isRSVPLoading ? 'Loading...' : 
-               currentUser && event.attendees?.includes(currentUser.id) ? 'Attending' : 'RSVP'}
-            </Button>
-          </div>
-        </div>
-        
-        {/* Like, Comment, Share buttons */}
-        <div className="flex items-center gap-4 pt-2 border-t border-border">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={`text-muted-foreground hover:text-red-500 ${isLiked ? 'text-red-500' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onLike(event.id);
-            }}
-          >
-            <Heart className={`w-4 h-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
-            <span className="text-sm">{event.liked_by?.length || 0}</span>
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-muted-foreground hover:text-primary"
-            onClick={(e) => {
-              e.stopPropagation();
-              onComment(event.id);
-            }}
-          >
-            <MessageCircle className="w-4 h-4 mr-1" />
-            <span className="text-sm">{event.comment_count || 0}</span>
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-muted-foreground hover:text-accent"
-            onClick={(e) => {
-              e.stopPropagation();
-              onShare(event.id);
-            }}
-          >
-            <Share className="w-4 h-4 mr-1" />
-            <span className="text-sm">Share</span>
-          </Button>
-        </div>
-      </div>
-    </Card>
-  );
+function getLocation(event: PostType): string {
+  const loc = event.event_location;
+  if (!loc || typeof loc !== "object") return "";
+  const o = loc as { address?: string };
+  return o.address || "";
 }
 
 export function EventsScreen({ className }: EventsScreenProps) {
@@ -212,425 +67,454 @@ export function EventsScreen({ className }: EventsScreenProps) {
   const router = useRouter();
   const [events, setEvents] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const [rsvpLoading, setRsvpLoading] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<"date" | "price" | "all">("date");
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
 
-  // Handle RSVP functionality
+  useEffect(() => {
+    if (!carouselApi) return;
+    const onSelect = () => setCarouselIndex(carouselApi.selectedScrollSnap());
+    carouselApi.on("select", onSelect);
+    return () => {
+      carouselApi.off("select", onSelect);
+    };
+  }, [carouselApi]);
+
   const handleRSVP = async (eventId: string) => {
     if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Login Required",
-        description: "Please log in to RSVP for events.",
-      });
+      router.push("/login");
       return;
     }
-
-    setRsvpLoading(prev => new Set(prev).add(eventId));
-
+    setRsvpLoading((prev) => new Set(prev).add(eventId));
     try {
-      // Get current event data
       const { data: eventData, error: fetchError } = await supabase
-        .from('posts')
-        .select('attendees')
-        .eq('id', eventId)
+        .from("posts")
+        .select("attendees")
+        .eq("id", eventId)
         .single();
-
-      if (fetchError) {
-        console.error('Error fetching event:', fetchError);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to RSVP. Please try again.",
-        });
-        return;
-      }
-
-      const currentAttendees = eventData.attendees || [];
+      if (fetchError) throw fetchError;
+      const currentAttendees = eventData?.attendees || [];
       const userHasRSVPed = currentAttendees.includes(user.id);
-
-      let newAttendees;
-      if (userHasRSVPed) {
-        // Remove user from attendees array
-        newAttendees = currentAttendees.filter((id: string) => id !== user.id);
-      } else {
-        // Add user to attendees array
-        newAttendees = [...currentAttendees, user.id];
-      }
-
-      // Update the event
+      const newAttendees = userHasRSVPed
+        ? currentAttendees.filter((id: string) => id !== user.id)
+        : [...currentAttendees, user.id];
       const { error: updateError } = await supabase
-        .from('posts')
+        .from("posts")
         .update({ attendees: newAttendees })
-        .eq('id', eventId);
-
-      if (updateError) {
-        console.error('Error updating event:', updateError);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to RSVP. Please try again.",
-        });
-      } else {
-        // Send confirmation email if user just RSVP'd (not cancelled)
-        if (!userHasRSVPed && user.email) {
-          try {
-            // Get the full event data for the email
-            const { data: fullEventData, error: eventError } = await supabase
-              .from('posts')
-              .select('*')
-              .eq('id', eventId)
-              .single();
-
-            if (!eventError && fullEventData) {
-              const emailResult = await sendEventConfirmationEmail({
-                attendeeEmail: user.email,
-                attendeeName: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-                eventName: fullEventData.title || 'Event',
-                eventDate: fullEventData.event_date,
-                eventTime: fullEventData.event_time,
-                eventLocation: fullEventData.event_location?.address,
-                eventDescription: fullEventData.text,
-                eventLink: fullEventData.event_link,
-              });
-
-              if (emailResult.success) {
-                toast({
-                  title: "RSVP Confirmed & Email Sent!",
-                  description: "You're now attending this event. Check your email for details!",
-                });
-              } else {
-                console.error('Failed to send event confirmation email:', emailResult.error);
-                toast({
-                  title: "RSVP Confirmed",
-                  description: "You're now attending this event!",
-                });
-              }
-            } else {
-              console.error('Error fetching event data for email:', eventError);
-              toast({
-                title: "RSVP Confirmed",
-                description: "You're now attending this event!",
-              });
-            }
-          } catch (emailError) {
-            console.error('Error sending RSVP email:', emailError);
-            toast({
-              title: "RSVP Confirmed",
-              description: "You're now attending this event!",
-            });
-          }
-        } else {
-          // User cancelled RSVP or no email available
-          toast({
-            title: userHasRSVPed ? "RSVP Cancelled" : "RSVP Confirmed",
-            description: userHasRSVPed 
-              ? "You're no longer attending this event." 
-              : "You're now attending this event!",
+        .eq("id", eventId);
+      if (updateError) throw updateError;
+      if (!userHasRSVPed && user.email) {
+        const { data: fullEvent } = await supabase.from("posts").select("*").eq("id", eventId).single();
+        if (fullEvent) {
+          await sendEventConfirmationEmail({
+            attendeeEmail: user.email,
+            attendeeName: user.user_metadata?.name || user.email?.split("@")[0] || "User",
+            eventName: fullEvent.title || "Event",
+            eventDate: fullEvent.event_date,
+            eventTime: fullEvent.event_time,
+            eventLocation: getLocation(fullEvent as PostType),
+            eventDescription: fullEvent.text,
+            eventLink: fullEvent.event_link,
           });
         }
       }
-    } catch (error) {
-      console.error('Error handling RSVP:', error);
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to RSVP. Please try again.",
+        title: userHasRSVPed ? "RSVP Cancelled" : "RSVP Confirmed",
+        description: userHasRSVPed ? "You're no longer attending." : "You're attending this event!",
       });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Error", description: "Could not update RSVP." });
     } finally {
-      setRsvpLoading(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(eventId);
-        return newSet;
+      setRsvpLoading((prev) => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
       });
     }
   };
 
   useEffect(() => {
     const fetchEvents = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('posts')
-          .select(`
-            *,
-            user:users!posts_user_id_fkey(
-              id,
-              name,
-              avatar_url
-            )
-          `)
-          .eq('category', 'Event')
-          .order('timestamp', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching events:', error);
-          return;
-        }
-
-        const formattedEvents = (data || []).map(event => ({
-          ...event,
-          author_name: event.user?.name || 'Anonymous',
-          author_image: event.user?.avatar_url || '/placeholder.svg',
-        })) as PostType[];
-
-        setEvents(formattedEvents);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching events:', error);
-        setLoading(false);
-      }
+      const { data, error } = await supabase
+        .from("posts")
+        .select(`
+          *,
+          user:users!posts_user_id_fkey(id, name, avatar_url)
+        `)
+        .eq("category", "Event")
+        .order("timestamp", { ascending: false });
+      if (!error)
+        setEvents(
+          (data || []).map((e: any) => ({
+            ...e,
+            author_name: e.user?.name || "Anonymous",
+            author_image: e.user?.avatar_url || "/placeholder.svg",
+          }))
+        );
+      setLoading(false);
     };
-
     fetchEvents();
-
-    // Set up real-time subscription for events
-    const channel = supabase
-      .channel('events-all')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'posts',
-      }, async (payload) => {
-        if (payload.eventType === 'INSERT') {
-          const newEvent = payload.new as PostType;
-          if (newEvent.category !== 'Event') return;
-
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('name, avatar_url')
-            .eq('id', newEvent.user_id)
-            .single();
-
-          setEvents(prevEvents => [{
-            ...newEvent,
-            author_name: userData?.name || 'Anonymous',
-            author_image: userData?.avatar_url || '/placeholder.svg',
-          }, ...prevEvents]);
-        } else if (payload.eventType === 'UPDATE') {
-          const updatedEvent = payload.new as PostType;
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('name, avatar_url')
-            .eq('id', updatedEvent.user_id)
-            .single();
-
-          setEvents(prevEvents => 
-            prevEvents.map(event => 
-              event.id === updatedEvent.id ? {
-                ...updatedEvent,
-                author_name: userData?.name || 'Anonymous',
-                author_image: userData?.avatar_url || '/placeholder.svg',
-              } : event
-            )
-          );
-        } else if (payload.eventType === 'DELETE') {
-          const deletedId = payload.old.id;
-          setEvents(prevEvents => prevEvents.filter(event => event.id !== deletedId));
-        }
-      })
+    const ch = supabase
+      .channel("events-page")
+      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, () => fetchEvents())
       .subscribe();
-
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(ch);
     };
   }, []);
 
-  // Handle like functionality
-  const handleLike = async (eventId: string) => {
-  if (!user) return;
-  
-  try {
-      // Get current event data
-      const { data: eventData, error: fetchError } = await supabase
-        .from('posts')
-        .select('liked_by')
-        .eq('id', eventId)
-        .single();
+  const filteredAndSorted = useMemo(() => {
+    let list = [...events];
+    if (sortBy === "price")
+      list.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+    else if (sortBy === "date")
+      list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return list;
+  }, [events, sortBy]);
 
-      if (fetchError) {
-        console.error('Error fetching event:', fetchError);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to like event. Please try again.",
-        });
-        return;
-      }
+  const pickedForYou = filteredAndSorted.slice(0, 5);
+  const inYourArea = filteredAndSorted.slice(0, 3);
+  const mainstream = filteredAndSorted;
 
-      const currentLikedBy = eventData.liked_by || [];
-      const userHasLiked = currentLikedBy.includes(user.id);
-
-      let newLikedBy;
-      if (userHasLiked) {
-        // Remove user from liked_by array
-        newLikedBy = currentLikedBy.filter((id: string) => id !== user.id);
-      } else {
-        // Add user to liked_by array
-        newLikedBy = [...currentLikedBy, user.id];
-      }
-
-      // Update the event
-      const { error: updateError } = await supabase
-        .from('posts')
-        .update({ liked_by: newLikedBy })
-        .eq('id', eventId);
-
-      if (updateError) {
-        console.error('Error updating event:', updateError);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to like event. Please try again.",
-        });
-      } else {
-        // Trigger notification if user just liked the event
-        if (!userHasLiked) {
-          try {
-            const { NotificationTriggers } = await import('@/lib/notification-triggers');
-            await NotificationTriggers.onPostLiked(eventId, user.id);
-          } catch (error) {
-            console.error('Error creating event like notification:', error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error handling like:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to like event. Please try again.",
-      });
-    }
-  };
-
-  // Handle comment functionality
-  const handleComment = (eventId: string) => {
-    // Navigate to event detail page for comments
-    router.push(`/posts/${eventId}`);
-  };
-
-  // Handle share functionality
-  const handleShare = async (eventId: string) => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Check out this event on Yrdly',
-          text: 'Check out this event on Yrdly',
-          url: window.location.origin + `/posts/${eventId}`
-        });
-      } else {
-        // Fallback to clipboard
-        await navigator.clipboard.writeText(window.location.origin + `/posts/${eventId}`);
-        toast({
-          title: "Link copied",
-          description: "Event link has been copied to clipboard.",
-        });
-      }
-    } catch (error) {
-      console.error('Error sharing:', error);
-    }
-  };
-
-  // Handle event card click for detailed view
-  const handleEventClick = (eventId: string) => {
-    router.push(`/posts/${eventId}`);
-  };
-
-  const filteredEvents = useMemo(() => {
-    let filtered = events;
-    
-    if (searchQuery) {
-      filtered = events.filter(event =>
-        event.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        event.event_location?.address?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    
-    // Sort by timestamp (most recent first)
-    return filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [events, searchQuery]);
-
-  // Get the most recent event for featured section
-  const featuredEvent = filteredEvents.length > 0 ? filteredEvents[0] : null;
-  // Get remaining events for the list
-  const remainingEvents = filteredEvents.slice(1);
-
-  return (
-    <div className={`p-4 space-y-6 ${className}`}>
-      {/* Header */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Events</h2>
-          <p className="text-muted-foreground">Discover and create community events</p>
-        </div>
-
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search events..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-card border-border focus:border-primary"
-          />
-        </div>
-
-      </div>
-
-      {/* Featured Event - Most Recent */}
-      {featuredEvent && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">Featured Event</h3>
-          <EventCard 
-            event={featuredEvent} 
-            onLike={handleLike}
-            onComment={handleComment}
-            onShare={handleShare}
-            onClick={handleEventClick}
-            onRSVP={handleRSVP}
-            isRSVPLoading={rsvpLoading.has(featuredEvent.id)}
-            currentUser={user}
-          />
-        </div>
-      )}
-
-      {/* Events List */}
-      {loading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-48 w-full rounded-lg" />
-          <Skeleton className="h-48 w-full rounded-lg" />
-          <Skeleton className="h-48 w-full rounded-lg" />
-        </div>
-      ) : remainingEvents.length > 0 ? (
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-foreground">More Events</h3>
-          {remainingEvents.map((event) => (
-            <EventCard 
-              key={event.id} 
-              event={event} 
-              onLike={handleLike}
-              onComment={handleComment}
-              onShare={handleShare}
-              onClick={handleEventClick}
-              onRSVP={handleRSVP}
-              isRSVPLoading={rsvpLoading.has(event.id)}
-              currentUser={user}
-            />
+  if (loading) {
+    return (
+      <div className={cn("p-4 space-y-6", className)}>
+        <Skeleton className="h-[280px] sm:h-[330px] w-full rounded-[28px]" style={{ background: "#1E2126" }} />
+        <Skeleton className="h-8 w-32" style={{ background: "#1E2126" }} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[200px] rounded" style={{ background: "#1E2126" }} />
           ))}
         </div>
-      ) : filteredEvents.length === 0 ? (
-        <EmptyEvents />
-      ) : null}
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-8 w-20 flex-shrink-0 rounded-md" style={{ background: "#1E2126" }} />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-[400px] rounded-[11px]" style={{ background: "#1E2126" }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-      {/* Floating Create Button */}
-      <div className="fixed bottom-20 right-4 z-50">
+  return (
+    <div className={cn("p-3 sm:p-4 md:p-6 space-y-6 md:space-y-8 pb-20 lg:pb-8", className)}>
+      {/* Picked for You */}
+      <section className="space-y-3 sm:space-y-4">
+        <h2
+          className="text-lg sm:text-[18px] leading-8 text-white"
+          style={{ fontFamily: '"Pacifico", cursive' }}
+        >
+          Picked for You
+        </h2>
+        {pickedForYou.length === 0 ? (
+          <div
+            className="rounded-[28px] h-[220px] sm:h-[280px] md:h-[330px] flex flex-col items-center justify-center gap-3 px-6"
+            style={{ background: "#1E2126" }}
+          >
+            <CalendarDays className="w-12 h-12 text-white/30" aria-hidden />
+            <p className="text-white/70 font-raleway text-sm text-center">No events picked for you yet</p>
+            <p className="text-white/50 font-raleway text-xs text-center max-w-[240px]">Create an event or check back later for recommendations.</p>
+          </div>
+        ) : (
+          <>
+            <Carousel
+              opts={{ align: "center", loop: true }}
+              className="w-full"
+              setApi={setCarouselApi}
+            >
+              <CarouselContent className="-ml-2 sm:-ml-4">
+                {pickedForYou.map((event) => (
+                  <CarouselItem
+                    key={event.id}
+                    className="pl-2 sm:pl-4 basis-full sm:basis-[85%] md:basis-[75%] lg:basis-[70%]"
+                  >
+                    <div
+                      className="relative w-full rounded-[28px] overflow-hidden aspect-[820/330] max-h-[280px] sm:max-h-[330px] bg-[#1E2126]"
+                      onClick={() => router.push(`/posts/${event.id}`)}
+                    >
+                      <Image
+                        src={event.image_urls?.[0] || event.image_url || "/placeholder.svg"}
+                        alt={event.title || "Event"}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 75vw"
+                      />
+                      <div
+                        className="absolute inset-0 rounded-[28px]"
+                        style={{
+                          background: "rgba(56,56,56,0.43)",
+                          backdropFilter: "blur(8.4px)",
+                        }}
+                      />
+                      <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 md:p-8">
+                        <h3 className="font-raleway font-extrabold text-lg sm:text-[23px] text-white mb-2">
+                          {event.title || "Event"}
+                        </h3>
+                        <div className="flex flex-wrap items-center gap-3 text-white/90 text-xs sm:text-[13px] font-raleway">
+                          <span className="flex items-center gap-1">
+                            <CalendarDays className="w-4 h-4" />
+                            {formatEventDateTime(event.event_date, event.event_time)}
+                          </span>
+                          <span className="flex items-center gap-1 truncate">
+                            <MapPin className="w-4 h-4 flex-shrink-0" />
+                            {getLocation(event) || "TBD"}
+                          </span>
+                        </div>
+                        <Button
+                          className="mt-4 w-full sm:w-auto sm:min-w-[180px] rounded-full font-raleway font-medium text-sm text-white border border-white/80"
+                          style={{ background: "#388E3C" }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRSVP(event.id);
+                          }}
+                          disabled={rsvpLoading.has(event.id)}
+                        >
+                          Get Ticket
+                        </Button>
+                      </div>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+            {pickedForYou.length > 1 && (
+              <div className="flex justify-center gap-1.5">
+                {pickedForYou.map((_, i) => (
+                  <button
+                    key={i}
+                    aria-label={`Slide ${i + 1}`}
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full transition",
+                      i === carouselIndex ? "bg-[#388E3C]" : "bg-[#D9D9D9]"
+                    )}
+                    onClick={() => carouselApi?.scrollTo(i)}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </section>
+
+      {/* Events in your Area */}
+      <section className="space-y-3 sm:space-y-4">
+        <div className="flex items-center justify-between">
+          <h2
+            className="text-lg sm:text-[18px] leading-8 text-white"
+            style={{ fontFamily: '"Pacifico", cursive' }}
+          >
+            Events in your Area
+          </h2>
+          <Link
+            href="/events"
+            className="font-raleway font-medium text-xs text-[#1976D2] hover:underline flex-shrink-0"
+          >
+            See all
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          {inYourArea.map((event) => (
+            <div
+              key={event.id}
+              className="rounded overflow-hidden cursor-pointer transition hover:opacity-95"
+              style={{ background: "#1E2126" }}
+              onClick={() => router.push(`/posts/${event.id}`)}
+            >
+              <div className="p-3 flex gap-2">
+                <div className="w-14 h-14 rounded flex-shrink-0 bg-[#15181D] overflow-hidden">
+                  <Image
+                    src={event.image_urls?.[0] || event.image_url || "/placeholder.svg"}
+                    alt=""
+                    width={56}
+                    height={56}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-raleway font-medium italic text-xs sm:text-[13px] text-white truncate">
+                    {event.title || "Event"}
+                  </p>
+                  <p className="font-raleway text-[9px] sm:text-[9px] text-white/80 mt-0.5">
+                    {formatEventDate(event.event_date)}
+                  </p>
+                  <div className="flex items-center gap-1 mt-1 text-white/70">
+                    <MapPin className="w-3 h-3 flex-shrink-0" />
+                    <span className="font-raleway text-[9px] sm:text-[11px] truncate">
+                      {getLocation(event) || event.text?.slice(0, 30) || "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="px-3 pb-3 pt-0 border-t border-white/10">
+                <p className="font-raleway text-[9px] text-white/60 mb-2">
+                  {event.attendees?.length || 0} are interested
+                </p>
+                <Button
+                  size="sm"
+                  className="w-full rounded-[15px] font-raleway text-[11px] text-white"
+                  style={{ background: "#388E3C" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRSVP(event.id);
+                  }}
+                  disabled={rsvpLoading.has(event.id)}
+                >
+                  I&apos;m Interested
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Sort buttons - horizontal scroll on mobile */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <button
+          onClick={() => setSortBy("all")}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2 rounded-md font-raleway text-[10px] sm:text-xs flex-shrink-0",
+            sortBy === "all" ? "bg-white text-black" : "border border-white/50 text-white"
+          )}
+        >
+          All Events
+          <ChevronDown className="w-3 h-3" />
+        </button>
+        <button
+          onClick={() => setSortBy("price")}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2 rounded-md font-raleway text-[10px] sm:text-xs flex-shrink-0",
+            sortBy === "price" ? "bg-white text-black" : "border border-white/50 text-white"
+          )}
+        >
+          Price
+          <ChevronDown className="w-3 h-3" />
+        </button>
+        <button
+          onClick={() => setSortBy("date")}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2 rounded-md font-raleway text-[10px] sm:text-xs flex-shrink-0",
+            sortBy === "date" ? "bg-white text-black" : "border border-white/50 text-white"
+          )}
+        >
+          Date
+          <ChevronDown className="w-3 h-3" />
+        </button>
+        <button className="flex items-center gap-1.5 px-3 py-2 rounded-md font-raleway text-[10px] sm:text-xs flex-shrink-0 bg-white text-black">
+          State
+          <ChevronDown className="w-3 h-3" />
+        </button>
+      </div>
+
+      {/* Mainstream Events */}
+      <section className="space-y-4">
+        <h2
+          className="text-lg sm:text-[18px] leading-8 text-white"
+          style={{ fontFamily: '"Pacifico", cursive' }}
+        >
+          Mainstream Events
+        </h2>
+        {mainstream.length === 0 ? (
+          <div
+            className="rounded-[11px] py-16 px-6 flex flex-col items-center justify-center gap-3"
+            style={{ background: "#1E2126" }}
+          >
+            <CalendarDays className="w-14 h-14 text-white/30" aria-hidden />
+            <p className="text-white/70 font-raleway text-sm text-center">No events yet</p>
+            <p className="text-white/50 font-raleway text-xs text-center max-w-[280px]">Be the first to create an event in your neighborhood.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {mainstream.map((event) => (
+              <div
+                key={event.id}
+                className="rounded-[11px] overflow-hidden cursor-pointer transition hover:opacity-95"
+                style={{ background: "#1E2126" }}
+                onClick={() => router.push(`/posts/${event.id}`)}
+              >
+                <div className="p-4 sm:p-5">
+                  {event.author_name && (
+                    <div className="flex items-center gap-2 mb-3">
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={event.author_image} />
+                        <AvatarFallback className="bg-[#388E3C] text-white text-xs">
+                          {event.author_name?.slice(0, 1)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-raleway font-bold text-sm text-white">
+                          {event.author_name}
+                        </p>
+                        <p className="font-raleway text-[11px] text-white/60">
+                          {timeAgo(event.timestamp ? new Date(event.timestamp) : null)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <h3 className="font-raleway font-extrabold text-base sm:text-lg text-white mb-3">
+                    {event.title || "Event"}
+                  </h3>
+                  <div className="relative w-full aspect-[434/262] rounded-[15px] overflow-hidden bg-[#15181D] mb-4">
+                    <Image
+                      src={event.image_urls?.[0] || event.image_url || "/placeholder.svg"}
+                      alt={event.title || "Event"}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                  <div className="space-y-2 text-white/90 font-raleway text-[13px]">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="w-4 h-4 flex-shrink-0" />
+                      {formatEventDateTime(event.event_date, event.event_time)}
+                    </div>
+                    <div className="flex items-center gap-2 truncate">
+                      <MapPin className="w-4 h-4 flex-shrink-0" />
+                      {getLocation(event) || "TBD"}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between mt-4">
+                    <span className="font-raleway font-bold text-xl sm:text-2xl text-[#388E3C]">
+                      {formatPrice(event.price)}
+                    </span>
+                    <button
+                      className="p-2 text-white hover:bg-white/10 rounded-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (navigator.share) {
+                          navigator.share({
+                            title: event.title || "Event",
+                            url: window.location.origin + `/posts/${event.id}`,
+                          });
+                        } else {
+                          navigator.clipboard.writeText(window.location.origin + `/posts/${event.id}`);
+                          toast({ title: "Link copied" });
+                        }
+                      }}
+                    >
+                      <Share2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Floating Create - mobile friendly */}
+      <div className="fixed bottom-20 right-4 z-40 lg:bottom-6">
         <CreateEventDialog>
           <Button
-            size="lg" 
-            className="rounded-full h-14 w-14 shadow-lg yrdly-gradient p-0"
+            size="lg"
+            className="rounded-full h-12 w-12 sm:h-14 sm:w-14 shadow-lg p-0"
+            style={{ background: "#388E3C" }}
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="h-6 w-6 text-white" />
           </Button>
         </CreateEventDialog>
       </div>

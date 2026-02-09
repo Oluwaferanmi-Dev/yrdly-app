@@ -32,7 +32,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { PlusCircle, X } from "lucide-react";
+import { PlusCircle, X, Ticket } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useState, useEffect, memo, useCallback, useMemo } from "react";
@@ -42,6 +42,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { usePosts } from "@/hooks/use-posts";
 import type { Post } from "@/types";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
+
+const inputBase = "bg-[#15181D] border border-[#388E3C] text-white placeholder:text-white/70 placeholder:italic font-raleway text-xs focus-visible:ring-[#388E3C] focus-visible:ring-offset-0";
+const labelClass = "font-raleway font-semibold text-xs text-white";
+const pointerClass = "w-2 h-2 border-b border-l border-[#388E3C] rounded-bl-md flex-shrink-0 mt-1.5";
 
 const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
   title: z.string().min(1, "Event title can't be empty.").max(100),
@@ -50,8 +55,11 @@ const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
     message: "Location is required.",
   }),
   eventDateTime: z.string().min(1, "Date and time are required."),
-  eventLink: z.string().url("Please enter a valid URL.").min(1, "Event link is required."),
-  image: z.any().refine((files) => files && (files.length > 0 || (Array.isArray(files) && files.some(f => typeof f === 'string'))), "An image is required for the event."),
+  eventLink: z.union([z.string().url("Please enter a valid URL."), z.literal("")]).optional(),
+  image: z.any().refine((files) => {
+    if (isEditMode && postToEdit?.image_urls?.length) return true;
+    return files && ((typeof FileList !== "undefined" && files instanceof FileList && files.length > 0) || (Array.isArray(files) && files.some(f => typeof f === "string")));
+  }, "An image is required for the event."),
 });
 
 type CreateEventDialogProps = {
@@ -165,7 +173,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
         event_location: values.location,
         event_date: eventDate,
         event_time: eventTime,
-        event_link: values.eventLink,
+        event_link: values.eventLink || undefined,
         attendees: postToEdit?.attendees || [],
         image_urls: filteredImageUrls,
     };
@@ -190,6 +198,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
     
     if (!newOpenState) {
       form.reset();
+      setRemovedImageIndexes([]);
     }
   }, [onOpenChange, externalOpen, form]);
 
@@ -217,160 +226,191 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
   });
   Trigger.displayName = "Trigger";
 
+  const headerBlock = (
+    <div className="flex items-start justify-between gap-4 p-5 sm:p-6 pb-2 flex-shrink-0">
+      <div>
+        <h2 className="text-lg font-normal text-white" style={{ fontFamily: '"Pacifico", cursive' }}>
+          {finalTitle}
+        </h2>
+        <p className="font-raleway font-light italic text-xs text-white/90 mt-0.5">{finalDescription}</p>
+      </div>
+      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(118.99deg, #FF0048 17.37%, #7D00D0 85.3%)" }}>
+        <Ticket className="w-5 h-5 text-white" />
+      </div>
+    </div>
+  );
+
+  const formContent = (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 min-h-0">
+          <div className="space-y-4 max-w-4xl mx-auto">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem className="space-y-1.5">
+                  <div className="flex items-start gap-2">
+                    <div className={pointerClass} />
+                    <FormLabel className={labelClass}>Event Title</FormLabel>
+                  </div>
+                  <FormControl>
+                    <Input placeholder="e.g Neighborhood Block Party" className={cn(inputBase, "rounded-full h-10")} {...field} />
+                  </FormControl>
+                  <FormMessage className="text-red-400 text-xs" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem className="space-y-1.5">
+                  <div className="flex items-start gap-2">
+                    <div className={pointerClass} />
+                    <FormLabel className={labelClass}>Description</FormLabel>
+                  </div>
+                  <FormControl>
+                    <Textarea placeholder="Tell everyone about your event" className={cn(inputBase, "rounded-xl resize-none min-h-[100px]")} {...field} />
+                  </FormControl>
+                  <FormMessage className="text-red-400 text-xs" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem className="space-y-1.5">
+                  <div className="flex items-start gap-2">
+                    <div className={pointerClass} />
+                    <FormLabel className={labelClass}>Location</FormLabel>
+                  </div>
+                  <FormControl>
+                    <div className={cn("[&_input]:bg-[#15181D] [&_input]:border-[#388E3C] [&_input]:rounded-full [&_input]:text-white [&_input]:placeholder:text-white/70 [&_input]:h-10")}>
+                      <LocationInput name={field.name} control={form.control} defaultValue={field.value} />
+                    </div>
+                  </FormControl>
+                  <FormMessage className="text-red-400 text-xs" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="eventDateTime"
+              render={({ field }) => (
+                <FormItem className="space-y-1.5">
+                  <div className="flex items-start gap-2">
+                    <div className={pointerClass} />
+                    <FormLabel className={labelClass}>Date & Time</FormLabel>
+                  </div>
+                  <FormControl>
+                    <Input type="datetime-local" min={new Date().toISOString().slice(0, 16)} className={cn(inputBase, "rounded-full h-10")} {...field} />
+                  </FormControl>
+                  <FormMessage className="text-red-400 text-xs" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="eventLink"
+              render={({ field }) => (
+                <FormItem className="space-y-1.5">
+                  <div className="flex items-start gap-2">
+                    <div className={pointerClass} />
+                    <FormLabel className={labelClass}>Event Link</FormLabel>
+                  </div>
+                  <FormControl>
+                    <Input placeholder="Link to tickets or more info" className={cn(inputBase, "rounded-full h-10")} {...field} />
+                  </FormControl>
+                  <FormMessage className="text-red-400 text-xs" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="image"
+              render={({ field: { onChange, value, ...rest } }) => (
+                <FormItem className="space-y-1.5">
+                  <div className="flex items-start gap-2">
+                    <div className={pointerClass} />
+                    <FormLabel className={labelClass}>Event Image</FormLabel>
+                  </div>
+                  <FormControl>
+                    <label className={cn("flex items-center gap-2 rounded-[5px] border border-[#388E3C] bg-[#15181D] px-4 py-3 cursor-pointer text-white font-raleway text-xs font-semibold italic")}>
+                      <span>Choose Files</span>
+                      <span className="font-normal text-white/70">
+                        {value && value.length > 0 ? `${value.length} file(s)` : "No file chosen"}
+                      </span>
+                      <input type="file" accept="image/*" multiple className="sr-only" onChange={(e) => onChange(e.target.files ?? undefined)} {...rest} />
+                    </label>
+                  </FormControl>
+                  {(value && value.length > 0) || (postToEdit?.image_urls && postToEdit.image_urls.filter((_, i) => !removedImageIndexes.includes(i)).length > 0) ? (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {postToEdit?.image_urls?.map((url, index) => {
+                        if (removedImageIndexes.includes(index)) return null;
+                        return (
+                          <div key={`url-${index}`} className="relative w-14 h-14 rounded overflow-hidden bg-[#15181D] flex-shrink-0">
+                            <Image src={url} alt="" width={56} height={56} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              className="absolute top-0 right-0 w-5 h-5 rounded-full flex items-center justify-center bg-[#FF383C] border border-white"
+                              onClick={() => setRemovedImageIndexes((prev) => [...prev, index])}
+                            >
+                              <X className="w-3 h-3 text-white" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                      {value && Array.from(value).map((file, index) => (
+                        <div key={`file-${index}`} className="relative w-14 h-14 rounded overflow-hidden bg-[#15181D] flex-shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- blob URL from file input */}
+                          <img src={URL.createObjectURL(file as File)} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            className="absolute top-0 right-0 w-5 h-5 rounded-full flex items-center justify-center bg-[#FF383C] border border-white"
+                            onClick={() => {
+                              const dt = new DataTransfer();
+                              Array.from(value).forEach((f, i) => { if (i !== index) dt.items.add(f as File); });
+                              onChange(dt.files.length ? dt.files : undefined);
+                            }}
+                          >
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  <FormMessage className="text-red-400 text-xs" />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+        <div className="p-5 sm:p-6 pt-0 flex-shrink-0">
+          <Button
+            type="submit"
+            className="w-full rounded-full h-12 font-raleway font-medium text-sm text-white"
+            style={{ background: "#388E3C" }}
+            disabled={loading}
+          >
+            {loading ? (isEditMode ? "Saving..." : "Creating...") : (isEditMode ? "Save Changes" : "Create Event")}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
 
   if (isMobile) {
     return (
-        <Sheet open={open} onOpenChange={handleOpenChange}>
-            <SheetTrigger asChild>{children ? children : <Trigger />}</SheetTrigger>
-            <SheetContent side="bottom" className="p-0 flex flex-col h-[90vh] max-h-screen">
-                <SheetHeader className="p-4 border-b flex-shrink-0">
-                    <SheetTitle>{finalTitle}</SheetTitle>
-                    <DialogDescription>{finalDescription}</DialogDescription>
-                </SheetHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-                    <div className="flex-1 overflow-y-auto p-4">
-                        <div className="space-y-4 px-1 pb-4">
-                            <FormField
-                                control={form.control}
-                                name="title"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Event Title</FormLabel>
-                                    <FormControl><Input placeholder="e.g. Neighborhood Block Party" {...field} /></FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            <FormField
-                              control={form.control}
-                              name="description"
-                              render={({ field }) => (
-                                <FormItem>
-                                   <FormLabel>Description</FormLabel>
-                                  <FormControl><Textarea placeholder="Tell everyone about your event..." className="resize-none min-h-[100px]" {...field} /></FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="location"
-                              render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Location</FormLabel>
-                                    <FormControl>
-                                        <LocationInput
-                                            name={field.name}
-                                            control={form.control}
-                                            defaultValue={field.value}
-                                        />
-                                    </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="eventDateTime"
-                                render={({ field }) => (
-                                  <FormItem>
-                                     <FormLabel>Date & Time</FormLabel>
-                                    <FormControl>
-                                        <Input 
-                                            type="datetime-local" 
-                                            {...field}
-                                            min={new Date().toISOString().slice(0, 16)}
-                                        />
-                                    </FormControl>
-                                     <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            <FormField
-                                control={form.control}
-                                name="eventLink"
-                                render={({ field }) => (
-                                    <FormItem>
-                                         <FormLabel>Event Link</FormLabel>
-                                        <FormControl><Input placeholder="Link to tickets or more info" {...field} /></FormControl>
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="image"
-                              render={({ field: { onChange, value, ...rest }}) => (
-                                <FormItem>
-                                  <FormLabel>Event Image</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      type="file"
-                                      accept="image/*"
-                                      multiple
-                                      onChange={(e) => onChange(e.target.files)}
-                                      {...rest}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
-                                <div className="space-y-3">
-                                    <div className="text-sm text-muted-foreground">
-                                        Current images ({postToEdit.image_urls.length}):
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {postToEdit.image_urls.map((url, index) => {
-                                            const isRemoved = removedImageIndexes.includes(index);
-                                            return (
-                                                <div key={index} className={`relative group ${isRemoved ? 'opacity-50' : ''}`}>
-                                                    <Image
-                                                        src={url}
-                                                        alt={`Current image ${index + 1}`}
-                                                        width={100}
-                                                        height={100}
-                                                        className="w-full h-20 object-cover rounded-lg"
-                                                    />
-                                                    {!isRemoved && (
-                                                        <Button
-                                                            type="button"
-                                                            variant="destructive"
-                                                            size="icon"
-                                                            className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                            onClick={() => {
-                                                                setRemovedImageIndexes(prev => [...prev, index]);
-                                                            }}
-                                                        >
-                                                            <X className="h-3 w-3" />
-                                                        </Button>
-                                                    )}
-                                                    {isRemoved && (
-                                                        <div className="absolute inset-0 bg-red-500/20 rounded-lg flex items-center justify-center">
-                                                            <X className="h-6 w-6 text-red-500" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                        Upload more images to add to the list.
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <SheetFooter className="p-4 border-t flex-shrink-0">
-                        <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                            {loading ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Event')}
-                        </Button>
-                    </SheetFooter>
-                  </form>
-                </Form>
-            </SheetContent>
-        </Sheet>
-    )
+      <Sheet open={open} onOpenChange={handleOpenChange}>
+        <SheetTrigger asChild>{children ? children : <Trigger />}</SheetTrigger>
+        <SheetContent side="bottom" className="p-0 flex flex-col h-[90vh] max-h-screen rounded-t-[11px] border border-[#BBBBBB] border-b-0 bg-[#1E2126] text-white [&>button]:text-white [&>button]:opacity-90">
+          {headerBlock}
+          {formContent}
+        </SheetContent>
+      </Sheet>
+    );
   }
 
   return (
@@ -378,152 +418,9 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
       {externalOpen === undefined && (
         <DialogTrigger asChild>{children ? children : <Trigger />}</DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-[600px] lg:max-w-[700px] xl:max-w-[800px] p-0 flex flex-col max-h-[90vh]">
-        <DialogHeader className="p-6 pb-0 flex-shrink-0">
-          <DialogTitle>{finalTitle}</DialogTitle>
-          <DialogDescription>{finalDescription}</DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto p-6 min-h-0">
-                <div className="space-y-4 px-1 pb-4 max-w-4xl mx-auto">
-                    <FormField
-                        control={form.control}
-                        name="title"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Event Title</FormLabel>
-                            <FormControl><Input placeholder="e.g. Neighborhood Block Party" {...field} /></FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                           <FormLabel>Description</FormLabel>
-                          <FormControl><Textarea placeholder="Tell everyone about your event..." className="resize-none min-h-[100px]" {...field} /></FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Location</FormLabel>
-                            <FormControl>
-                                <LocationInput
-                                    name={field.name}
-                                    control={form.control}
-                                    defaultValue={field.value}
-                                />
-                            </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="eventDateTime"
-                        render={({ field }) => (
-                          <FormItem>
-                             <FormLabel>Date & Time</FormLabel>
-                            <FormControl>
-                                <Input 
-                                    type="datetime-local" 
-                                    {...field}
-                                    min={new Date().toISOString().slice(0, 16)}
-                                />
-                            </FormControl>
-                             <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    <FormField
-                        control={form.control}
-                        name="eventLink"
-                        render={({ field }) => (
-                            <FormItem>
-                                 <FormLabel>Event Link</FormLabel>
-                                <FormControl><Input placeholder="Link to tickets or more info" {...field} /></FormControl>
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="image"
-                      render={({ field: { onChange, value, ...rest }}) => (
-                        <FormItem>
-                          <FormLabel>Event Image</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="file"
-                              accept="image/*"
-                              multiple
-                              onChange={(e) => onChange(e.target.files)}
-                              {...rest}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
-                        <div className="space-y-3">
-                            <div className="text-sm text-muted-foreground">
-                                Current images ({postToEdit.image_urls.length}):
-                            </div>
-                            <div className="grid grid-cols-3 gap-2">
-                                {postToEdit.image_urls.map((url, index) => {
-                                    const isRemoved = removedImageIndexes.includes(index);
-                                    return (
-                                        <div key={index} className={`relative group ${isRemoved ? 'opacity-50' : ''}`}>
-                                            <Image
-                                                src={url}
-                                                alt={`Current image ${index + 1}`}
-                                                width={100}
-                                                height={100}
-                                                className="w-full h-20 object-cover rounded-lg"
-                                            />
-                                            {!isRemoved && (
-                                                <Button
-                                                    type="button"
-                                                    variant="destructive"
-                                                    size="icon"
-                                                    className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    onClick={() => {
-                                                        setRemovedImageIndexes(prev => [...prev, index]);
-                                                    }}
-                                                >
-                                                    <X className="h-3 w-3" />
-                                                </Button>
-                                            )}
-                                            {isRemoved && (
-                                                <div className="absolute inset-0 bg-red-500/20 rounded-lg flex items-center justify-center">
-                                                    <X className="h-6 w-6 text-red-500" />
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                                Upload more images to add to the list.
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-            <DialogFooter className="p-6 pt-0 border-t flex-shrink-0">
-              <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                {loading ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Event')}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+      <DialogContent className={cn("sm:max-w-[626px] p-0 flex flex-col max-h-[90vh] border border-[#BBBBBB] rounded-[11px] bg-[#1E2126] text-white gap-0 [&>button]:text-white [&>button]:right-4 [&>button]:top-4")}>
+        {headerBlock}
+        {formContent}
       </DialogContent>
     </Dialog>
   );

@@ -25,7 +25,8 @@ import {
     MoreHorizontal, 
     Heart,
     Trash2,
-    Edit2
+    Edit2,
+    MessageCircle
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -52,9 +53,13 @@ interface CommentSectionProps {
     author?: User | null;
     onCommentCountChange?: (count: number) => void;
     onClose?: () => void;
+    /** Inline variant: no sheet, dark theme, input above comments (post detail page) */
+    variant?: "default" | "inline";
+    /** Hide the post preview block (use when full post is shown above) */
+    hidePostPreview?: boolean;
 }
 
-export function CommentSection({ postId, post, author, onCommentCountChange, onClose }: CommentSectionProps) {
+export function CommentSection({ postId, post, author, onCommentCountChange, onClose, variant = "default", hidePostPreview }: CommentSectionProps) {
     const { user: currentUser, profile: userDetails, loading } = useAuth();
     const { toast } = useToast();
     const inputRef = useRef<HTMLInputElement>(null);
@@ -114,6 +119,14 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
                     }
                 });
                 setLikedComments(liked);
+
+                // Sync comment count with parent (and fix drift: update post row if stored count differs)
+                const actualCount = mappedComments.length;
+                onCommentCountChange?.(actualCount);
+                const { data: postRow } = await supabase.from('posts').select('comment_count').eq('id', postId).single();
+                if (postRow && (postRow.comment_count ?? 0) !== actualCount) {
+                    await supabase.from('posts').update({ comment_count: actualCount }).eq('id', postId);
+                }
             }
         };
         
@@ -176,7 +189,17 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [postId, currentUser]);
+    }, [postId, currentUser, onCommentCountChange]);
+
+    // Keep parent comment count in sync when comments list changes (realtime or local); skip initial mount to avoid flashing 0
+    const isFirstCommentSync = useRef(true);
+    useEffect(() => {
+        if (isFirstCommentSync.current) {
+            isFirstCommentSync.current = false;
+            return;
+        }
+        onCommentCountChange?.(comments.length);
+    }, [comments.length, onCommentCountChange]);
 
     // Focus input when replying
     useEffect(() => {
@@ -429,26 +452,27 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
         const showReplies = expandedReplies.has(comment.id);
         const isLiked = likedComments.has(comment.id);
         const likeCount = comment.reactions?.['❤️']?.length || 0;
+        const dark = variant === "inline";
 
         return (
-            <div key={comment.id} className={cn("flex gap-3 py-2", isReply && "ml-11")}>
-                <Avatar className="h-8 w-8 flex-shrink-0">
+            <div key={comment.id} className={cn("flex gap-3 py-2", isReply && "ml-6", dark && isReply && "border-l-2 border-[#388E3C] pl-3")}>
+                <Avatar className={cn("h-8 w-8 flex-shrink-0", dark && "ring-1 ring-white/10")}>
                     <AvatarImage src={comment.authorImage} />
-                    <AvatarFallback className="text-xs">{comment.authorName?.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className={cn("text-xs", dark && "bg-[#388E3C] text-white")}>{comment.authorName?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-2">
                         <div className="flex-1 min-w-0">
                             <div className="flex items-baseline gap-2 flex-wrap">
-                                <span className="font-semibold text-sm">{comment.authorName}</span>
-                                <span className="text-sm">{comment.text}</span>
+                                <span className={cn("font-semibold text-sm", dark && "text-white")}>{comment.authorName}</span>
+                                <span className={cn("text-sm", dark && "text-white/90")}>{comment.text}</span>
                             </div>
                             <div className="flex items-center gap-4 mt-1">
-                                <span className="text-xs text-muted-foreground">{timeAgo(new Date(comment.timestamp))}</span>
+                                <span className={cn("text-xs", dark ? "text-white/60" : "text-muted-foreground")}>{timeAgo(new Date(comment.timestamp))}</span>
                                 {!isReply && (
                                     <button
                                         onClick={() => setReplyingTo(comment.id)}
-                                        className="text-xs text-muted-foreground hover:text-foreground font-medium"
+                                        className={cn("text-xs font-medium", dark ? "text-white/70 hover:text-white" : "text-muted-foreground hover:text-foreground")}
                                     >
                                         Reply
                                     </button>
@@ -457,15 +481,12 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
                                     <AlertDialog>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <button className="text-xs text-muted-foreground hover:text-foreground">
+                                                <button className={cn("text-xs", dark ? "text-white/70 hover:text-white" : "text-muted-foreground hover:text-foreground")}>
                                                     <MoreHorizontal className="h-3 w-3" />
                                                 </button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => {
-                                                    setEditingComment(comment.id);
-                                                    setEditText(comment.text);
-                                                }}>
+                                            <DropdownMenuContent align="end" className={dark ? "bg-[#1E2126] border-white/10" : undefined}>
+                                                <DropdownMenuItem onClick={() => { setEditingComment(comment.id); setEditText(comment.text); }}>
                                                     <Edit2 className="mr-2 h-4 w-4" />
                                                     <span>Edit</span>
                                                 </DropdownMenuItem>
@@ -477,49 +498,38 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
                                                 </AlertDialogTrigger>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
-                                        <AlertDialogContent>
+                                        <AlertDialogContent className={dark ? "bg-[#1E2126] border-white/10 text-white" : undefined}>
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    This action cannot be undone. This will permanently delete your comment.
-                                                </AlertDialogDescription>
+                                                <AlertDialogDescription>This action cannot be undone. This will permanently delete your comment.</AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                <AlertDialogAction 
-                                                    onClick={() => handleDeleteComment(comment.id)} 
-                                                    className="bg-destructive hover:bg-destructive/90"
-                                                >
-                                                    Delete
-                                                </AlertDialogAction>
+                                                <AlertDialogAction onClick={() => handleDeleteComment(comment.id)} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
                                 )}
                             </div>
                         </div>
-                        <div className="flex items-center flex-shrink-0 mt-1">
-                            <button
-                                onClick={() => handleLikeComment(comment.id)}
-                            >
-                                <Heart 
-                                    className={cn(
-                                        "h-4 w-4 transition-colors",
-                                        isLiked ? "text-red-500 fill-current" : "text-muted-foreground"
-                                    )} 
-                                />
+                        <div className="flex items-center gap-2 flex-shrink-0 mt-1">
+                            <button onClick={() => handleLikeComment(comment.id)}>
+                                <Heart className={cn("h-4 w-4 transition-colors", isLiked ? "text-red-500 fill-current" : dark ? "text-white/70" : "text-muted-foreground")} />
                             </button>
-                            {likeCount > 0 && (
-                                <span className="text-xs font-semibold text-foreground ml-0.5">{likeCount}</span>
+                            {likeCount > 0 && <span className={cn("text-xs font-semibold", dark ? "text-white/90" : "text-foreground")}>{likeCount}</span>}
+                            {!isReply && hasReplies && (
+                                <span className={cn("text-xs", dark ? "text-white/60" : "text-muted-foreground")}>
+                                    {replies.length}
+                                </span>
                             )}
                         </div>
                     </div>
                     {hasReplies && !isReply && (
                         <button
                             onClick={() => toggleReplies(comment.id)}
-                            className="text-xs text-muted-foreground hover:text-foreground mt-2 font-medium"
+                            className={cn("text-xs font-medium mt-2 block", dark ? "text-white/80 italic hover:text-white" : "text-muted-foreground hover:text-foreground")}
                         >
-                            {showReplies ? 'Hide' : 'View'} {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
+                            {showReplies ? "Hide" : "View"} {replies.length === 1 ? "reply" : "replies"}
                         </button>
                     )}
                     {showReplies && hasReplies && (
@@ -530,7 +540,7 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
                 </div>
             </div>
         );
-    }, [repliesByParent, expandedReplies, likedComments, currentUser, timeAgo, handleLikeComment, handleDeleteComment, toggleReplies, setReplyingTo]);
+    }, [repliesByParent, expandedReplies, likedComments, currentUser, timeAgo, handleLikeComment, handleDeleteComment, toggleReplies, setReplyingTo, variant]);
 
     if (isAuthLoading) {
         return (
@@ -548,10 +558,51 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
         );
     }
 
+    const isInline = variant === "inline";
+    const inputBlock = (
+        <div className={cn("flex-shrink-0", isInline ? "p-4 pb-2" : "p-4 border-t bg-background safe-area-bottom")}>
+            {replyingTo && (
+                <div className={cn("mb-2 flex items-center justify-between text-xs", isInline ? "text-white/70" : "text-muted-foreground")}>
+                    <span>Replying to {comments.find(c => c.id === replyingTo)?.authorName}</span>
+                    <button onClick={() => setReplyingTo(null)} className={isInline ? "hover:text-white" : "hover:text-foreground"}>
+                        Cancel
+                    </button>
+                </div>
+            )}
+            <form onSubmit={handlePostComment} className="flex items-center gap-3">
+                <Avatar className={cn("flex-shrink-0", isInline ? "h-9 w-9" : "h-8 w-8")}>
+                    <AvatarImage src={userDetails?.avatar_url} />
+                    <AvatarFallback className={cn("text-xs", isInline && "bg-[#388E3C] text-white")}>{userDetails?.name?.charAt(0) || "U"}</AvatarFallback>
+                </Avatar>
+                <Input
+                    ref={inputRef}
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder={replyingTo ? "Add a reply..." : "Leave a comment"}
+                    className={cn(
+                        "flex-1 font-raleway",
+                        isInline
+                            ? "h-10 bg-[#15181D] border-[#388E3C] rounded-full text-white placeholder:text-white/70 focus-visible:ring-[#388E3C]"
+                            : "h-9"
+                    )}
+                />
+                <Button
+                    type="submit"
+                    size="sm"
+                    disabled={!newComment.trim()}
+                    className={cn(isInline ? "rounded-full bg-[#388E3C] text-white hover:bg-[#2d7a2e]" : "text-primary hover:text-primary")}
+                    variant={isInline ? "default" : "ghost"}
+                >
+                    Post
+                </Button>
+            </form>
+        </div>
+    );
+
     return (
-        <div className="flex flex-col h-full min-h-0">
-            {/* Post Preview */}
-            {post && author && (
+        <div className={cn("flex flex-col min-h-0", isInline ? "h-auto" : "h-full")}>
+            {/* Post Preview - hidden when inline / hidePostPreview */}
+            {!hidePostPreview && post && author && (
                 <div className="p-4 border-b flex-shrink-0">
                     <div className="flex gap-3">
                         <Avatar className="h-8 w-8 flex-shrink-0">
@@ -566,69 +617,35 @@ export function CommentSection({ postId, post, author, onCommentCountChange, onC
                         </div>
                         {post.image_urls && post.image_urls.length > 0 && (
                             <div className="w-12 h-12 flex-shrink-0 rounded overflow-hidden">
-                                <Image
-                                    src={post.image_urls[0]}
-                                    alt="Post thumbnail"
-                                    width={48}
-                                    height={48}
-                                    className="w-full h-full object-cover"
-                                />
+                                <Image src={post.image_urls[0]} alt="Post thumbnail" width={48} height={48} className="w-full h-full object-cover" />
                             </div>
                         )}
                     </div>
                 </div>
             )}
 
+            {isInline && inputBlock}
+
             {/* Comments List */}
-            <div className="flex-1 overflow-y-auto px-4 py-2">
+            <div className={cn("flex-1 overflow-y-auto min-h-0", isInline ? "px-4 py-2 max-h-[60vh]" : "px-4 py-2")}>
                 {parentComments.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-8">
-                        No comments yet. Be the first to comment!
+                    <div className={cn(
+                        "text-center py-8 flex flex-col items-center gap-2",
+                        isInline ? "text-white/70 font-raleway" : "text-muted-foreground"
+                    )}>
+                        {isInline && <MessageCircle className="w-10 h-10 text-white/30 flex-shrink-0" aria-hidden />}
+                        <p className="text-sm">No comments yet.</p>
+                        <p className={cn("text-xs", isInline ? "text-white/50" : "text-muted-foreground/80")}>Be the first to comment!</p>
                     </div>
                 ) : (
-                    <div className="space-y-0">
+                    <div className={cn("space-y-0", isInline && "space-y-1")}>
                         {parentComments.map(comment => renderComment(comment))}
                     </div>
                 )}
                 <div ref={commentsEndRef} />
             </div>
 
-            {/* Fixed Input Field */}
-            <div className="p-4 border-t bg-background flex-shrink-0 safe-area-bottom">
-                {replyingTo && (
-                    <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Replying to {comments.find(c => c.id === replyingTo)?.authorName}</span>
-                        <button
-                            onClick={() => setReplyingTo(null)}
-                            className="hover:text-foreground"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                )}
-                <form onSubmit={handlePostComment} className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarImage src={userDetails?.avatar_url} />
-                        <AvatarFallback className="text-xs">{userDetails?.name?.charAt(0) || 'U'}</AvatarFallback>
-                    </Avatar>
-                    <Input
-                        ref={inputRef}
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        placeholder={replyingTo ? "Add a reply..." : "Add a comment..."}
-                        className="flex-1 h-9"
-                    />
-                    <Button
-                        type="submit"
-                        size="sm"
-                        disabled={!newComment.trim()}
-                        className="text-primary hover:text-primary"
-                        variant="ghost"
-                    >
-                        Post
-                    </Button>
-                </form>
-            </div>
+            {!isInline && inputBlock}
         </div>
     );
 }

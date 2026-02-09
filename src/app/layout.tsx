@@ -26,6 +26,8 @@ export default function RootLayout({
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        {/* Root layout: font loads for all pages. Suppress no-page-custom-font (rule targets Pages Router _document). */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
           href="https://fonts.googleapis.com/css2?family=Jersey+25&family=Pacifico&family=Raleway:ital,wght@0,300;0,400;0,500;1,300&display=swap"
           rel="stylesheet"
