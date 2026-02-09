@@ -55,9 +55,9 @@ export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
     defaultValues: {
       name: '',
       bio: '',
-      locationState: '',
-      locationLga: '',
-      locationWard: '',
+      locationState: undefined,
+      locationLga: undefined,
+      locationWard: undefined,
       interests: [],
     },
   });
@@ -83,8 +83,8 @@ export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
   useEffect(() => {
     if (selectedState) {
       setLgas(lgasByState[selectedState] || []);
-      form.setValue('locationLga', ''); // Reset LGA when state changes
-      form.setValue('locationWard', ''); // Reset ward when state changes
+      form.setValue('locationLga', undefined); // Reset LGA when state changes
+      form.setValue('locationWard', undefined); // Reset ward when state changes
     } else {
       setLgas([]);
       setWards([]);
@@ -96,7 +96,7 @@ export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
   useEffect(() => {
     if (selectedLga) {
       setWards(wardsByLga[selectedLga] || []);
-      form.setValue('locationWard', ''); // Reset ward when LGA changes
+      form.setValue('locationWard', undefined); // Reset ward when LGA changes
     } else {
       setWards([]);
     }
@@ -308,7 +308,7 @@ export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>State</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select your state" />
@@ -333,7 +333,7 @@ export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Local Government Area</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!form.watch('locationState')}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} disabled={!form.watch('locationState')}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select your LGA" />
@@ -358,7 +358,7 @@ export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Ward</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value} disabled={!form.watch('locationLga')}>
+                    <Select onValueChange={field.onChange} value={field.value || undefined} disabled={!form.watch('locationLga')}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select your ward" />

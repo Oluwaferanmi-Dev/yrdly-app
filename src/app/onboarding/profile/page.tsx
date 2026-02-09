@@ -477,7 +477,7 @@ export default function OnboardingProfilePage() {
                 <div className="space-y-2">
                   <Label htmlFor="ward">Ward (Optional)</Label>
                   <Select
-                    value={form.watch('location.ward') || ''}
+                    value={form.watch('location.ward') || undefined}
                     onValueChange={(value) => form.setValue('location.ward', value)}
                     disabled={!form.watch('location.lga') || locationLoading}
                   >
