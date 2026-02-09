@@ -424,7 +424,7 @@ export default function OnboardingProfilePage() {
                       <SelectValue placeholder={locationLoading ? "Loading states..." : "Select your state"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {states.map((state) => (
+                      {states.filter((s) => s != null && s !== '').map((state) => (
                         <SelectItem key={state} value={state}>
                           {state}
                         </SelectItem>
@@ -459,7 +459,7 @@ export default function OnboardingProfilePage() {
                       } />
                     </SelectTrigger>
                     <SelectContent>
-                      {lgas.map((lga) => (
+                      {lgas.filter((l) => l != null && l !== '').map((lga) => (
                         <SelectItem key={lga} value={lga}>
                           {lga}
                         </SelectItem>
@@ -491,7 +491,7 @@ export default function OnboardingProfilePage() {
                       } />
                     </SelectTrigger>
                     <SelectContent>
-                      {wards.map((ward) => (
+                      {wards.filter((w) => w != null && w !== '').map((ward) => (
                         <SelectItem key={ward} value={ward}>
                           {ward}
                         </SelectItem>

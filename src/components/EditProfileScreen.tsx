@@ -315,7 +315,7 @@ export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {allStates.map((state) => (
+                        {allStates.filter((s) => s != null && s !== '').map((state) => (
                           <SelectItem key={state} value={state}>
                             {state}
                           </SelectItem>
@@ -340,7 +340,7 @@ export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {lgas.map((lga) => (
+                        {lgas.filter((l) => l != null && l !== '').map((lga) => (
                           <SelectItem key={lga} value={lga}>
                             {lga}
                           </SelectItem>
@@ -365,7 +365,7 @@ export function EditProfileScreen({ onBack }: EditProfileScreenProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {wards.map((ward) => (
+                        {wards.filter((w) => w != null && w !== '').map((ward) => (
                           <SelectItem key={ward} value={ward}>
                             {ward}
                           </SelectItem>

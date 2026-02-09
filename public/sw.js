@@ -74,6 +74,10 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Only cache http/https; chrome-extension and other schemes are unsupported
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return;
+  }
   // Skip non-GET requests
   if (request.method !== 'GET') {
     return;
@@ -98,8 +102,8 @@ async function handleApiRequest(request) {
     // Try network first
     const networkResponse = await fetch(request);
     
-    // Cache successful responses
-    if (networkResponse.ok) {
+    // Cache successful responses (only http/https)
+    if (networkResponse.ok && (request.url.startsWith('http:') || request.url.startsWith('https:'))) {
       const cache = await caches.open(DATA_CACHE);
       cache.put(request, networkResponse.clone());
     }
@@ -138,7 +142,7 @@ async function handleStaticRequest(request) {
   
   try {
     const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
+    if (networkResponse.ok && (request.url.startsWith('http:') || request.url.startsWith('https:'))) {
       const cache = await caches.open(STATIC_CACHE);
       cache.put(request, networkResponse.clone());
     }
@@ -156,7 +160,7 @@ async function handleStaticRequest(request) {
 async function handlePageRequest(request) {
   try {
     const networkResponse = await fetch(request);
-    if (networkResponse.ok) {
+    if (networkResponse.ok && (request.url.startsWith('http:') || request.url.startsWith('https:'))) {
       const cache = await caches.open(STATIC_CACHE);
       cache.put(request, networkResponse.clone());
     }

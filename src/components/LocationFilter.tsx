@@ -112,7 +112,7 @@ export function LocationFilter({
               <SelectValue placeholder="Select state" />
             </SelectTrigger>
             <SelectContent>
-              {states.map((s) => (
+              {states.filter((s) => s != null && s !== '').map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}
                 </SelectItem>
@@ -130,7 +130,7 @@ export function LocationFilter({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL_LGAS_VALUE}>All LGAs</SelectItem>
-                {lgas.map((l) => (
+                {lgas.filter((l) => l != null && l !== '').map((l) => (
                   <SelectItem key={l} value={l}>
                     {l}
                   </SelectItem>
@@ -149,7 +149,7 @@ export function LocationFilter({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL_WARDS_VALUE}>All Wards</SelectItem>
-                {wards.map((w) => (
+                {wards.filter((w) => w != null && w !== '').map((w) => (
                   <SelectItem key={w} value={w}>
                     {w}
                   </SelectItem>
