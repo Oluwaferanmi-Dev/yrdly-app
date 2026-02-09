@@ -1,6 +1,8 @@
-const CACHE_NAME = 'yrdly-v1';
-const STATIC_CACHE = 'yrdly-static-v1';
-const DATA_CACHE = 'yrdly-data-v1';
+// __CACHE_VERSION__ is replaced at build time so each deploy gets a fresh cache
+const CACHE_VERSION = '__CACHE_VERSION__';
+const CACHE_NAME = 'yrdly-' + CACHE_VERSION;
+const STATIC_CACHE = 'yrdly-static-' + CACHE_VERSION;
+const DATA_CACHE = 'yrdly-data-' + CACHE_VERSION;
 
 // Files to cache immediately
 const STATIC_FILES = [
