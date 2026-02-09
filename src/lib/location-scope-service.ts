@@ -53,35 +53,6 @@ export class LocationScopeService {
   }
 
   /**
-   * Build a Supabase query filter for location-based filtering
-   * Returns filter that includes:
-   * - Content matching the specified state
-   * - Grandfathered content (state IS NULL)
-   * 
-   * @param state - State to filter by (required)
-   * @param lga - Optional LGA filter
-   * @param ward - Optional ward filter
-   * @returns Supabase query filter
-   */
-  static buildLocationFilter(state?: string | null, lga?: string | null, ward?: string | null): any {
-    if (!state) {
-      // If no state specified, only show grandfathered content
-      return { state: null };
-    }
-
-    const filters: any[] = [
-      { state },
-      { state: null }, // Include grandfathered content
-    ];
-
-    // Note: Supabase doesn't support complex OR with AND conditions easily
-    // We'll handle LGA/ward filtering in the application layer if needed
-    // For now, state-level filtering is the primary requirement
-
-    return filters;
-  }
-
-  /**
    * Build a Supabase .or() filter string for location-based queries
    * This is used with .or() method: .or(`state.eq.${state},state.is.null`)
    */
