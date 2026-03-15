@@ -1,7 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { usePosts } from "@/hooks/use-posts";
@@ -9,8 +7,59 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyFeed } from "@/components/EmptyFeed";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
+import { CreateItemDialog } from "@/components/CreateItemDialog";
 import { PostCard } from "@/components/PostCard";
-import { Handshake, Ticket, MapPin } from "lucide-react";
+
+/* ─── gradient SVG icons ──────────────────────────────────────── */
+function HandshakeGradient() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 42 42" fill="none">
+      <defs>
+        <linearGradient id="hg1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="17.37%" stopColor="#FFD600" />
+          <stop offset="85.3%" stopColor="#00D078" />
+        </linearGradient>
+      </defs>
+      <path d="M6 22l5-5 4 2 5-5h4l5 5 4-2 5 5-9 7-5-3-5 3L6 22z" fill="url(#hg1)" />
+      <path d="M14 19l3 8M28 19l-3 8" stroke="url(#hg1)" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TicketGradient() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 42 42" fill="none">
+      <defs>
+        <linearGradient id="tg1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="17.37%" stopColor="#FF0048" />
+          <stop offset="85.3%" stopColor="#7D00D0" />
+        </linearGradient>
+      </defs>
+      <rect x="4" y="14" width="34" height="14" rx="3" fill="url(#tg1)" />
+      <circle cx="4" cy="21" r="4" fill="#15181D" />
+      <circle cx="38" cy="21" r="4" fill="#15181D" />
+      <line x1="18" y1="14" x2="18" y2="28" stroke="#15181D" strokeWidth="1.5" strokeDasharray="3 2" />
+    </svg>
+  );
+}
+
+function PinGradient() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 42 42" fill="none">
+      <defs>
+        <linearGradient id="pg1" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#FFE100" />
+          <stop offset="100%" stopColor="#FFF2ED" />
+        </linearGradient>
+      </defs>
+      <path d="M21 4C15.477 4 11 8.477 11 14c0 8 10 24 10 24s10-16 10-24c0-5.523-4.477-10-10-10z" fill="url(#pg1)" />
+      <circle cx="21" cy="14" r="4" fill="#15181D" />
+    </svg>
+  );
+}
+
+const FONT_RALEWAY = "Raleway, sans-serif";
+const GREEN = "#388E3C";
 
 interface HomeScreenProps {
   onViewProfile?: (user: unknown) => void;
@@ -21,92 +70,84 @@ export function HomeScreen({ onViewProfile }: HomeScreenProps) {
   const { posts, loading, deletePost, createPost } = usePosts();
 
   return (
-    <div className="w-full pb-4">
-      {/* What's going on? post bar - design #1E2126 */}
-      <Card
-        className="rounded-[11px] border-0 overflow-hidden mb-4"
-        style={{ background: "#1E2126" }}
-      >
+    <div className="w-full pb-4 space-y-3">
+      {/* ── Post Bar ── */}
+      <div className="rounded-[11px] overflow-hidden" style={{ background: "#1E2126" }}>
         <div className="p-4">
-          <div className="flex items-start gap-3">
-            <Avatar className="w-10 h-10 rounded-full flex-shrink-0">
+          {/* Input row */}
+          <div className="flex items-center gap-3">
+            <Avatar className="w-9 h-9 flex-shrink-0">
               <AvatarImage src={profile?.avatar_url || "/diverse-user-avatars.png"} />
-              <AvatarFallback className="bg-[#388E3C] text-white text-sm">
+              <AvatarFallback className="text-sm text-white" style={{ background: GREEN }}>
                 {profile?.name?.charAt(0) || "U"}
               </AvatarFallback>
             </Avatar>
             <CreatePostDialog createPost={createPost}>
-              <Button
-                variant="ghost"
-                className="flex-1 justify-start text-left h-11 rounded-full font-raleway font-light text-xs text-white hover:bg-[#15181D] border border-[#388E3C] bg-[#15181D] px-4"
-                style={{ border: "0.5px solid #388E3C" }}
+              <button
+                className="flex-1 h-10 rounded-full text-left px-4 font-raleway font-light text-[12px] text-white/70 hover:text-white transition-colors"
+                style={{ background: "#15181D", border: `0.5px solid ${GREEN}`, fontFamily: FONT_RALEWAY }}
               >
                 What&apos;s going on?
-              </Button>
+              </button>
             </CreatePostDialog>
           </div>
 
-          <div className="my-3 border-t border-white/20" style={{ borderWidth: "0.2px" }} />
+          {/* Divider */}
+          <div className="my-3" style={{ borderTop: "0.2px solid rgba(255,255,255,0.2)" }} />
 
+          {/* Action buttons */}
           <div className="flex flex-wrap items-center gap-2">
-            <CreatePostDialog createPost={createPost}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-[20.5px] font-raleway font-semibold text-xs text-white hover:bg-white/10 gap-2"
+            <CreateItemDialog>
+              <button
+                className="flex items-center gap-1.5 rounded-[20.5px] px-3 py-1.5 text-white text-[12px] font-semibold hover:bg-white/10 transition-colors"
+                style={{ fontFamily: FONT_RALEWAY }}
               >
-                <Handshake className="w-4 h-4" />
+                <HandshakeGradient />
                 Sell
-              </Button>
-            </CreatePostDialog>
+              </button>
+            </CreateItemDialog>
+
             <CreateEventDialog>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-[20.5px] font-raleway font-semibold text-xs text-white hover:bg-white/10 gap-2"
+              <button
+                className="flex items-center gap-1.5 rounded-[20.5px] px-3 py-1.5 text-white text-[12px] font-semibold hover:bg-white/10 transition-colors"
+                style={{ fontFamily: FONT_RALEWAY }}
               >
-                <Ticket className="w-4 h-4" />
+                <TicketGradient />
                 Event
-              </Button>
+              </button>
             </CreateEventDialog>
+
             <CreatePostDialog createPost={createPost}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="rounded-[20.5px] font-raleway font-semibold text-xs text-white hover:bg-white/10 gap-2"
+              <button
+                className="flex items-center gap-1.5 rounded-[20.5px] px-3 py-1.5 text-white text-[12px] font-semibold hover:bg-white/10 transition-colors"
+                style={{ fontFamily: FONT_RALEWAY }}
               >
-                <MapPin className="w-4 h-4" />
+                <PinGradient />
                 Location
-              </Button>
+              </button>
             </CreatePostDialog>
           </div>
         </div>
-      </Card>
-
-      {/* Feed */}
-      <div className="w-full">
-        {loading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-[40vh] w-full rounded-[11px]" style={{ background: "#1E2126" }} />
-            <Skeleton className="h-[40vh] w-full rounded-[11px]" style={{ background: "#1E2126" }} />
-          </div>
-        ) : posts.length > 0 ? (
-          <div className="space-y-4">
-            {posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onDelete={deletePost}
-                onCreatePost={createPost}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="py-8">
-            <EmptyFeed createPost={createPost} />
-          </div>
-        )}
       </div>
+
+      {/* ── Feed ── */}
+      {loading ? (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-64 w-full rounded-[11px]" style={{ background: "#1E2126" }} />
+          ))}
+        </div>
+      ) : posts.length > 0 ? (
+        <div className="space-y-3">
+          {posts.map((post) => (
+            <PostCard key={post.id} post={post} onDelete={deletePost} onCreatePost={createPost} />
+          ))}
+        </div>
+      ) : (
+        <div className="py-8">
+          <EmptyFeed createPost={createPost} />
+        </div>
+      )}
     </div>
   );
 }

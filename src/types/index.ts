@@ -215,8 +215,4 @@ export interface NotificationSettings {
   eventInvites: boolean;
 }
 
-export interface LocationScope {
-  state: string | null;
-  lga?: string | null;
-  ward?: string | null;
-}
+

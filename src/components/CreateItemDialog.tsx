@@ -1,98 +1,419 @@
 
 "use client";
 
-import { useForm, UseFormReturn } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { PlusCircle, X } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { X } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useState, useEffect, memo, useCallback, useMemo } from "react";
-import * as React from 'react';
+import * as React from "react";
 import { usePosts } from "@/hooks/use-posts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Post } from "@/types";
 import Image from "next/image";
 
-const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
-  text: z.string().min(1, "Item title can't be empty.").max(100),
-  description: z.string().min(1, "Item description is required.").max(1000),
-  price: z.preprocess(
-      (val) => (val === "" || val === null || val === undefined ? undefined : Number(val)),
+/* ─── design tokens ─────────────────────────────────────────────── */
+const BG_DARK = "#15181D";
+const CARD_BG = "#1E2126";
+const GREEN = "#388E3C";
+const FONT_RALEWAY = "Raleway, sans-serif";
+const FONT_PACIFICO = "Pacifico, cursive";
+
+/* ─── schema ────────────────────────────────────────────────────── */
+const getFormSchema = (isEditMode: boolean) =>
+  z.object({
+    text: z.string().min(1, "Item title can't be empty.").max(100),
+    description: z
+      .string()
+      .min(1, "Item description is required.")
+      .max(1000),
+    price: z.preprocess(
+      (val) =>
+        val === "" || val === null || val === undefined
+          ? undefined
+          : Number(val),
       z.number().positive("Price must be positive.").optional()
-  ),
-  image: z.any().refine((files) => files && (files.length > 0 || (Array.isArray(files) && files.some(f => typeof f === 'string'))), "An image is required for the item."),
-});
+    ),
+    image: z
+      .any()
+      .refine(
+        (files) =>
+          files &&
+          (files.length > 0 ||
+            (Array.isArray(files) && files.some((f) => typeof f === "string"))),
+        "An image is required for the item."
+      ),
+  });
 
 type CreateItemDialogProps = {
-    children?: React.ReactNode;
-    postToEdit?: Post;
-    onOpenChange?: (open: boolean) => void;
-    open?: boolean; // Add open prop for programmatic control
+  children?: React.ReactNode;
+  postToEdit?: Post;
+  onOpenChange?: (open: boolean) => void;
+  open?: boolean;
+};
+
+/* ─── L-shaped pointer bracket ──────────────────────────────────── */
+function Pointer() {
+  return (
+    <div
+      className="w-4 h-4 flex-shrink-0"
+      style={{
+        borderWidth: "0px 0px 1px 1px",
+        borderStyle: "solid",
+        borderColor: GREEN,
+        borderRadius: "0px 6px 6px 6px",
+      }}
+    />
+  );
 }
 
-const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange, open: externalOpen }: CreateItemDialogProps) => {
+/* ─── styled label ───────────────────────────────────────────────── */
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      className="text-[12px] font-semibold text-white mb-1"
+      style={{ fontFamily: FONT_RALEWAY }}
+    >
+      {children}
+    </p>
+  );
+}
+
+/* ─── gradient handshake icon (top-right) ───────────────────────── */
+function HandshakeIcon() {
+  return (
+    <svg width="42" height="42" viewBox="0 0 42 42" fill="none">
+      <defs>
+        <linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FFD600" />
+          <stop offset="100%" stopColor="#00D078" />
+        </linearGradient>
+      </defs>
+      {/* simplified handshake shape */}
+      <path
+        d="M6 22l5-5 4 2 5-5h4l5 5 4-2 5 5-9 7-5-3-5 3L6 22z"
+        fill="url(#hg)"
+      />
+      <path
+        d="M14 19l3 8M28 19l-3 8"
+        stroke="url(#hg)"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/* ─── inner form body shared by Dialog & Sheet ───────────────────── */
+interface FormBodyProps {
+  form: ReturnType<typeof useForm<any>>;
+  onSubmit: (values: any) => Promise<void>;
+  loading: boolean;
+  isEditMode: boolean;
+  postToEdit?: Post;
+  removedImageIndexes: number[];
+  setRemovedImageIndexes: React.Dispatch<React.SetStateAction<number[]>>;
+  imageField: ReturnType<ReturnType<typeof useForm>["register"]>;
+  onClose: () => void;
+}
+
+function FormBody({
+  form,
+  onSubmit,
+  loading,
+  isEditMode,
+  postToEdit,
+  removedImageIndexes,
+  setRemovedImageIndexes,
+  imageField,
+  onClose,
+}: FormBodyProps) {
+  const submitLabel = loading
+    ? isEditMode
+      ? "Saving…"
+      : "Listing Item…"
+    : isEditMode
+    ? "Save Changes"
+    : "List Item";
+
+  return (
+    <div
+      className="relative w-full rounded-xl overflow-hidden"
+      style={{
+        background: CARD_BG,
+        border: "0.2px solid #BBBBBB",
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between px-6 pt-6 pb-2">
+        <div>
+          <h2
+            className="text-[18px] leading-[32px] text-white"
+            style={{ fontFamily: FONT_PACIFICO }}
+          >
+            {isEditMode ? "Edit Item" : "Create Item for Sale"}
+          </h2>
+          <p
+            className="text-[12px] font-light text-white mt-0.5"
+            style={{ fontFamily: FONT_RALEWAY }}
+          >
+            {isEditMode
+              ? "Make changes to your item here."
+              : "Sell something in your neighborhood"}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <HandshakeIcon />
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-white/60 hover:text-white transition-colors ml-1"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <div className="px-6 pb-4 space-y-4 max-h-[60vh] overflow-y-auto">
+
+            {/* Item Title */}
+            <FormField
+              control={form.control}
+              name="text"
+              render={({ field }) => (
+                <FormItem>
+                  <FieldLabel>Item Title</FieldLabel>
+                  <div className="flex items-end gap-1">
+                    <Pointer />
+                    <FormControl>
+                      <input
+                        {...field}
+                        placeholder="e.g Slightly used armchair"
+                        className="flex-1 h-9 bg-[#15181D] text-white text-[12px] italic font-light rounded-full px-4 outline-none placeholder:text-white/60"
+                        style={{
+                          border: `0.5px solid ${GREEN}`,
+                          fontFamily: FONT_RALEWAY,
+                        }}
+                      />
+                    </FormControl>
+                  </div>
+                  <FormMessage className="text-xs ml-5" />
+                </FormItem>
+              )}
+            />
+
+            {/* Description */}
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FieldLabel>Description</FieldLabel>
+                  <div className="flex items-start gap-1">
+                    <Pointer />
+                    <FormControl>
+                      <textarea
+                        {...field}
+                        placeholder="Add more details about the item, it's condition, etc"
+                        rows={4}
+                        className="flex-1 bg-[#15181D] text-white text-[12px] italic font-light px-4 py-2.5 outline-none resize-none placeholder:text-white/60"
+                        style={{
+                          border: `0.5px solid ${GREEN}`,
+                          borderRadius: "12px",
+                          fontFamily: FONT_RALEWAY,
+                        }}
+                      />
+                    </FormControl>
+                  </div>
+                  <FormMessage className="text-xs ml-5" />
+                </FormItem>
+              )}
+            />
+
+            {/* Price */}
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FieldLabel>Price (Optional)</FieldLabel>
+                  <div className="flex items-end gap-1">
+                    <Pointer />
+                    <FormControl>
+                      <div className="flex-1 relative">
+                        <span
+                          className="absolute left-4 top-1/2 -translate-y-1/2 text-[12px] text-white/70"
+                          style={{ fontFamily: FONT_RALEWAY }}
+                        >
+                          ₦
+                        </span>
+                        <input
+                          {...field}
+                          type="number"
+                          placeholder="Leave blank if free"
+                          className="w-full h-9 bg-[#15181D] text-white text-[12px] font-light rounded-full pl-8 pr-4 outline-none placeholder:text-white/60"
+                          style={{
+                            border: `0.5px solid ${GREEN}`,
+                            fontFamily: FONT_RALEWAY,
+                          }}
+                        />
+                      </div>
+                    </FormControl>
+                  </div>
+                  <FormMessage className="text-xs ml-5" />
+                </FormItem>
+              )}
+            />
+
+            {/* Add Images */}
+            <FormField
+              control={form.control}
+              name="image"
+              render={() => (
+                <FormItem>
+                  <FieldLabel>Add Images</FieldLabel>
+                  <div className="flex items-end gap-1">
+                    <Pointer />
+                    <FormControl>
+                      <input
+                        {...imageField}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="flex-1 h-9 bg-[#15181D] text-white text-[12px] font-semibold italic px-3 outline-none file:mr-3 file:text-white file:font-semibold file:bg-transparent file:border-0 file:text-[12px] file:cursor-pointer"
+                        style={{
+                          border: `0.5px solid ${GREEN}`,
+                          borderRadius: "5px",
+                          fontFamily: FONT_RALEWAY,
+                        }}
+                      />
+                    </FormControl>
+                  </div>
+                  <FormMessage className="text-xs ml-5" />
+                </FormItem>
+              )}
+            />
+
+            {/* Existing images (edit mode) */}
+            {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
+              <div className="space-y-2 ml-5">
+                <p
+                  className="text-[11px] text-white/50"
+                  style={{ fontFamily: FONT_RALEWAY }}
+                >
+                  Current images ({postToEdit.image_urls.length}):
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {postToEdit.image_urls.map((url, index) => {
+                    const isRemoved = removedImageIndexes.includes(index);
+                    return (
+                      <div
+                        key={index}
+                        className={`relative group rounded-lg overflow-hidden ${
+                          isRemoved ? "opacity-40" : ""
+                        }`}
+                      >
+                        <Image
+                          src={url}
+                          alt={`Image ${index + 1}`}
+                          width={80}
+                          height={64}
+                          className="w-full h-16 object-cover"
+                        />
+                        {!isRemoved && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRemovedImageIndexes((p) => [...p, index])
+                            }
+                            className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Submit */}
+          <div className="px-6 pb-6 pt-2">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-11 rounded-full text-white text-[14px] font-medium transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{
+                background: GREEN,
+                fontFamily: FONT_RALEWAY,
+              }}
+            >
+              {submitLabel}
+            </button>
+          </div>
+        </form>
+      </Form>
+    </div>
+  );
+}
+
+/* ─── main component ─────────────────────────────────────────────── */
+const CreateItemDialogComponent = ({
+  children,
+  postToEdit,
+  onOpenChange,
+  open: externalOpen,
+}: CreateItemDialogProps) => {
   const { createPost } = usePosts();
   const [internalOpen, setInternalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [removedImageIndexes, setRemovedImageIndexes] = useState<number[]>([]);
   const isMobile = useIsMobile();
   const isEditMode = !!postToEdit;
-  
-  // Use external open prop if provided, otherwise use internal state
+
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
 
-  // Create form schema once and stabilize it
-  const formSchema = useMemo(() => getFormSchema(isEditMode, postToEdit), [isEditMode, postToEdit]);
+  const formSchema = useMemo(() => getFormSchema(isEditMode), [isEditMode]);
 
-  // Create form once and stabilize it - don't recreate on every render
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       text: "",
       description: "",
-      price: "" as any, // Use empty string instead of undefined to avoid controlled/uncontrolled warning
+      price: "" as any,
       image: undefined,
     },
   });
 
-  // Stabilize form.reset function to prevent dependency issues
-  const stableFormReset = useCallback((values: any) => {
-    form.reset(values);
-  }, [form]);
+  const stableFormReset = useCallback(
+    (values: any) => form.reset(values),
+    [form]
+  );
 
-  // Fix useEffect dependencies - only reset when dialog opens, not on every change
   useEffect(() => {
     if (open) {
-      // Use setTimeout to ensure this runs after the dialog is fully opened
       const timer = setTimeout(() => {
         if (isEditMode && postToEdit) {
           stableFormReset({
@@ -102,342 +423,98 @@ const CreateItemDialogComponent = ({ children, postToEdit, onOpenChange, open: e
             image: postToEdit.image_urls || [],
           });
         } else if (!isEditMode) {
-          stableFormReset({
-            text: "",
-            description: "",
-            price: "",
-            image: undefined,
-          });
+          stableFormReset({ text: "", description: "", price: "", image: undefined });
         }
       }, 0);
-      
       return () => clearTimeout(timer);
     }
-  }, [open, isEditMode, postToEdit, stableFormReset]); // Include all dependencies
+  }, [open, isEditMode, postToEdit, stableFormReset]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
-    
-    // Filter out removed images
     let filteredImageUrls: string[] = [];
     if (postToEdit?.image_urls) {
-      filteredImageUrls = postToEdit.image_urls.filter((_, index) => !removedImageIndexes.includes(index));
+      filteredImageUrls = postToEdit.image_urls.filter(
+        (_, i) => !removedImageIndexes.includes(i)
+      );
     }
-    
-    // Validate image files
     let validImageFiles: FileList | undefined;
     if (values.image && values.image.length > 0) {
-      // Filter out invalid files
-      const validFiles = Array.from(values.image).filter(file => 
-        file && file instanceof File && file.name && file.size > 0
+      const validFiles = Array.from(values.image).filter(
+        (f) => f && f instanceof File && (f as File).size > 0
       );
-      
       if (validFiles.length > 0) {
-        // Create a new FileList-like object
-        const dataTransfer = new DataTransfer();
-        validFiles.forEach(file => dataTransfer.items.add(file as File));
-        validImageFiles = dataTransfer.files;
+        const dt = new DataTransfer();
+        validFiles.forEach((f) => dt.items.add(f as File));
+        validImageFiles = dt.files;
       }
     }
-    
     const postData: Partial<Post> = {
-        text: values.text,
-        description: values.description,
-        category: "For Sale",
-        price: values.price || 0,
-        image_urls: filteredImageUrls,
+      text: values.text,
+      description: values.description,
+      category: "For Sale",
+      price: values.price || 0,
+      image_urls: filteredImageUrls,
     };
     await createPost(postData, postToEdit?.id, validImageFiles);
     setLoading(false);
     handleOpenChange(false);
   }
 
-  const handleOpenChange = useCallback((newOpenState: boolean) => {
-    if (externalOpen !== undefined) {
-      // External control - only call onOpenChange
-      if (onOpenChange) {
-        onOpenChange(newOpenState);
+  const handleOpenChange = useCallback(
+    (newOpen: boolean) => {
+      if (externalOpen !== undefined) {
+        onOpenChange?.(newOpen);
+      } else {
+        setInternalOpen(newOpen);
+        onOpenChange?.(newOpen);
       }
-    } else {
-      // Internal control - update internal state
-      setInternalOpen(newOpenState);
-      if (onOpenChange) {
-        onOpenChange(newOpenState);
-      }
-    }
-    
-    if (!newOpenState) {
-      form.reset();
-    }
-  }, [onOpenChange, externalOpen, form]);
+      if (!newOpen) form.reset();
+    },
+    [onOpenChange, externalOpen, form]
+  );
 
-  const finalTitle = isEditMode ? "Edit Item" : "Create Item for Sale";
-  const finalDescription = isEditMode ? "Make changes to your item here." : "Sell something in your neighborhood.";
+  const imageField = form.register("image");
 
-  const imageField = form.register('image');
+  const formBodyProps: FormBodyProps = {
+    form,
+    onSubmit,
+    loading,
+    isEditMode,
+    postToEdit,
+    removedImageIndexes,
+    setRemovedImageIndexes,
+    imageField,
+    onClose: () => handleOpenChange(false),
+  };
 
-
-
-  const Trigger = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>((props, ref) => {
-    const { profile: userDetails } = useAuth();
-    return (
-     <div ref={ref} {...props} className="flex items-center gap-4 w-full">
-        <Avatar>
-            <AvatarImage src={userDetails?.avatar_url || 'https://placehold.co/100x100.png'}/>
-            <AvatarFallback>{userDetails?.name?.charAt(0) || 'U'}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1 text-left text-muted-foreground cursor-pointer hover:bg-muted p-2 rounded-md border border-dashed">
-            Sell something...
-        </div>
-        <Button variant="ghost" size="icon"><PlusCircle className="h-6 w-6 text-primary" /></Button>
-    </div>
-    )
-  });
-  Trigger.displayName = 'Trigger';
-
+  /* ── Mobile: bottom Sheet ── */
   if (isMobile) {
     return (
-        <Sheet open={open} onOpenChange={handleOpenChange}>
-            <SheetTrigger asChild>
-                { children || <Trigger /> }
-            </SheetTrigger>
-            <SheetContent side="bottom" className="p-0 flex flex-col max-h-screen">
-                <SheetHeader className="p-4 border-b">
-                    <SheetTitle>{finalTitle}</SheetTitle>
-                    <DialogDescription>
-                        {finalDescription}
-                    </DialogDescription>
-                </SheetHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col">
-                    <div className="p-4 flex-1 overflow-y-auto">
-                        <div className="space-y-4 px-1">
-                            <FormField
-                                control={form.control}
-                                name="text"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Item Title</FormLabel>
-                                    <FormControl>
-                                    <Input placeholder="e.g. Slightly used armchair" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="description"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>
-                                        Description <span className="text-destructive">*</span>
-                                    </FormLabel>
-                                    <FormControl>
-                                    <Textarea
-                                        placeholder="Add more details about the item, its condition, etc."
-                                        className="resize-none min-h-[100px]"
-                                        {...field}
-                                    />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="price"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Price (Optional)</FormLabel>
-                                    <FormControl>
-                                    <div className="relative">
-                                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₦</span>
-                                        <Input type="number" placeholder="Leave blank for Free" className="pl-7" {...field} />
-                                    </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="image"
-                                render={() => (
-                                <FormItem>
-                                    <FormLabel>
-                                        Add images <span className="text-destructive">*</span>
-                                    </FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            type="file"
-                                            accept="image/*"
-                                            multiple
-                                            {...imageField}
-                                        />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
-                                <div className="space-y-3">
-                                    <div className="text-sm text-muted-foreground">
-                                        Current images ({postToEdit.image_urls.length}):
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {postToEdit.image_urls.map((url, index) => {
-                                            const isRemoved = removedImageIndexes.includes(index);
-                                            return (
-                                                <div key={index} className={`relative group ${isRemoved ? 'opacity-50' : ''}`}>
-                                                    <Image
-                                                        src={url}
-                                                        alt={`Current image ${index + 1}`}
-                                                        width={100}
-                                                        height={100}
-                                                        className="w-full h-20 object-cover rounded-lg"
-                                                    />
-                                                    {!isRemoved && (
-                                                        <Button
-                                                            type="button"
-                                                            variant="destructive"
-                                                            size="icon"
-                                                            className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                            onClick={() => {
-                                                                setRemovedImageIndexes(prev => [...prev, index]);
-                                                            }}
-                                                        >
-                                                            <X className="h-3 w-3" />
-                                                        </Button>
-                                                    )}
-                                                    {isRemoved && (
-                                                        <div className="absolute inset-0 bg-red-500/20 rounded-lg flex items-center justify-center">
-                                                            <X className="h-6 w-6 text-red-500" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                        Upload more images to add to the list.
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <SheetFooter className="p-4 border-t mt-auto">
-                        <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                            {loading ? (isEditMode ? 'Saving...' : 'Listing Item...') : (isEditMode ? 'Save Changes' : 'List Item')}
-                        </Button>
-                    </SheetFooter>
-                  </form>
-                </Form>
-            </SheetContent>
-        </Sheet>
-    )
+      <Sheet open={open} onOpenChange={handleOpenChange}>
+        <SheetTrigger asChild>{children ?? <span />}</SheetTrigger>
+        <SheetContent
+          side="bottom"
+          className="p-4 border-0 rounded-t-2xl"
+          style={{ background: BG_DARK }}
+        >
+          <FormBody {...formBodyProps} />
+        </SheetContent>
+      </Sheet>
+    );
   }
 
+  /* ── Desktop: centered Dialog ── */
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {externalOpen === undefined && (
-        <DialogTrigger asChild>
-          { children || <Trigger /> }
-        </DialogTrigger>
+        <DialogTrigger asChild>{children ?? <span />}</DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-[525px] p-0">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogHeader className="p-6 pb-0">
-              <DialogTitle>{finalTitle}</DialogTitle>
-              <DialogDescription>
-                 {finalDescription}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="max-h-[70vh] overflow-y-auto p-6">
-                <div className="space-y-4 px-1">
-                    <FormField
-                        control={form.control}
-                        name="text"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Item Title</FormLabel>
-                            <FormControl>
-                            <Input placeholder="e.g. Slightly used armchair" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="description"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>
-                                Description <span className="text-destructive">*</span>
-                            </FormLabel>
-                            <FormControl>
-                            <Textarea
-                                placeholder="Add more details about the item, its condition, etc."
-                                className="resize-none min-h-[100px]"
-                                {...field}
-                            />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="price"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Price (Optional)</FormLabel>
-                            <FormControl>
-                            <div className="relative">
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">₦</span>
-                                <Input type="number" placeholder="Leave blank for Free" className="pl-7" {...field} />
-                            </div>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="image"
-                        render={() => (
-                        <FormItem>
-                            <FormLabel>
-                                Add images <span className="text-destructive">*</span>
-                            </FormLabel>
-                            <FormControl>
-                                <Input
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    {...imageField}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                    {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
-                        <div className="text-sm text-muted-foreground">
-                            Current images: {postToEdit.image_urls.length}. Upload more to add to the list.
-                        </div>
-                    )}
-                </div>
-            </div>
-            <DialogFooter className="p-6 pt-0 border-t">
-                <Button type="submit" className="w-full" variant="default" disabled={loading}>
-                    {loading ? (isEditMode ? 'Saving...' : 'Listing Item...') : (isEditMode ? 'Save Changes' : 'List Item')}
-                </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+      <DialogContent
+        className="p-4 border-0 shadow-2xl max-w-[626px]"
+        style={{ background: BG_DARK }}
+      >
+        <FormBody {...formBodyProps} />
       </DialogContent>
     </Dialog>
   );

@@ -10,7 +10,7 @@ import {
   Home,
   Users,
   ShoppingBag,
-  Calendar,
+  Globe,
   Briefcase,
   MapPin,
   MessageCircle,
@@ -37,7 +37,7 @@ const navItems = [
   { href: "/home", label: "Home", icon: Home },
   { href: "/neighbors", label: "Community", icon: Users },
   { href: "/marketplace", label: "Market", icon: ShoppingBag },
-  { href: "/events", label: "Events", icon: Calendar },
+  { href: "/events", label: "Events", icon: Globe },
   { href: "/businesses", label: "Business", icon: Briefcase },
 ];
 
@@ -249,10 +249,18 @@ export function MainLayout({ children }: MainLayoutProps) {
                       <span
                         className={cn(
                           "w-1 h-6 rounded-sm flex-shrink-0",
-                          isActive && "bg-[#388E3C]"
+                          isActive ? "bg-[#388E3C]" : "bg-transparent"
                         )}
                       />
-                      <Icon className={cn("w-6 h-6 flex-shrink-0", isActive ? "text-[#388E3C]" : "text-white")} />
+                      <Icon
+                        className={cn(
+                          "w-6 h-6 flex-shrink-0",
+                          isActive
+                            ? "text-white fill-[#388E3C] stroke-white"
+                            : "text-white fill-none"
+                        )}
+                        strokeWidth={2}
+                      />
                       <span
                         className="text-white text-xl leading-[35px]"
                         style={{ fontFamily: '"Pacifico", cursive' }}
@@ -309,7 +317,13 @@ export function MainLayout({ children }: MainLayoutProps) {
                 const isActive = pathname === href || (href !== "/home" && pathname.startsWith(href));
                 return (
                   <Link key={href} href={href} className="flex flex-col items-center justify-center flex-1 py-2">
-                    <Icon className={cn("w-6 h-6 mb-0.5", isActive ? "text-[#388E3C]" : "text-white/80")} />
+                    <Icon
+                      className={cn(
+                        "w-6 h-6 mb-0.5",
+                        isActive ? "fill-[#388E3C] text-white stroke-white" : "text-white/80 fill-none"
+                      )}
+                      strokeWidth={2}
+                    />
                     <span
                       className={cn(
                         "text-[10px] leading-tight",

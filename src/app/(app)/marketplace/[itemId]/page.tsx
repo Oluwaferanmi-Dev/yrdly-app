@@ -1,530 +1,499 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { 
-  ArrowLeft, 
-  Heart, 
-  Share, 
-  MessageCircle, 
-  MapPin, 
-  Calendar,
-  Shield,
-  Truck,
-  MoreHorizontal,
-  User,
-  ChevronLeft,
-  ChevronRight
-} from "lucide-react";
+import { ArrowLeft, Send, ShoppingBag, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { formatPrice } from "@/lib/utils";
 import type { Post as PostType } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
+
+/* ─── colour tokens matching the Figma ─────────────────────────── */
+const BG = "#15181D";
+const CARD_BG = "#1E2126";
+const GREEN = "#388E3C";
+const FADED = "#BBBBBB";
+const FONT_RALEWAY = "Raleway, sans-serif";
+const FONT_PACIFICO = "Pacifico, cursive";
 
 export default function MarketplaceItemPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
+
   const [item, setItem] = useState<PostType | null>(null);
+  const [relatedItems, setRelatedItems] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(0);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [message, setMessage] = useState("Hi, Is this available?");
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   const itemId = params.itemId as string;
 
-  // Image navigation functions
-  const nextImage = () => {
-    if (!item?.image_urls || item.image_urls.length === 0) return;
-    setCurrentImageIndex((prev) => (prev + 1) % item.image_urls!.length);
-  };
-
-  const prevImage = () => {
-    if (!item?.image_urls || item.image_urls.length === 0) return;
-    setCurrentImageIndex((prev) => (prev - 1 + item.image_urls!.length) % item.image_urls!.length);
-  };
-
+  /* ── fetch item ── */
   useEffect(() => {
     if (!itemId) return;
-
     const fetchItem = async () => {
       try {
         setLoading(true);
         const { data, error } = await supabase
-          .from('posts')
-          .select(`
-            *,
-            user:users!posts_user_id_fkey(name, avatar_url, created_at)
-          `)
-          .eq('id', itemId)
-          .eq('category', 'For Sale')
+          .from("posts")
+          .select(`*, user:users!posts_user_id_fkey(id, name, avatar_url, created_at)`)
+          .eq("id", itemId)
+          .eq("category", "For Sale")
           .single();
 
         if (error) throw error;
+        setItem({ ...data, author_name: data.user?.name, author_image: data.user?.avatar_url });
 
-        const itemWithAuthor = {
-          ...data,
-          author_name: data.user?.name || 'Unknown User',
-          author_image: data.user?.avatar_url,
-          author_created_at: data.user?.created_at,
-        };
+        /* fetch related items (other For Sale posts, exclude current) */
+        const { data: related } = await supabase
+          .from("posts")
+          .select(`*, user:users!posts_user_id_fkey(id, name, avatar_url)`)
+          .eq("category", "For Sale")
+          .eq("is_sold", false)
+          .neq("id", itemId)
+          .order("timestamp", { ascending: false })
+          .limit(4);
 
-        setItem(itemWithAuthor);
-        setIsLiked(data.liked_by?.includes(user?.id || '') || false);
-        setLikeCount(data.liked_by?.length || 0);
-      } catch (error) {
-        console.error('Error fetching item:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to load item details",
-        });
-        router.push('/marketplace');
+        if (related) setRelatedItems(related as PostType[]);
+      } catch {
+        toast({ variant: "destructive", title: "Error", description: "Failed to load item." });
+        router.push("/marketplace");
       } finally {
         setLoading(false);
       }
     };
-
     fetchItem();
-  }, [itemId, user?.id, toast, router]);
+  }, [itemId, router, toast]);
 
-  const handleLike = async () => {
-    if (!user || !item) return;
-
-    try {
-      const currentLikes = item.liked_by || [];
-      const isCurrentlyLiked = currentLikes.includes(user.id);
-      
-      let newLikes;
-      if (isCurrentlyLiked) {
-        newLikes = currentLikes.filter(id => id !== user.id);
-      } else {
-        newLikes = [...currentLikes, user.id];
-      }
-
-      const { error } = await supabase
-        .from('posts')
-        .update({ liked_by: newLikes })
-        .eq('id', item.id);
-
-      if (error) throw error;
-
-      setIsLiked(!isCurrentlyLiked);
-      setLikeCount(newLikes.length);
-    } catch (error) {
-      console.error('Error updating like:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to update like",
-      });
-    }
-  };
-
-  const handleMessageSeller = async () => {
-    if (!user || !item) {
-      toast({
-        variant: "destructive",
-        title: "Login Required",
-        description: "Please log in to message the seller"
-      });
-      return;
-    }
-    
+  /* ── send message → creates/opens conversation ── */
+  const handleSendMessage = async () => {
+    if (!user || !item || !message.trim()) return;
     if (user.id === item.user_id) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "You cannot message yourself",
-      });
+      toast({ variant: "destructive", title: "Error", description: "You cannot message yourself." });
       return;
     }
-
+    setSendingMessage(true);
     try {
-      // Check if item-specific conversation already exists
-      const { data: existingConversations, error: fetchError } = await supabase
-        .from('conversations')
-        .select('id, participant_ids, item_id')
-        .contains('participant_ids', [user.id])
-        .eq('type', 'marketplace')
-        .eq('item_id', item.id);
+      const { data: existing } = await supabase
+        .from("conversations")
+        .select("id")
+        .contains("participant_ids", [user.id])
+        .eq("type", "marketplace")
+        .eq("item_id", item.id)
+        .limit(1);
 
-      if (fetchError) {
-        console.error("Error fetching conversations:", fetchError);
-        toast({ 
-          variant: "destructive", 
-          title: "Error", 
-          description: "Could not open conversation." 
-        });
-        return;
-      }
-      
       let conversationId: string;
 
-      if (!existingConversations || existingConversations.length === 0) {
-        // Create new item-specific conversation
-        const sortedParticipantIds = [user.id, item.user_id].sort();
-        const { data: newConv, error: createError } = await supabase
-          .from('conversations')
+      if (!existing || existing.length === 0) {
+        const { data: newConv, error } = await supabase
+          .from("conversations")
           .insert({
-            participant_ids: sortedParticipantIds,
-            type: 'marketplace',
+            participant_ids: [user.id, item.user_id].sort(),
+            type: "marketplace",
             item_id: item.id,
             item_title: item.title || item.text || "Item",
-            item_image: item.image_url || item.image_urls?.[0] || "/placeholder.svg",
+            item_image: item.image_urls?.[0] || "",
             item_price: item.price || 0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
-          .select('id')
+          .select("id")
           .single();
-        
-        if (createError) throw createError;
+        if (error) throw error;
         conversationId = newConv.id;
       } else {
-        conversationId = existingConversations[0].id;
+        conversationId = existing[0].id;
       }
-      
-      // Navigate to the conversation
+
+      /* insert the first message */
+      await supabase.from("messages").insert({
+        conversation_id: conversationId,
+        sender_id: user.id,
+        text: message.trim(),
+        created_at: new Date().toISOString(),
+        is_read: false,
+      });
+
       router.push(`/messages/${conversationId}`);
-    } catch (error) {
-      console.error("Error creating conversation:", error);
-      toast({ 
-        variant: "destructive", 
-        title: "Error", 
-        description: "Could not open conversation." 
-      });
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Could not send message." });
+    } finally {
+      setSendingMessage(false);
     }
   };
 
-  const handleBuyNow = () => {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Login Required",
-        description: "Please log in to purchase items.",
-      });
-      return;
-    }
+  const formatPrice = (price?: number | null) =>
+    !price || price === 0 ? "FREE" : `₦${price.toLocaleString()}`;
 
-    if (user.id === item?.user_id) {
-      toast({
-        variant: "destructive",
-        title: "Cannot Buy Own Item",
-        description: "You cannot purchase your own item.",
-      });
-      return;
-    }
+  const images = item?.image_urls?.length ? item.image_urls : item?.image_url ? [item.image_url] : [];
+  const isOwn = user?.id === item?.user_id;
 
-    // For now, show a message about contacting seller
-    // In a real app, this would integrate with a payment system
-    toast({
-      title: "Contact Seller",
-      description: `To purchase "${item?.title || item?.text || 'this item'}", please contact the seller directly.`,
-    });
-    
-    // Optionally navigate to seller profile or open chat
-    handleMessageSeller();
-  };
-
-  const handleShare = async () => {
-    try {
-      const shareData = {
-        title: `${item?.title || 'Item'} - ${formatPrice(item?.price)}`,
-        text: item?.text || '',
-        url: `${window.location.origin}/marketplace/${itemId}`,
-      };
-
-      if (navigator.share) {
-        await navigator.share(shareData);
-        toast({ title: "Item shared!" });
-      } else {
-        await navigator.clipboard.writeText(`${window.location.origin}/marketplace/${itemId}`);
-        toast({ title: "Link copied!", description: "The item link has been copied to your clipboard." });
-      }
-    } catch (error) {
-      console.error('Error sharing item:', error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to share item." });
-    }
-  };
-
+  /* ─────────────────────────────────────────── LOADING ── */
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="max-w-4xl mx-auto p-4">
-          <div className="flex items-center gap-4 mb-6">
-            <Skeleton className="w-8 h-8 rounded-full" />
-            <Skeleton className="h-8 w-32" />
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Skeleton className="aspect-square rounded-lg" />
-            <div className="space-y-4">
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-6 w-1/2" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-2/3" />
-            </div>
-          </div>
+      <div className="min-h-screen p-6" style={{ background: BG }}>
+        <div className="flex gap-6 mt-4">
+          <Skeleton className="flex-1 h-[670px] rounded-xl" style={{ background: CARD_BG }} />
+          <Skeleton className="w-[320px] h-[313px] rounded-xl" style={{ background: CARD_BG }} />
         </div>
       </div>
     );
   }
 
-  if (!item) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Item Not Found</h1>
-          <p className="text-muted-foreground mb-4">The item you&apos;re looking for doesn&apos;t exist or has been removed.</p>
-          <Button onClick={() => router.push('/marketplace')}>
-            Back to Marketplace
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  if (!item) return null;
 
-  const isOwnItem = user?.id === item.user_id;
-
+  /* ─────────────────────────────────────────── RENDER ── */
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-4">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-            className="p-2"
+    <div className="min-h-screen" style={{ background: BG }}>
+
+      {/* ── Back button row ── */}
+      <div className="px-4 pt-4 pb-2">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-sm transition-opacity hover:opacity-70"
+          style={{ color: FADED, fontFamily: FONT_RALEWAY }}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Marketplace
+        </button>
+      </div>
+
+      {/* ── Main two-column layout ── */}
+      <div className="px-4 pb-8 flex flex-col lg:flex-row gap-5 items-start">
+
+        {/* ════ LEFT — main item card ════ */}
+        <div
+          className="flex-1 w-full rounded-xl overflow-hidden"
+          style={{ background: CARD_BG }}
+        >
+          {/* Card header strip */}
+          <div
+            className="px-6 py-4"
+            style={{
+              background: "rgba(185,185,185,0.05)",
+              borderBottom: "0.2px solid rgba(255,255,255,0.1)",
+            }}
           >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-xl font-semibold">Item Details</h1>
-          <div className="ml-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="p-2">
-                  <MoreHorizontal className="w-5 h-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleShare}>
-                  <Share className="w-4 h-4 mr-2" />
-                  Share
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <h1
+              className="text-2xl font-extrabold text-white leading-tight"
+              style={{ fontFamily: FONT_RALEWAY }}
+            >
+              {item.title || item.text || "Item"}
+            </h1>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Image Section */}
-          <div className="space-y-4">
-            <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
-              <Image
-                src={item.image_urls?.[currentImageIndex] || item.image_url || "/placeholder.svg"}
-                alt={item.title || "Item image"}
-                width={400}
-                height={400}
-                className="w-full h-full object-cover"
-              />
-              
-              {/* Navigation arrows for multiple images */}
-              {item.image_urls && item.image_urls.length > 1 && (
-                <>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
-                    onClick={prevImage}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
-                    onClick={nextImage}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
-
-              {/* Image counter */}
-              {item.image_urls && item.image_urls.length > 1 && (
-                <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
-                  {currentImageIndex + 1} / {item.image_urls.length}
+          {/* Image + carousel */}
+          <div className="px-6 pt-5">
+            <div className="relative w-full rounded-xl overflow-hidden" style={{ height: "301px" }}>
+              {images.length > 0 ? (
+                <Image
+                  src={images[currentImageIndex]}
+                  alt={item.title || "Item image"}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <div
+                  className="w-full h-full flex items-center justify-center"
+                  style={{ background: "#252B35" }}
+                >
+                  <ShoppingBag className="w-16 h-16" style={{ color: GREEN, opacity: 0.4 }} />
                 </div>
               )}
             </div>
-            
-            {/* Thumbnail strip */}
-            {item.image_urls && item.image_urls.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto">
-                {item.image_urls.map((url, index) => (
+
+            {/* Dot indicators */}
+            {images.length > 1 && (
+              <div className="flex items-center justify-center gap-2.5 mt-3 mb-1">
+                {images.map((_, i) => (
                   <button
-                    key={index}
-                    onClick={() => setCurrentImageIndex(index)}
-                    className={`relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 ${
-                      index === currentImageIndex ? 'ring-2 ring-primary' : ''
-                    }`}
-                  >
-                    <Image
-                      src={url}
-                      alt={`Thumbnail ${index + 1}`}
-                      width={64}
-                      height={64}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
+                    key={i}
+                    onClick={() => setCurrentImageIndex(i)}
+                    className="w-[6px] h-[6px] rounded-full transition-colors"
+                    style={{ background: i === currentImageIndex ? "#FFFFFF" : FADED }}
+                  />
                 ))}
               </div>
             )}
           </div>
 
-          {/* Details Section */}
-          <div className="space-y-6">
-            {/* Price and Title */}
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">
-                {formatPrice(item.price)}
-              </h1>
-              <h2 className="text-xl font-semibold text-foreground mb-2">
-                {item.title || item.text}
-              </h2>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-200 dark:border-green-800">
-                  For Sale
-                </Badge>
-                {item.condition && (
-                  <Badge variant="secondary">{item.condition}</Badge>
-                )}
+          {/* Divider */}
+          <div className="mx-6 my-4" style={{ borderTop: "0.2px solid rgba(255,255,255,0.2)" }} />
+
+          {/* Details section */}
+          <div className="px-6 pb-4">
+            <p
+              className="font-bold text-[13px] text-white mb-2"
+              style={{ fontFamily: FONT_RALEWAY }}
+            >
+              Details
+            </p>
+            <p
+              className="text-[13px] text-white leading-[18px]"
+              style={{ fontFamily: FONT_RALEWAY, fontWeight: 400 }}
+            >
+              {item.description || item.text || "No description provided."}
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="mx-6 my-4" style={{ borderTop: "0.2px solid rgba(255,255,255,0.2)" }} />
+
+          {/* Directions / location */}
+          <div className="px-6 pb-6">
+            <p
+              className="font-bold text-[13px] text-white mb-3"
+              style={{ fontFamily: FONT_RALEWAY }}
+            >
+              Directions
+            </p>
+            {item.event_location?.geopoint ? (
+              /* Embed a static map via Google Maps if coordinates exist */
+              <div className="w-full rounded-xl overflow-hidden" style={{ height: "135px" }}>
+                <Image
+                  src={`https://maps.googleapis.com/maps/api/staticmap?center=${item.event_location.geopoint.latitude},${item.event_location.geopoint.longitude}&zoom=15&size=600x200&markers=${item.event_location.geopoint.latitude},${item.event_location.geopoint.longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
+                  alt="Map"
+                  width={600}
+                  height={135}
+                  className="w-full h-full object-cover"
+                />
               </div>
-            </div>
-
-            {/* Seller Info */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3 mb-4">
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={item.author_image || "/placeholder.svg"} />
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {item.author_name?.substring(0, 2).toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground">{item.author_name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Member since {new Date(item.user?.created_at || item.timestamp).getFullYear()}
-                    </p>
-                  </div>
-                  {/* Rating removed - no hardcoded values */}
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    onClick={() => router.push(`/profile/${item.user_id}`)}
-                  >
-                    <User className="w-4 h-4 mr-2" />
-                    View Profile
-                  </Button>
-                  {!isOwnItem && (
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={handleMessageSeller}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Message
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Description */}
-            {item.description && (
-              <div>
-                <h3 className="font-semibold text-foreground mb-2">Description</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap">{item.description}</p>
+            ) : item.event_location?.address ? (
+              <div
+                className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm"
+                style={{ background: "#252B35", color: FADED, fontFamily: FONT_RALEWAY }}
+              >
+                <MapPin className="w-4 h-4 flex-shrink-0" style={{ color: GREEN }} />
+                <span>{item.event_location.address}</span>
+              </div>
+            ) : (
+              <div
+                className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm"
+                style={{ background: "#252B35", color: FADED, fontFamily: FONT_RALEWAY }}
+              >
+                <MapPin className="w-4 h-4" style={{ color: GREEN }} />
+                <span>Location not specified</span>
               </div>
             )}
-
-            {/* Location */}
-            {item.event_location?.address && (
-              <div>
-                <h3 className="font-semibold text-foreground mb-2">Location</h3>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
-                  <span>{item.event_location.address}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Features */}
-            <div>
-              <h3 className="font-semibold text-foreground mb-3">Features</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Shield className="w-4 h-4 text-green-500" />
-                  <span>Secure Payment</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Truck className="w-4 h-4 text-blue-500" />
-                  <span>Delivery Available</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLike}
-                  className={`flex-1 ${isLiked ? 'text-red-500 border-red-500' : ''}`}
-                >
-                  <Heart className={`w-4 h-4 mr-2 ${isLiked ? 'fill-current' : ''}`} />
-                  {likeCount} {likeCount === 1 ? 'Like' : 'Likes'}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleShare}
-                  className="flex-1"
-                >
-                  <Share className="w-4 h-4 mr-2" />
-                  Share
-                </Button>
-              </div>
-              
-              {!isOwnItem && (
-                <Button
-                  onClick={handleBuyNow}
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                  size="lg"
-                >
-                  Buy Now
-                </Button>
-              )}
-            </div>
           </div>
         </div>
+
+        {/* ════ RIGHT — price + seller + message ════ */}
+        <div className="w-full lg:w-[340px] flex-shrink-0 flex flex-col gap-4">
+
+          {/* Price */}
+          <p
+            className="text-[24px] font-bold leading-[28px]"
+            style={{ fontFamily: FONT_RALEWAY, color: GREEN }}
+          >
+            {formatPrice(item.price)}
+          </p>
+
+          {/* Horizontal divider */}
+          <div style={{ borderTop: "0.2px solid rgba(255,255,255,0.2)" }} />
+
+          {/* Seller Information */}
+          <div>
+            <p
+              className="font-bold text-[13px] text-white mb-3"
+              style={{ fontFamily: FONT_RALEWAY }}
+            >
+              Seller Information
+            </p>
+            <button
+              className="flex items-center gap-3 hover:opacity-80 transition-opacity w-full text-left"
+              onClick={() => router.push(`/profile/${item.user_id}`)}
+            >
+              <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-xs font-bold text-white"
+                   style={{ background: GREEN }}>
+                {item.author_image ? (
+                  <Image
+                    src={item.author_image}
+                    alt={item.author_name || ""}
+                    width={36}
+                    height={36}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  (item.author_name?.slice(0, 2) || "U").toUpperCase()
+                )}
+              </div>
+              <div>
+                <p
+                  className="text-[13px] font-normal text-white"
+                  style={{ fontFamily: FONT_RALEWAY }}
+                >
+                  {item.author_name || "Unknown Seller"}
+                </p>
+                <p
+                  className="text-[10px] italic font-extralight text-white"
+                  style={{ fontFamily: FONT_RALEWAY }}
+                >
+                  Joined Yrdly in {new Date(item.user?.created_at || item.timestamp).getFullYear()}
+                </p>
+              </div>
+            </button>
+          </div>
+
+          {/* Horizontal divider */}
+          <div style={{ borderTop: "0.2px solid rgba(255,255,255,0.2)" }} />
+
+          {/* Message box (only for non-owners) */}
+          {!isOwn && (
+            <div className="flex items-start gap-3">
+              {/* Current user avatar */}
+              <div
+                className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-xs font-bold text-white mt-1"
+                style={{ background: GREEN }}
+              >
+                {profile?.avatar_url ? (
+                  <Image
+                    src={profile.avatar_url}
+                    alt={profile.name || ""}
+                    width={36}
+                    height={36}
+                    className="object-cover w-full h-full"
+                  />
+                ) : (
+                  (profile?.name?.slice(0, 2) || "U").toUpperCase()
+                )}
+              </div>
+
+              {/* Input + send */}
+              <div className="flex-1 flex flex-col gap-1">
+                <div
+                  className="relative w-full rounded-xl"
+                  style={{
+                    background: BG,
+                    border: `0.5px solid ${GREEN}`,
+                    minHeight: "115px",
+                  }}
+                >
+                  <textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Hi, Is this available?"
+                    rows={4}
+                    className="w-full bg-transparent text-white text-[13px] font-light p-3 pr-10 resize-none outline-none placeholder:text-[#BBBBBB]"
+                    style={{ fontFamily: FONT_RALEWAY }}
+                  />
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={sendingMessage || !message.trim()}
+                    className="absolute top-3 right-3 transition-opacity hover:opacity-70 disabled:opacity-40"
+                  >
+                    <Send className="w-5 h-5" style={{ color: GREEN }} />
+                  </button>
+                </div>
+                <p
+                  className="text-[10px] italic font-extralight text-white pl-1"
+                  style={{ fontFamily: FONT_RALEWAY }}
+                >
+                  Send seller a message
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Own item note */}
+          {isOwn && (
+            <div
+              className="text-center text-sm py-3 rounded-xl"
+              style={{ background: "#252B35", color: FADED, fontFamily: FONT_RALEWAY }}
+            >
+              This is your listing
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* ════ BOTTOM — Other Items You May Like ════ */}
+      {relatedItems.length > 0 && (
+        <div className="px-4 pb-10">
+          {/* Section title */}
+          <h2
+            className="text-lg mb-4"
+            style={{ fontFamily: FONT_PACIFICO, color: "#FFFFFF", fontWeight: 400 }}
+          >
+            Other Items You May Like
+          </h2>
+
+          {/* 4-col grid — same card style as the marketplace listing */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {relatedItems.map((related) => (
+              <RelatedCard
+                key={related.id}
+                item={related}
+                formatPrice={formatPrice}
+                onClick={() => router.push(`/marketplace/${related.id}`)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+/* ─── Related item card ─────────────────────────────────────────── */
+function RelatedCard({
+  item,
+  formatPrice,
+  onClick,
+}: {
+  item: PostType;
+  formatPrice: (p?: number | null) => string;
+  onClick: () => void;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const imageUrl = !imgError && item.image_urls?.[0] ? item.image_urls[0] : null;
+
+  return (
+    <button
+      className="text-left rounded-xl overflow-hidden transition-transform hover:scale-[1.02] hover:shadow-2xl w-full"
+      style={{ background: CARD_BG }}
+      onClick={onClick}
+    >
+      {/* Image */}
+      <div className="relative w-full" style={{ height: "150px" }}>
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={item.title || item.text || "Item"}
+            fill
+            className="object-cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div
+            className="w-full h-full flex items-center justify-center"
+            style={{ background: "#252B35" }}
+          >
+            <ShoppingBag className="w-8 h-8" style={{ color: GREEN, opacity: 0.4 }} />
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="p-2.5">
+        <p
+          className="text-[13px] text-white line-clamp-1 mb-1"
+          style={{ fontFamily: FONT_RALEWAY, fontWeight: 500 }}
+        >
+          {item.title || item.text || "Untitled"}
+        </p>
+        <p
+          className="text-[22px] font-bold"
+          style={{ fontFamily: FONT_RALEWAY, color: GREEN }}
+        >
+          {formatPrice(item.price)}
+        </p>
+      </div>
+    </button>
   );
 }

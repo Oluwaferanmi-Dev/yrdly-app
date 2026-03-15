@@ -5,17 +5,13 @@ import { useAuth } from '@/hooks/use-supabase-auth';
 import { supabase } from '@/lib/supabase';
 import { StorageService } from '@/lib/storage-service';
 import { UserActivityService } from '@/lib/user-activity-service';
-import { LocationScopeService } from '@/lib/location-scope-service';
+
 import { Post, Business } from '@/types';
 import { useToast } from './use-toast';
 
-export interface UsePostsOptions {
-  state?: string | null;
-  lga?: string | null;
-  ward?: string | null;
-}
 
-export const usePosts = (options?: UsePostsOptions) => {
+
+export const usePosts = () => {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -240,19 +236,6 @@ export const usePosts = (options?: UsePostsOptions) => {
           )
         );
 
-        // Extract state from user's location or event location
-        let postState = LocationScopeService.getUserState(profile);
-        let postLga = LocationScopeService.getUserLga(profile);
-        let postWard = LocationScopeService.getUserWard(profile);
-
-        // For events, try to extract state from event_location if available
-        if (postData.category === 'Event' && postData.event_location) {
-          const eventState = LocationScopeService.extractStateFromEventLocation(postData.event_location);
-          if (eventState) {
-            postState = eventState;
-          }
-        }
-
         const finalPostData = {
           ...cleanedPostData,
           user_id: user.id,
@@ -261,9 +244,6 @@ export const usePosts = (options?: UsePostsOptions) => {
           image_urls: imageUrls.length > 0 ? imageUrls : [],
           timestamp: postIdToUpdate ? postData.timestamp : new Date().toISOString(),
           category: postData.category || 'General', // Ensure category is always provided
-          state: postState,
-          lga: postLga,
-          ward: postWard,
         };
 
         if (postIdToUpdate) {
@@ -316,23 +296,10 @@ export const usePosts = (options?: UsePostsOptions) => {
             imageUrls = businessIdToUpdate ? [...imageUrls, ...uploadedUrls] : uploadedUrls;
         }
 
-        // Extract state from business location or user's location
-        let businessState = LocationScopeService.extractStateFromBusinessLocation(businessData.location);
-        let businessLga = LocationScopeService.getUserLga(profile);
-        let businessWard = LocationScopeService.getUserWard(profile);
-
-        // If state not found in location, use user's state
-        if (!businessState) {
-          businessState = LocationScopeService.getUserState(profile);
-        }
-
         const finalBusinessData = {
             ...businessData,
             owner_id: user.id,
             image_urls: imageUrls,
-            state: businessState,
-            lga: businessLga,
-            ward: businessWard,
         }
 
         if (businessIdToUpdate) {
