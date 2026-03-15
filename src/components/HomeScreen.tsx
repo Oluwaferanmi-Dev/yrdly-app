@@ -95,8 +95,8 @@ export function HomeScreen({ onViewProfile }: HomeScreenProps) {
           {/* Divider */}
           <div className="my-3" style={{ borderTop: "0.2px solid rgba(255,255,255,0.2)" }} />
 
-          {/* Action buttons */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Action buttons - horizontally scrollable on small screens */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
             <CreateItemDialog>
               <button
                 className="flex items-center gap-1.5 rounded-[20.5px] px-3 py-1.5 text-white text-[12px] font-semibold hover:bg-white/10 transition-colors"

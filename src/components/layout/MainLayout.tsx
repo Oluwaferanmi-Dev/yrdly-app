@@ -174,6 +174,15 @@ export function MainLayout({ children }: MainLayoutProps) {
 
                 {/* Right icons */}
                 <div className="flex items-center gap-1 ml-auto md:gap-2">
+                  {/* Mobile search icon (hidden on md+) */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden text-white hover:bg-white/10 rounded-full"
+                    onClick={() => setShowSearch(true)}
+                  >
+                    <Search className="w-5 h-5" />
+                  </Button>
                   <Link href="/map">
                     <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full">
                       <MapPin className="w-5 h-5" />
@@ -227,7 +236,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           className={cn(
             "flex flex-col lg:flex-row min-h-screen",
             !isChatPage && "pt-16 md:pt-[84px]",
-            !isChatPage && "pb-16 lg:pb-0"
+            !isChatPage && "pb-20 lg:pb-0"
           )}
         >
           {/* Left navigation - desktop only */}
@@ -295,7 +304,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               {isChatPage ? (
                 <div className="w-full h-full">{children}</div>
               ) : (
-                <div className="w-full max-w-2xl mx-auto lg:max-w-none">
+                <div className="w-full max-w-[680px] mx-auto lg:max-w-none">
                   {children}
                 </div>
               )}
@@ -310,8 +319,12 @@ export function MainLayout({ children }: MainLayoutProps) {
         {!isChatPage && (
           <Suspense fallback={null}>
             <nav
-              className="lg:hidden fixed bottom-0 left-0 right-0 z-50 h-14 flex items-center justify-around px-2"
-              style={{ background: "#1B2B3A", paddingBottom: "env(safe-area-inset-bottom)" }}
+              className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2"
+              style={{
+                background: "#1B2B3A",
+                height: 'calc(56px + env(safe-area-inset-bottom))',
+                paddingBottom: "env(safe-area-inset-bottom)",
+              }}
             >
               {navItems.map(({ href, label, icon: Icon }) => {
                 const isActive = pathname === href || (href !== "/home" && pathname.startsWith(href));

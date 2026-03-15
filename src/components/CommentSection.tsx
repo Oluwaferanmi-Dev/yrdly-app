@@ -505,7 +505,7 @@ export function CommentSection({
                         type="button"
                         onClick={e => handlePostComment(e as any)}
                         disabled={!newComment.trim()}
-                        className="h-[36px] px-8 rounded-full text-white text-[14px] font-medium disabled:opacity-50 transition-opacity hover:opacity-90"
+                        className="h-[36px] px-4 sm:px-8 rounded-full text-white text-[13px] sm:text-[14px] font-medium disabled:opacity-50 transition-opacity hover:opacity-90 whitespace-nowrap"
                         style={{ background: GREEN, fontFamily: FONT_RALEWAY }}
                     >
                         Post
@@ -513,7 +513,7 @@ export function CommentSection({
                 </div>
 
                 {/* Comments */}
-                <div className="px-4 pb-4 space-y-3 max-h-[40vh] overflow-y-auto">
+                <div className="px-4 pb-4 space-y-3 overflow-y-auto" style={{ maxHeight: 'min(40vh, 300px)' }}>
                     {parentComments.length === 0 ? (
                         <div className="py-8 text-center">
                             <p className="text-[13px] text-white/50" style={{ fontFamily: FONT_RALEWAY }}>No comments yet. Be the first!</p>
@@ -531,7 +531,7 @@ export function CommentSection({
     return (
         <div className="flex flex-col h-auto">
             {inputBox}
-            <div className="px-4 pb-4 space-y-3 max-h-[60vh] overflow-y-auto">
+            <div className="px-4 pb-4 space-y-3 overflow-y-auto" style={{ maxHeight: 'min(60vh, 400px)' }}>
                 {parentComments.length === 0 ? (
                     <div className="py-8 text-center flex flex-col items-center gap-2">
                         <MessageCircle className="w-10 h-10 text-white/30" />

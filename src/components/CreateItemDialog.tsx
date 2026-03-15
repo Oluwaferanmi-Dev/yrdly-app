@@ -194,7 +194,7 @@ function FormBody({
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <div className="px-6 pb-4 space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="px-4 sm:px-6 pb-4 space-y-4 overflow-y-auto" style={{ maxHeight: 'min(65vh, 480px)' }}>
 
             {/* Item Title */}
             <FormField

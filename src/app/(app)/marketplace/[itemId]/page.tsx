@@ -136,10 +136,10 @@ export default function MarketplaceItemPage() {
   /* ─────────────────────────────────────────── LOADING ── */
   if (loading) {
     return (
-      <div className="min-h-screen p-6" style={{ background: BG }}>
-        <div className="flex gap-6 mt-4">
-          <Skeleton className="flex-1 h-[670px] rounded-xl" style={{ background: CARD_BG }} />
-          <Skeleton className="w-[320px] h-[313px] rounded-xl" style={{ background: CARD_BG }} />
+      <div className="min-h-screen p-4" style={{ background: BG }}>
+        <div className="flex flex-col lg:flex-row gap-4 mt-4">
+          <Skeleton className="flex-1 h-[400px] lg:h-[670px] rounded-xl" style={{ background: CARD_BG }} />
+          <Skeleton className="w-full lg:w-[320px] h-[200px] lg:h-[313px] rounded-xl" style={{ background: CARD_BG }} />
         </div>
       </div>
     );
@@ -188,8 +188,8 @@ export default function MarketplaceItemPage() {
           </div>
 
           {/* Image + carousel */}
-          <div className="px-6 pt-5">
-            <div className="relative w-full rounded-xl overflow-hidden" style={{ height: "301px" }}>
+          <div className="px-3 sm:px-6 pt-5">
+            <div className="relative w-full rounded-xl overflow-hidden" style={{ aspectRatio: '4/3', maxHeight: '360px' }}>
               {images.length > 0 ? (
                 <Image
                   src={images[currentImageIndex]}
@@ -378,7 +378,7 @@ export default function MarketplaceItemPage() {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Hi, Is this available?"
-                    rows={4}
+                    rows={3}
                     className="w-full bg-transparent text-white text-[13px] font-light p-3 pr-10 resize-none outline-none placeholder:text-[#BBBBBB]"
                     style={{ fontFamily: FONT_RALEWAY }}
                   />

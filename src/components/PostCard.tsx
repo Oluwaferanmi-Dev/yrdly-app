@@ -108,16 +108,15 @@ function ImageCollage({
     return (
       <div
         className="relative w-full cursor-pointer overflow-hidden"
-        style={{ borderRadius: 15 }}
+        style={{ borderRadius: 15, aspectRatio: '16/9' }}
         onClick={() => onImageClick(0)}
       >
         <Image
           src={urls[0]}
           alt="Post image"
-          width={563}
-          height={311}
-          className="w-full h-auto object-cover"
-          style={{ maxHeight: 360 }}
+          fill
+          className="object-cover"
+          sizes="(max-width: 640px) 100vw, 626px"
         />
       </div>
     );
@@ -136,8 +135,10 @@ function ImageCollage({
   // 3+: 1 tall left + 2 right
   return (
     <div className="grid grid-cols-2 gap-1 overflow-hidden" style={{ borderRadius: 15 }}>
-      <div className="row-span-2 relative min-h-[200px] cursor-pointer" onClick={() => onImageClick(0)}>
-        <Image src={urls[0]} alt="" fill className="object-cover" />
+      <div className="row-span-2 relative" style={{ aspectRatio: '1/1.38' }}>
+        <div className="absolute inset-0 cursor-pointer" onClick={() => onImageClick(0)}>
+          <Image src={urls[0]} alt="" fill className="object-cover" />
+        </div>
       </div>
       <div className="relative aspect-[276/150] cursor-pointer" onClick={() => onImageClick(1)}>
         <Image src={urls[1]} alt="" fill className="object-cover" />
@@ -533,7 +534,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
         {/* image */}
         {urls.length > 0 && (
           <div className="px-3 pb-3">
-            <div className="relative w-full overflow-hidden" style={{ borderRadius: 15, height: 256 }}>
+            <div className="relative w-full overflow-hidden" style={{ borderRadius: 15, aspectRatio: '16/9' }}>
               <Image src={urls[0]} alt="" fill className="object-cover" />
             </div>
           </div>

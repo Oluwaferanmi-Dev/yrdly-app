@@ -186,7 +186,7 @@ export function PostDetailView({ post, onCommentCountChange }: PostDetailViewPro
   return (
     <div
       className={cn(
-        "w-full max-w-[626px] mx-auto rounded-[11px] overflow-hidden",
+        "w-full rounded-[11px] overflow-hidden",
         "bg-[#1E2126] text-white"
       )}
     >
