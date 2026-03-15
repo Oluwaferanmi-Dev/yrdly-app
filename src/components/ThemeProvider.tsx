@@ -29,7 +29,7 @@ export function ThemeProvider({
   disableTransitionOnChange = false
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(defaultTheme)
-  const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("light")
+  const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("dark")
 
   useEffect(() => {
     const root = window.document.documentElement
