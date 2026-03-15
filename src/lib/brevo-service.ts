@@ -31,7 +31,7 @@ export class BrevoEmailService {
    * Generate a manual verification link as fallback
    */
   static generateManualVerificationLink(userId: string, email: string): string {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app-yrdly.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yrdly-app.vercel.app';
     return `${baseUrl}/onboarding/verify-email?token=${userId}&email=${encodeURIComponent(email)}`;
   }
 
@@ -618,7 +618,7 @@ If you have any questions, please contact our support team at support@yrdly.ng
             
             <div class="button-container">
               ${data.eventLink ? `<a href="${data.eventLink}" class="calendar-button">View Event Details</a>` : ''}
-              <a href="https://app-yrdly.vercel.app/events" class="calendar-button">Browse More Events</a>
+              <a href="https://yrdly-app.vercel.app/events" class="calendar-button">Browse More Events</a>
             </div>
             
             <p class="message" style="text-align: center; font-style: italic; color: #6b7280;">
@@ -752,7 +752,7 @@ If you have any questions about this event, please contact the event organizer o
             </div>
             
             <div class="button-container">
-              <a href="https://app-yrdly.vercel.app/home" class="cta-button">Start Exploring Yrdly</a>
+              <a href="https://yrdly-app.vercel.app/home" class="cta-button">Start Exploring Yrdly</a>
             </div>
             
             <p style="text-align: center; font-style: italic; color: #6b7280;">
@@ -797,7 +797,7 @@ What you can do on Yrdly:
 👥 Connect with Neighbors
    Build relationships with the people who live around you. A stronger community starts here.
 
-Ready to get started? Visit: https://app-yrdly.vercel.app/home
+Ready to get started? Visit: https://yrdly-app.vercel.app/home
 
 Ready to connect with your neighbors?
 The Yrdly Team
