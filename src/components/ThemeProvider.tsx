@@ -33,43 +33,35 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = window.document.documentElement
-    
-    // Get stored theme from localStorage
-    const storedTheme = localStorage.getItem("theme") as Theme
-    if (storedTheme) {
-      setTheme(storedTheme)
-    }
 
-    // Apply theme to document
+    // Always apply the configured theme (dark). Never let localStorage override it.
     const applyTheme = (newTheme: Theme) => {
       if (disableTransitionOnChange) {
         root.style.transition = "none"
-        setTimeout(() => {
-          root.style.transition = ""
-        }, 0)
+        setTimeout(() => { root.style.transition = "" }, 0)
       }
 
       if (newTheme === "system" && enableSystem) {
         const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-        root.classList.remove("light", "dark")
+        root.classList.remove("light", "dark", "system")
         root.classList.add(systemTheme)
         setResolvedTheme(systemTheme)
       } else {
-        root.classList.remove("light", "dark")
-        root.classList.add(newTheme)
-        setResolvedTheme(newTheme as "dark" | "light")
+        const resolved = (newTheme === "system") ? "dark" : newTheme as "dark" | "light"
+        root.classList.remove("light", "dark", "system")
+        root.classList.add(resolved)
+        setResolvedTheme(resolved)
       }
     }
 
+    // Sync localStorage and always force-apply the current theme
+    localStorage.setItem("theme", theme)
     applyTheme(theme)
 
-    // Listen for system theme changes
     if (enableSystem) {
       const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
       const handleChange = () => {
-        if (theme === "system") {
-          applyTheme("system")
-        }
+        if (theme === "system") applyTheme("system")
       }
       mediaQuery.addEventListener("change", handleChange)
       return () => mediaQuery.removeEventListener("change", handleChange)

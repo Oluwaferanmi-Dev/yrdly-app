@@ -41,6 +41,24 @@ export default function RootLayout({
       </head>
 
       <body className={cn('font-body antialiased min-h-screen bg-background')}>
+        {/* Force dark mode synchronously before React hydration — prevents flash of light theme */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  // Always force dark mode — clear any stale 'system' or 'light' localStorage value
+                  var stored = localStorage.getItem('theme');
+                  if (!stored || stored !== 'dark') {
+                    localStorage.setItem('theme', 'dark');
+                  }
+                  document.documentElement.classList.remove('light', 'system');
+                  document.documentElement.classList.add('dark');
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
