@@ -53,16 +53,11 @@ export default function PaymentVerificationPage() {
       if (result.success) {
         setVerificationStatus('success');
         setTransactionId(result.transactionId);
-        
-        toast({
-          title: "Payment Successful",
-          description: "Your payment has been verified and the transaction is now active.",
-        });
 
-        // Redirect to transaction details after 3 seconds
-        setTimeout(() => {
-          router.push(`/transactions/${result.transactionId}`);
-        }, 3000);
+        // Redirect immediately to Stitch escrow-confirmation page
+        router.replace(
+          `/payment/escrow-confirmation?txn=${result.transactionId}&amount=${result.amount ?? ''}&ref=${txRef ?? ''}`
+        );
       } else {
         setVerificationStatus('failed');
         setErrorMessage(result.error || 'Payment verification failed');

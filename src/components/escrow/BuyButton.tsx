@@ -2,13 +2,10 @@
 
 import React, { useState } from "react";
 import { X, Lock, Info, ChevronRight } from "lucide-react";
-import { DeliveryOption, DeliveryDetails, PaymentMethod } from "@/types/escrow";
-import { EscrowService } from "@/lib/escrow-service";
-import { FlutterwaveService } from "@/lib/flutterwave-service";
-import { ItemTrackingService } from "@/lib/item-tracking-service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
+
 
 /* ── Design tokens ─────────────────────────────────── */
 const BG     = "#101418";
@@ -60,41 +57,42 @@ export function BuyButton({
 
     setLoading(true);
     try {
-      const isAvailable = await ItemTrackingService.isItemAvailable(itemId);
-      if (!isAvailable) {
-        toast({ title: "Item Sold", description: "This item has already been sold.", variant: "destructive" });
-        setOpen(false);
+      const res = await fetch("/api/payment/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemId,
+          buyerId: user.id,
+          sellerId,
+          price,
+          buyerEmail: user.email ?? "",
+          buyerName:
+            user.user_metadata?.name ||
+            user.email?.split("@")[0] ||
+            "Buyer",
+          itemTitle,
+          sellerName,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.paymentLink) {
+        toast({
+          title: "Error",
+          description: data.error ?? "Failed to initialize payment.",
+          variant: "destructive",
+        });
         return;
       }
 
-      const deliveryDetails: DeliveryDetails = { option: DeliveryOption.FACE_TO_FACE };
-
-      const transactionId = await EscrowService.createTransaction(
-        itemId,
-        user.id,
-        sellerId,
-        price,
-        PaymentMethod.CARD,
-        deliveryDetails
-      );
-
-      const paymentLink = await FlutterwaveService.initializePayment({
-        transactionId,
-        amount: totalPay,
-        buyerEmail: user.email || "",
-        buyerName:
-          user.user_metadata?.name || user.email?.split("@")[0] || "Buyer",
-        itemTitle,
-        sellerName,
-      });
-
-      // Navigate to loading screen then redirect
       setOpen(false);
+      // Navigate to redirect loading page then to Flutterwave
       router.push(
-        `/payment/redirect?link=${encodeURIComponent(paymentLink)}&txn=${transactionId}`
+        `/payment/redirect?link=${encodeURIComponent(data.paymentLink)}&txn=${data.transactionId}`
       );
     } catch {
-      toast({ title: "Error", description: "Failed to create transaction. Please try again.", variant: "destructive" });
+      toast({ title: "Error", description: "Something went wrong. Please try again.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
