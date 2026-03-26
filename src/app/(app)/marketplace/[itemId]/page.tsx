@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Send, ShoppingBag, MapPin } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
@@ -9,6 +9,7 @@ import { supabase } from "@/lib/supabase";
 import type { Post as PostType } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import Image from "next/image";
+import { BuyButton } from "@/components/escrow/BuyButton";
 
 /* ─── colour tokens matching the Figma ─────────────────────────── */
 const BG = "#15181D";
@@ -293,6 +294,19 @@ export default function MarketplaceItemPage() {
           >
             {formatPrice(item.price)}
           </p>
+
+          {/* Buy Now button — shown only to non-owners with a priced item */}
+          {!isOwn && item.price && item.price > 0 && (
+            <BuyButton
+              itemId={item.id}
+              itemTitle={item.title || item.text || "Item"}
+              itemImageUrl={images[0]}
+              price={item.price}
+              condition={item.condition ?? "Used"}
+              sellerId={item.user_id}
+              sellerName={item.author_name || "Seller"}
+            />
+          )}
 
           {/* Horizontal divider */}
           <div style={{ borderTop: "0.2px solid rgba(255,255,255,0.2)" }} />
