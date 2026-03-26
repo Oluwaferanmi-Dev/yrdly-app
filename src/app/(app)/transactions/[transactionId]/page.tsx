@@ -193,50 +193,47 @@ export default function TransactionDetailsPage() {
   const getActionButton = () => {
     if (!user || !transaction) return null;
 
-    const isBuyer = user.id === transaction.buyer_id;
+    const isBuyer  = user.id === transaction.buyer_id;
     const isSeller = user.id === transaction.seller_id;
 
     switch (transaction.status) {
       case EscrowStatus.PAID:
         if (isSeller) {
           return (
-            <Button 
-              onClick={() => handleStatusUpdate('shipped')}
-              disabled={actionLoading}
+            <Button
+              onClick={() => router.push(`/transactions/${transactionId}/mark-sent`)}
               className="w-full"
             >
               <Truck className="mr-2 h-4 w-4" />
-              Mark as Shipped
+              Mark as Sent
             </Button>
           );
         }
         break;
-      
+
       case EscrowStatus.SHIPPED:
         if (isBuyer) {
           return (
-            <Button 
-              onClick={() => handleStatusUpdate('delivered')}
-              disabled={actionLoading}
+            <Button
+              onClick={() => router.push(`/transactions/${transactionId}/confirm-receipt`)}
               className="w-full"
             >
               <Package className="mr-2 h-4 w-4" />
-              Confirm Delivery
+              Confirm Receipt
             </Button>
           );
         }
         break;
-      
+
       case EscrowStatus.DELIVERED:
         if (isBuyer) {
           return (
-            <Button 
-              onClick={() => handleStatusUpdate('completed')}
-              disabled={actionLoading}
+            <Button
+              onClick={() => router.push(`/transactions/${transactionId}/confirm-receipt`)}
               className="w-full"
             >
               <CheckCircle className="mr-2 h-4 w-4" />
-              Complete Transaction
+              Confirm &amp; Release Funds
             </Button>
           );
         }
@@ -506,12 +503,14 @@ export default function TransactionDetailsPage() {
           {/* Dispute Button */}
           {transaction.status !== 'completed' && transaction.status !== 'cancelled' && (
             <div className="flex justify-center">
-              <OpenDisputeDialog transactionId={transactionId}>
-                <Button variant="outline" className="border-red-500 text-red-500 hover:bg-red-50">
-                  <AlertTriangle className="mr-2 h-4 w-4" />
-                  Open Dispute
-                </Button>
-              </OpenDisputeDialog>
+              <Button
+                variant="outline"
+                className="border-red-500 text-red-500 hover:bg-red-50"
+                onClick={() => router.push(`/transactions/${transactionId}/dispute`)}
+              >
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Open Dispute
+              </Button>
             </div>
           )}
 
@@ -554,17 +553,17 @@ export default function TransactionDetailsPage() {
                       </div>
                     </div>
                   ) : (
-                    <SubmitReviewDialog
-                      businessId={businessId}
-                      businessName={transaction.seller?.name || 'Business'}
-                      transactionId={transactionId}
-                      onSuccess={fetchTransactionDetails}
+                    <Button
+                      className="w-full"
+                      onClick={() =>
+                        router.push(
+                          `/transactions/${transactionId}/review?seller=${encodeURIComponent(transaction.seller?.name ?? '')}`
+                        )
+                      }
                     >
-                      <Button className="w-full">
-                        <Star className="mr-2 h-4 w-4" />
-                        Write a Review
-                      </Button>
-                    </SubmitReviewDialog>
+                      <Star className="mr-2 h-4 w-4" />
+                      Write a Review
+                    </Button>
                   )}
                 </CardContent>
               </Card>
