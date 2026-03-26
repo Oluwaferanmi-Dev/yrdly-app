@@ -1,31 +1,14 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import {
-  MapPin,
-  Calendar,
-  Briefcase,
-  Clock,
-  Users,
-  Search,
-  Navigation,
-  ChevronRight,
-} from 'lucide-react';
-import { APIProvider, Map, AdvancedMarker, Pin, InfoWindow } from '@vis.gl/react-google-maps';
+import Image from 'next/image';
+import { Search, Navigation, Calendar, Briefcase, Users, Clock, ChevronRight } from 'lucide-react';
+import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-supabase-auth';
 
-const BG    = "#101418";
-const CARD  = "#1E2126";
-const GREEN = "#388E3C";
-const GREEN_LIGHT = "#82DB7E";
-const FONT  = "Work Sans, sans-serif";
-const HEADLINE = "Raleway, sans-serif";
-
-interface MapScreenProps {
-  className?: string;
-}
+type FilterTab = 'all' | 'events' | 'businesses' | 'friends';
 
 type MarkerData = {
   id: string;
@@ -39,194 +22,148 @@ type MarkerData = {
   attendees?: number;
   avatar_url?: string;
   last_seen?: string;
+  image?: string;
+  category?: string;
+  distance?: string;
 };
+
+const DARK_MAP_STYLES = [
+  { featureType: "all",           elementType: "geometry",          stylers: [{ color: "#1d2025" }] },
+  { featureType: "water",         elementType: "geometry",          stylers: [{ color: "#0b0e13" }] },
+  { featureType: "road",          elementType: "geometry",          stylers: [{ color: "#272a2f" }] },
+  { featureType: "road",          elementType: "geometry.stroke",   stylers: [{ color: "#1d2025" }] },
+  { featureType: "poi",           elementType: "labels",            stylers: [{ visibility: "off" }] },
+  { featureType: "administrative",elementType: "labels.text.fill",  stylers: [{ color: "#899485" }] },
+  { featureType: "administrative",elementType: "labels.text.stroke",stylers: [{ color: "#101418" }] },
+  { featureType: "landscape",     elementType: "geometry",          stylers: [{ color: "#191c21" }] },
+  { featureType: "transit",       elementType: "labels",            stylers: [{ visibility: "off" }] },
+];
+
+interface MapScreenProps { className?: string }
 
 export function MapScreen({ className }: MapScreenProps) {
   const { user } = useAuth();
-  const [markers, setMarkers] = useState<MarkerData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedMarker, setSelectedMarker] = useState<MarkerData | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [nearbyEvents, setNearbyEvents] = useState(0);
-  const [nearbyBusinesses, setNearbyBusinesses] = useState(0);
-  const [nearbyFriends, setNearbyFriends] = useState(0);
   const router = useRouter();
+  const [markers, setMarkers]           = useState<MarkerData[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [selected, setSelected]         = useState<MarkerData | null>(null);
+  const [search, setSearch]             = useState('');
+  const [activeTab, setActiveTab]       = useState<FilterTab>('all');
+  const [nearbyEvents, setNearbyEvents] = useState(0);
+  const [nearbyBiz, setNearbyBiz]       = useState(0);
+  const [nearbyFriends, setNearbyFriends] = useState(0);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const load = async () => {
       setLoading(true);
-      const fetchedMarkers: MarkerData[] = [];
+      const found: MarkerData[] = [];
 
-      const extractLatLng = (loc: any): { lat: number; lng: number; address: string } | null => {
+      const extract = (loc: any): { lat: number; lng: number; address: string } | null => {
         if (!loc) return null;
-        if (loc.geopoint)               return { lat: loc.geopoint.latitude, lng: loc.geopoint.longitude, address: loc.address };
-        if (loc.latitude && loc.longitude) return { lat: loc.latitude,          lng: loc.longitude,          address: loc.address };
-        if (loc.lat && loc.lng)         return { lat: loc.lat,                 lng: loc.lng,                address: loc.address };
+        if (loc.geopoint)            return { lat: loc.geopoint.latitude,  lng: loc.geopoint.longitude, address: loc.address || '' };
+        if (loc.latitude && loc.longitude) return { lat: loc.latitude, lng: loc.longitude, address: loc.address || '' };
+        if (loc.lat && loc.lng)      return { lat: loc.lat, lng: loc.lng, address: loc.address || '' };
         return null;
       };
 
-      const { data: eventsData } = await supabase.from('posts').select('*').eq('category', 'Event').not('event_location', 'is', null);
-      (eventsData || []).forEach(post => {
-        const coords = extractLatLng(typeof post.event_location === 'string' ? null : post.event_location);
-        if (coords) fetchedMarkers.push({ id: post.id, type: 'event', position: coords, title: post.title || post.text, address: coords.address || 'Location not specified', description: post.text, date: post.event_date, time: post.event_time, attendees: post.attendees?.length || 0 });
+      const { data: evts } = await supabase.from('posts').select('*').eq('category', 'Event').not('event_location', 'is', null);
+      (evts || []).forEach(p => {
+        const loc = extract(typeof p.event_location === 'string' ? null : p.event_location);
+        if (loc) found.push({ id: p.id, type: 'event', position: loc, title: p.title || p.text, address: loc.address || 'Location TBD', description: p.text, date: p.event_date, time: p.event_time, attendees: p.attendees?.length || 0, image: p.image_urls?.[0] });
       });
 
-      const { data: bizData } = await supabase.from('businesses').select('*').not('location', 'is', null);
-      (bizData || []).forEach(biz => {
-        const coords = extractLatLng(biz.location);
-        if (coords) fetchedMarkers.push({ id: biz.id, type: 'business', position: coords, title: biz.name, address: coords.address || 'Location not specified', description: biz.description });
+      const { data: bizs } = await supabase.from('businesses').select('*').not('location', 'is', null);
+      (bizs || []).forEach(b => {
+        const loc = extract(b.location);
+        if (loc) found.push({ id: b.id, type: 'business', position: loc, title: b.name, address: loc.address || 'Lagos, Nigeria', description: b.description, category: b.category, image: b.image_urls?.[0] });
       });
 
       if (user?.id) {
-        const { data: friendsData } = await supabase.rpc('get_friends_locations', { user_id: user.id });
-        (friendsData || []).forEach((friend: any) => {
-          const coords = extractLatLng(friend.location);
-          if (coords) fetchedMarkers.push({ id: friend.friend_id, type: 'friend', position: coords, title: friend.friend_name, address: coords.address || 'Location not specified', avatar_url: friend.friend_avatar_url, last_seen: friend.last_seen });
+        const { data: frds } = await supabase.rpc('get_friends_locations', { user_id: user.id });
+        (frds || []).forEach((f: any) => {
+          const loc = extract(f.location);
+          if (loc) found.push({ id: f.friend_id, type: 'friend', position: loc, title: f.friend_name, address: loc.address || 'Nearby', avatar_url: f.friend_avatar_url, last_seen: f.last_seen });
         });
       }
 
-      setMarkers(fetchedMarkers);
-      setNearbyEvents(fetchedMarkers.filter(m => m.type === 'event').length);
-      setNearbyBusinesses(fetchedMarkers.filter(m => m.type === 'business').length);
-      setNearbyFriends(fetchedMarkers.filter(m => m.type === 'friend').length);
+      setMarkers(found);
+      setNearbyEvents(found.filter(m => m.type === 'event').length);
+      setNearbyBiz(found.filter(m => m.type === 'business').length);
+      setNearbyFriends(found.filter(m => m.type === 'friend').length);
       setLoading(false);
     };
-    fetchData();
+    load();
   }, [user?.id]);
 
-  const filteredMarkers = markers.filter(m =>
-    searchQuery === '' ||
-    m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.address.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filtered = markers.filter(m => {
+    const matchTab = activeTab === 'all' || m.type === activeTab.replace('businesses', 'business').replace('friends', 'friend').replace('events', 'event');
+    const matchSearch = !search || m.title.toLowerCase().includes(search.toLowerCase()) || m.address.toLowerCase().includes(search.toLowerCase());
+    return matchTab && matchSearch;
+  });
 
-  const handleViewDetails = (marker: MarkerData) => {
-    if (marker.type === 'event')    router.push(`/posts/${marker.id}`);
-    else if (marker.type === 'business') router.push(`/businesses/${marker.id}`);
-    else                            router.push(`/profile/${marker.id}`);
-  };
+  const TABS: { key: FilterTab; label: string }[] = [
+    { key: 'all', label: 'All' }, { key: 'events', label: 'Events' }, { key: 'businesses', label: 'Businesses' }, { key: 'friends', label: 'Friends' },
+  ];
 
-  const markerColor = (type: MarkerData['type']) =>
-    type === 'business' ? '#3b82f6' : type === 'event' ? '#ef4444' : GREEN;
+  const pinColor = (t: MarkerData['type']) => t === 'business' ? '#006ec9' : t === 'event' ? '#93000a' : '#4da24e';
 
   return (
-    <div className={`h-screen w-full relative ${className}`} style={{ background: BG }}>
-      {/* Search bar */}
-      <div className="absolute top-4 left-4 right-4 z-10">
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: GREEN_LIGHT }} />
-          <input
-            type="text"
-            placeholder="Search locations..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            className="w-full h-12 rounded-full pl-11 pr-4 text-sm text-white outline-none"
-            style={{ background: CARD, border: `1px solid ${GREEN}`, fontFamily: FONT }}
-          />
-        </div>
-      </div>
+    <div className={`relative w-full overflow-hidden ${className ?? ''}`} style={{ height: '100dvh', background: '#0b0e13' }}>
 
-      {/* Loading overlay */}
-      {loading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center" style={{ background: "rgba(16,20,24,0.85)" }}>
-          <div className="text-center space-y-3">
-            <div className="w-10 h-10 rounded-full border-4 animate-spin mx-auto" style={{ borderColor: GREEN, borderTopColor: "transparent" }} />
-            <p className="text-sm" style={{ color: GREEN_LIGHT, fontFamily: FONT }}>Loading map...</p>
-          </div>
-        </div>
-      )}
-
-      {/* Map */}
+      {/* ── MAP ── */}
       <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} libraries={['places']}>
         <Map
           defaultCenter={{ lat: 6.5244, lng: 3.3792 }}
-          defaultZoom={10}
+          defaultZoom={12}
           gestureHandling="greedy"
           disableDefaultUI
           mapId="7bdaf6c131a6958be5380043f"
           className="w-full h-full"
-          styles={[
-            { featureType: "all",            elementType: "geometry",         stylers: [{ color: "#1d2025" }] },
-            { featureType: "water",           elementType: "geometry",         stylers: [{ color: "#101418" }] },
-            { featureType: "road",            elementType: "geometry",         stylers: [{ color: "#272a2f" }] },
-            { featureType: "poi",             elementType: "labels.text.fill", stylers: [{ color: "#899485" }] },
-            { featureType: "poi",             elementType: "labels.text.stroke",stylers: [{ color: "#101418" }] },
-            { featureType: "administrative",  elementType: "labels.text.fill", stylers: [{ color: "#899485" }] },
-            { featureType: "administrative",  elementType: "labels.text.stroke",stylers: [{ color: "#101418" }] },
-          ]}
+          /* @ts-ignore */
+          styles={DARK_MAP_STYLES}
         >
-          {filteredMarkers.map(marker => (
-            <AdvancedMarker key={marker.id} position={marker.position} onClick={() => setSelectedMarker(marker)}>
-              <div className="relative">
-                <Pin background={markerColor(marker.type)} borderColor="#101418" glyphColor="white" />
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                  <span className="text-white text-xs font-medium px-2 py-0.5 rounded" style={{ background: "rgba(16,20,24,0.8)" }}>
-                    {marker.title}
-                  </span>
+          {filtered.map(m => (
+            <AdvancedMarker key={m.id} position={m.position} onClick={() => setSelected(m)}>
+              <div className="flex flex-col items-center cursor-pointer">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-2"
+                  style={{ background: pinColor(m.type), borderColor: '#101418' }}
+                >
+                  {m.type === 'event'    && <Calendar className="w-5 h-5 text-white" />}
+                  {m.type === 'business' && <Briefcase className="w-5 h-5 text-white" />}
+                  {m.type === 'friend'   && (
+                    m.avatar_url
+                      ? <Image src={m.avatar_url} alt="" fill className="rounded-full object-cover" sizes="40px" />
+                      : <Users className="w-5 h-5 text-white" />
+                  )}
+                </div>
+                <div className="mt-1 px-2 py-0.5 rounded-full text-[9px] font-bold text-white" style={{ background: 'rgba(21,24,29,0.85)' }}>
+                  {m.title.length > 14 ? m.title.slice(0, 12) + '…' : m.title}
                 </div>
               </div>
             </AdvancedMarker>
           ))}
 
-          {selectedMarker && (
-            <InfoWindow position={selectedMarker.position} onCloseClick={() => setSelectedMarker(null)}>
-              <div className="rounded-xl shadow-2xl max-w-xs p-4" style={{ background: CARD, border: `1px solid rgba(56,142,60,0.3)` }}>
-                <div className="flex items-center gap-2 mb-2">
-                  {selectedMarker.type === 'event' ? (
-                    <Calendar className="w-4 h-4" style={{ color: "#ef4444" }} />
-                  ) : selectedMarker.type === 'business' ? (
-                    <Briefcase className="w-4 h-4" style={{ color: "#3b82f6" }} />
-                  ) : (
-                    <Users className="w-4 h-4" style={{ color: GREEN_LIGHT }} />
-                  )}
-                  <span
-                    className="text-xs font-bold px-2 py-0.5 rounded-full"
-                    style={{
-                      background: selectedMarker.type === 'event' ? 'rgba(239,68,68,0.15)' : selectedMarker.type === 'business' ? 'rgba(59,130,246,0.15)' : 'rgba(56,142,60,0.15)',
-                      color: selectedMarker.type === 'event' ? '#ef4444' : selectedMarker.type === 'business' ? '#3b82f6' : GREEN_LIGHT,
-                      fontFamily: FONT,
-                    }}
-                  >
-                    {selectedMarker.type === 'event' ? 'Event' : selectedMarker.type === 'business' ? 'Business' : 'Friend'}
-                  </span>
-                </div>
-
-                <h3 className="font-bold text-base mb-2 text-white" style={{ fontFamily: HEADLINE }}>{selectedMarker.title}</h3>
-
-                <div className="flex items-center gap-2 text-sm mb-2" style={{ color: "#899485", fontFamily: FONT }}>
-                  <MapPin className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate">{selectedMarker.address}</span>
-                </div>
-
-                {selectedMarker.description && (
-                  <p className="text-sm mb-3 line-clamp-2" style={{ color: "#bfcab9", fontFamily: FONT }}>{selectedMarker.description}</p>
+          {selected && (
+            <InfoWindow position={selected.position} onCloseClick={() => setSelected(null)}>
+              <div className="rounded-[11px] p-3 max-w-[220px]" style={{ background: '#1E2126', border: '0.5px solid rgba(56,142,60,0.3)' }}>
+                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: selected.type === 'event' ? '#ffb4ab' : selected.type === 'business' ? '#a5c8ff' : '#82db7e' }}>
+                  {selected.type === 'event' ? 'Live Event' : selected.type === 'business' ? 'Business' : 'Friend'}
+                </span>
+                <p className="text-sm font-bold mt-1 text-white" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>{selected.title}</p>
+                <p className="text-[11px] mt-1" style={{ color: '#bfcab9' }}>{selected.address}</p>
+                {selected.attendees !== undefined && selected.type === 'event' && (
+                  <p className="text-[11px]" style={{ color: '#bfcab9' }}>{selected.attendees} attending</p>
                 )}
-                {selectedMarker.type === 'event' && selectedMarker.date && (
-                  <div className="flex items-center gap-2 text-sm mb-2" style={{ color: "#899485", fontFamily: FONT }}>
-                    <Clock className="w-4 h-4" />
-                    <span>{selectedMarker.date}{selectedMarker.time ? ` at ${selectedMarker.time}` : ''}</span>
-                  </div>
+                {selected.last_seen && (
+                  <p className="text-[11px]" style={{ color: '#bfcab9' }}>Last seen: {new Date(selected.last_seen).toLocaleTimeString()}</p>
                 )}
-                {selectedMarker.type === 'event' && selectedMarker.attendees !== undefined && (
-                  <div className="flex items-center gap-2 text-sm mb-3" style={{ color: "#899485", fontFamily: FONT }}>
-                    <Users className="w-4 h-4" />
-                    <span>{selectedMarker.attendees} attending</span>
-                  </div>
-                )}
-                {selectedMarker.type === 'friend' && selectedMarker.last_seen && (
-                  <div className="flex items-center gap-2 text-sm mb-3" style={{ color: "#899485", fontFamily: FONT }}>
-                    <Clock className="w-4 h-4" />
-                    <span>Last seen: {new Date(selectedMarker.last_seen).toLocaleString()}</span>
-                  </div>
-                )}
-
                 <button
-                  onClick={() => handleViewDetails(selectedMarker)}
-                  className="w-full h-9 rounded-full flex items-center justify-center gap-2 text-sm font-bold transition-opacity hover:opacity-90"
-                  style={{ background: GREEN, color: "#fff", fontFamily: HEADLINE }}
+                  onClick={() => { setSelected(null); selected.type === 'event' ? router.push(`/posts/${selected.id}`) : selected.type === 'business' ? router.push(`/businesses/${selected.id}`) : router.push(`/profile/${selected.id}`); }}
+                  className="mt-3 w-full h-8 rounded-full text-xs font-bold text-white flex items-center justify-center gap-1"
+                  style={{ background: '#388E3C' }}
                 >
-                  <Navigation className="w-4 h-4" />
-                  View Details
+                  <Navigation className="w-3 h-3" /> View Details
                 </button>
               </div>
             </InfoWindow>
@@ -234,40 +171,126 @@ export function MapScreen({ className }: MapScreenProps) {
         </Map>
       </APIProvider>
 
-      {/* Bottom info panel */}
-      <div className="absolute bottom-4 left-4 right-4 z-10">
-        <div className="p-4 rounded-[11px]" style={{ background: CARD, border: `1px solid rgba(56,142,60,0.2)` }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4" style={{ color: "#ef4444" }} />
-                <span className="text-white text-sm font-semibold" style={{ fontFamily: FONT }}>
-                  {nearbyEvents} Event{nearbyEvents !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <div className="w-px h-4" style={{ background: "rgba(137,148,133,0.3)" }} />
-              <div className="flex items-center gap-1.5">
-                <Briefcase className="w-4 h-4" style={{ color: "#3b82f6" }} />
-                <span className="text-white text-sm font-semibold" style={{ fontFamily: FONT }}>
-                  {nearbyBusinesses} Biz
-                </span>
-              </div>
-              <div className="w-px h-4" style={{ background: "rgba(137,148,133,0.3)" }} />
-              <div className="flex items-center gap-1.5">
-                <Users className="w-4 h-4" style={{ color: GREEN_LIGHT }} />
-                <span className="text-white text-sm font-semibold" style={{ fontFamily: FONT }}>
-                  {nearbyFriends} Friend{nearbyFriends !== 1 ? 's' : ''}
-                </span>
-              </div>
-            </div>
+      {/* ── Header blur bar ── */}
+      <header
+        className="absolute top-0 left-0 right-0 z-20 flex justify-between items-center px-6 py-4"
+        style={{ background: 'rgba(16,20,24,0.8)', backdropFilter: 'blur(20px)' }}
+      >
+        <div className="flex items-center gap-2">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#82DB7E"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          <span style={{ fontFamily: 'Jersey 25, sans-serif', fontSize: 22, color: '#259907' }}>Yrdly</span>
+        </div>
+        <button className="p-2 rounded-full transition-colors hover:bg-white/10" style={{ color: '#899485' }}>
+          <Search className="w-5 h-5" />
+        </button>
+      </header>
 
+      {/* ── Search + filter overlay ── */}
+      <div className="absolute top-20 left-4 right-4 z-10 space-y-3">
+        <div
+          className="flex items-center gap-3 rounded-full px-5 py-3 shadow-xl"
+          style={{ background: 'rgba(39,42,47,0.8)', backdropFilter: 'blur(12px)', border: '0.5px solid #388E3C' }}
+        >
+          <Search className="w-4 h-4 flex-shrink-0" style={{ color: '#82DB7E' }} />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Explore your yard..."
+            className="flex-1 bg-transparent border-none outline-none text-sm"
+            style={{ color: '#e1e2e9', fontFamily: 'Work Sans, sans-serif' }}
+          />
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+          {TABS.map(t => (
             <button
-              onClick={() => router.push('/events')}
-              className="flex items-center gap-1 text-sm font-bold transition-opacity hover:opacity-80"
-              style={{ color: GREEN_LIGHT, fontFamily: HEADLINE }}
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className="flex-shrink-0 rounded-full px-5 py-2 text-xs font-bold shadow-md transition-all"
+              style={
+                activeTab === t.key
+                  ? { background: '#82DB7E', color: '#00390a' }
+                  : { background: 'rgba(39,42,47,0.8)', backdropFilter: 'blur(8px)', color: '#e1e2e9', border: '0.5px solid rgba(64,73,61,0.6)' }
+              }
             >
-              All <ChevronRight className="w-4 h-4" />
+              {t.label}
             </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Loading overlay ── */}
+      {loading && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center" style={{ background: 'rgba(16,20,24,0.85)' }}>
+          <div className="text-center space-y-3">
+            <div className="w-10 h-10 rounded-full border-4 animate-spin mx-auto" style={{ borderColor: '#388E3C', borderTopColor: 'transparent' }} />
+            <p className="text-sm" style={{ color: '#82db7e', fontFamily: 'Work Sans, sans-serif' }}>Loading map...</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── FAB ── */}
+      <button
+        className="absolute right-6 z-20 w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-white transition-transform active:scale-90"
+        style={{ bottom: 176, background: '#388E3C' }}
+      >
+        <Navigation className="w-6 h-6" />
+      </button>
+
+      {/* ── Bottom panel ── */}
+      <div className="absolute bottom-[88px] left-0 right-0 z-20 px-4">
+        <div
+          className="rounded-t-[28px] p-5"
+          style={{ background: '#1E2126', boxShadow: '0 -20px 40px rgba(0,0,0,0.6)', backdropFilter: 'blur(16px)' }}
+        >
+          {/* Drag handle */}
+          <div className="w-12 h-1 rounded-full mx-auto mb-5" style={{ background: '#32353a' }} />
+
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-white" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>Near You</h2>
+              <p className="text-sm" style={{ color: '#bfcab9' }}>{nearbyEvents} active events and {nearbyFriends} friends nearby</p>
+            </div>
+            <button className="p-2 rounded-full" style={{ background: '#272a2f', color: '#82DB7E' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+            </button>
+          </div>
+
+          {/* Horizontal scrolable mini cards */}
+          <div className="flex gap-3 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+            {filtered.slice(0, 6).map(m => (
+              <button
+                key={m.id}
+                onClick={() => setSelected(m)}
+                className="min-w-[220px] rounded-xl p-3 flex gap-3 text-left transition-colors hover:bg-white/5 flex-shrink-0"
+                style={{ background: '#1d2025', border: '0.5px solid rgba(64,73,61,0.6)' }}
+              >
+                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0" style={{ background: '#272a2f' }}>
+                  {m.image
+                    ? <Image src={m.image} alt="" fill className="object-cover" sizes="64px" />
+                    : (
+                      <div className="w-full h-full flex items-center justify-center" style={{ background: pinColor(m.type) + '22' }}>
+                        {m.type === 'event'    && <Calendar className="w-6 h-6" style={{ color: '#ffb4ab' }} />}
+                        {m.type === 'business' && <Briefcase className="w-6 h-6" style={{ color: '#a5c8ff' }} />}
+                        {m.type === 'friend'   && <Users className="w-6 h-6" style={{ color: '#82DB7E' }} />}
+                      </div>
+                    )
+                  }
+                </div>
+                <div className="flex flex-col justify-center min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: m.type === 'business' ? '#a5c8ff' : m.type === 'event' ? '#6edf51' : '#82DB7E' }}>
+                    {m.type}
+                  </p>
+                  <p className="text-sm font-bold text-white truncate">{m.title}</p>
+                  <p className="text-xs truncate" style={{ color: '#bfcab9' }}>{m.distance || m.address}</p>
+                </div>
+              </button>
+            ))}
+
+            {filtered.length === 0 && !loading && (
+              <p className="text-sm py-4 px-2" style={{ color: '#899485', fontFamily: 'Work Sans, sans-serif' }}>No places found nearby</p>
+            )}
           </div>
         </div>
       </div>
