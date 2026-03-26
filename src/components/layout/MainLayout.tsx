@@ -17,7 +17,6 @@ import {
   Bell,
   Search,
   Plus,
-  LogOut,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Suspense } from "react";
@@ -60,11 +59,6 @@ export function MainLayout({ children }: MainLayoutProps) {
   const isChatPage =
     (pathname.startsWith("/messages/") && pathname !== "/messages") ||
     pathname.includes("/chat");
-
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/login");
-  };
 
   useEffect(() => {
     if (!user) return;
@@ -312,23 +306,7 @@ export function MainLayout({ children }: MainLayoutProps) {
               </Button>
             </Link>
 
-            {/* Desktop Logout */}
-            <button
-              onClick={handleSignOut}
-              className="mt-auto flex items-center gap-3 px-3 py-2.5 rounded-[21.5px] w-full text-left hover:bg-white/5 transition-colors group"
-            >
-              <span className="w-1 h-6 rounded-sm flex-shrink-0 bg-transparent" />
-              <LogOut
-                className="w-6 h-6 flex-shrink-0 text-white/40 group-hover:text-red-400 transition-colors"
-                strokeWidth={2}
-              />
-              <span
-                className="text-white/40 text-xl leading-[35px] group-hover:text-red-400 transition-colors"
-                style={{ fontFamily: '"Pacifico", cursive' }}
-              >
-                Logout
-              </span>
-            </button>
+
           </nav>
 
           {/* ── Main Content ── */}
@@ -392,22 +370,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                 );
               })}
 
-              {/* Mobile Logout */}
-              <button
-                onClick={handleSignOut}
-                className="flex flex-col items-center justify-center flex-1 py-2 group"
-              >
-                <LogOut
-                  className="w-6 h-6 mb-0.5 text-white/40 group-hover:text-red-400 transition-colors"
-                  strokeWidth={2}
-                />
-                <span
-                  className="text-[10px] leading-tight text-white/40 group-hover:text-red-400 transition-colors"
-                  style={{ fontFamily: '"Raleway", sans-serif' }}
-                >
-                  Logout
-                </span>
-              </button>
+
             </nav>
           </Suspense>
         )}
