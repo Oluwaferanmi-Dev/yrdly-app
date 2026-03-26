@@ -302,7 +302,7 @@ export default function MarketplaceItemPage() {
               itemTitle={item.title || item.text || "Item"}
               itemImageUrl={images[0]}
               price={item.price}
-              condition={item.condition ?? "Used"}
+              condition="Used"
               sellerId={item.user_id}
               sellerName={item.author_name || "Seller"}
             />
