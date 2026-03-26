@@ -513,6 +513,7 @@ const CreateItemDialogComponent = ({
       <DialogContent
         className="p-4 border-0 shadow-2xl max-w-[626px]"
         style={{ background: BG_DARK }}
+        hideClose
       >
         <FormBody {...formBodyProps} />
       </DialogContent>

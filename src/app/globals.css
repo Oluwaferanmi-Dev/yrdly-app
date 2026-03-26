@@ -233,21 +233,54 @@
     overflow-x: hidden;
     width: 100%;
     position: relative;
+    /* Prevent iOS text size adjustment on orientation change */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /*
+   * CRITICAL — iOS auto-zoom fix:
+   * iOS Safari zooms into the page whenever a focused input has font-size < 16px.
+   * Force 16px on all form controls to prevent this.
+   */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /*
+   * touch-action: manipulation — removes the 300ms tap delay and disables
+   * double-tap-to-zoom on interactive elements. This prevents accidental zooming
+   * when tapping buttons quickly.
+   */
+  button,
+  a,
+  input,
+  textarea,
+  select,
+  [role="button"] {
+    touch-action: manipulation;
   }
 
   /* Ensure touch targets are at least 44x44px */
   button,
-  a,
-  input,
-  textarea {
+  a {
     min-height: 44px;
-    min-width: 44px;
   }
 
   /* Optimize text rendering on mobile */
   body {
     text-rendering: optimizeLegibility;
   }
+}
+
+/* Apply touch-action globally for all screen sizes (safe) */
+button,
+a,
+[role="button"],
+[tabindex] {
+  touch-action: manipulation;
 }
 
 /* Fix for Google Maps Autocomplete suggestions appearing behind dialogs */

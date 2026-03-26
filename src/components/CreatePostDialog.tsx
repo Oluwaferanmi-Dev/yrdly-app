@@ -273,7 +273,7 @@ const CreatePostDialogComponent = ({
       )}
       <DialogContent
         style={dialogStyles}
-        className="[&>button]:hidden" // hide default X added by DialogContent
+        hideClose
       >
         <PostForm {...formProps} />
       </DialogContent>

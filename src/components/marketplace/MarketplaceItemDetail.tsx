@@ -73,7 +73,7 @@ export function MarketplaceItemDetail({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" hideClose>
           <DialogHeader className="flex flex-row items-center justify-between">
             <div>
               <DialogTitle className="text-xl font-bold">
