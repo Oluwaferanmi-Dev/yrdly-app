@@ -17,6 +17,7 @@ import {
   Bell,
   Search,
   Plus,
+  LogOut,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Suspense } from "react";
@@ -44,7 +45,7 @@ const navItems = [
 export function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -52,12 +53,18 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   const isHomePage = pathname === "/home";
-  const isPostDetailPage = pathname.startsWith("/posts/") && pathname.split("/").filter(Boolean).length === 2;
-  const showRightSidebar = (isHomePage || isPostDetailPage);
+  const isPostDetailPage =
+    pathname.startsWith("/posts/") &&
+    pathname.split("/").filter(Boolean).length === 2;
+  const showRightSidebar = isHomePage || isPostDetailPage;
   const isChatPage =
     (pathname.startsWith("/messages/") && pathname !== "/messages") ||
     pathname.includes("/chat");
 
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/login");
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -72,9 +79,20 @@ export function MainLayout({ children }: MainLayoutProps) {
     fetchUnreadCount();
     const ch = supabase
       .channel("notification_count")
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, fetchUnreadCount)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        fetchUnreadCount
+      )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, [user]);
 
   useEffect(() => {
@@ -105,7 +123,12 @@ export function MainLayout({ children }: MainLayoutProps) {
               .order("created_at", { ascending: false })
               .limit(1)
               .maybeSingle();
-            if (msgs && msgs.sender_id !== user.id && !msgs.read_by?.includes(user.id)) unreadChatsCount++;
+            if (
+              msgs &&
+              msgs.sender_id !== user.id &&
+              !msgs.read_by?.includes(user.id)
+            )
+              unreadChatsCount++;
           }
         }
         setUnreadMessagesCount(unreadChatsCount);
@@ -116,15 +139,21 @@ export function MainLayout({ children }: MainLayoutProps) {
     fetchUnreadMessagesCount();
     const ch = supabase
       .channel("conversations_count")
-      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, fetchUnreadMessagesCount)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "conversations" },
+        fetchUnreadMessagesCount
+      )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, [user]);
 
   return (
     <>
       <div className="min-h-screen bg-[#15181D] dark" role="application">
-        {/* Top header - dark bar */}
+        {/* ── Top Header ── */}
         {!isChatPage && (
           <Suspense fallback={null}>
             <header
@@ -132,7 +161,6 @@ export function MainLayout({ children }: MainLayoutProps) {
               style={{ background: "#1B2B3A" }}
             >
               <div className="w-full max-w-7xl mx-auto flex items-center gap-4">
-                {/* Logo */}
                 <Link href="/home" className="flex items-center gap-1.5 flex-shrink-0">
                   <Image
                     src="/yrdly-logo.png"
@@ -149,7 +177,6 @@ export function MainLayout({ children }: MainLayoutProps) {
                   </span>
                 </Link>
 
-                {/* Centered search - visible on md+ */}
                 <div className="hidden md:flex flex-1 justify-center max-w-xl">
                   <button
                     type="button"
@@ -159,7 +186,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   >
                     <Search className="h-5 w-5 flex-shrink-0 text-[#BBBBBB]" />
                     <span
-                      className="font-raleway font-light italic text-xs text-white placeholder:text-[#BBBBBB] truncate"
+                      className="font-light italic text-xs text-white/70 truncate"
                       style={{ fontFamily: '"Raleway", sans-serif' }}
                     >
                       Search for events, items
@@ -167,9 +194,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   </button>
                 </div>
 
-                {/* Right icons */}
                 <div className="flex items-center gap-1 ml-auto md:gap-2">
-                  {/* Mobile search icon (hidden on md+) */}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -216,7 +241,10 @@ export function MainLayout({ children }: MainLayoutProps) {
                   >
                     <Avatar className="w-8 h-8 md:w-9 md:h-9 rounded-full">
                       <AvatarImage src={profile?.avatar_url || "/diverse-user-avatars.png"} />
-                      <AvatarFallback style={{ background: "#388E3C", color: "#fff", fontFamily: "Raleway, sans-serif", fontWeight: 700 }}>{profile?.name?.charAt(0).toUpperCase() || "U"}
+                      <AvatarFallback
+                        style={{ background: "#388E3C", color: "#fff", fontFamily: "Raleway, sans-serif", fontWeight: 700 }}
+                      >
+                        {profile?.name?.charAt(0).toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -233,7 +261,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             !isChatPage && "pb-20 lg:pb-0"
           )}
         >
-          {/* Left navigation - desktop only */}
+          {/* ── Desktop Left Nav ── */}
           <nav
             className="hidden lg:flex lg:flex-col lg:w-[184px] lg:flex-shrink-0 lg:fixed lg:left-0 lg:top-[84px] lg:bottom-0 lg:pt-6 lg:px-4 lg:pb-6"
             style={{ background: "#15181D" }}
@@ -258,9 +286,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                       <Icon
                         className={cn(
                           "w-6 h-6 flex-shrink-0",
-                          isActive
-                            ? "text-white fill-[#388E3C] stroke-white"
-                            : "text-white fill-none"
+                          isActive ? "text-white fill-[#388E3C] stroke-white" : "text-white fill-none"
                         )}
                         strokeWidth={2}
                       />
@@ -275,23 +301,42 @@ export function MainLayout({ children }: MainLayoutProps) {
                 );
               })}
             </div>
-            <Link href="/home" className="mt-auto pt-4">
+
+            <Link href="/home" className="mt-4">
               <Button
-                className="w-full h-11 rounded-full text-white font-raleway font-medium text-sm"
-                style={{ background: "#388E3C" }}
+                className="w-full h-11 rounded-full text-white font-medium text-sm"
+                style={{ background: "#388E3C", fontFamily: "Raleway, sans-serif" }}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Post
               </Button>
             </Link>
+
+            {/* Desktop Logout */}
+            <button
+              onClick={handleSignOut}
+              className="mt-auto flex items-center gap-3 px-3 py-2.5 rounded-[21.5px] w-full text-left hover:bg-white/5 transition-colors group"
+            >
+              <span className="w-1 h-6 rounded-sm flex-shrink-0 bg-transparent" />
+              <LogOut
+                className="w-6 h-6 flex-shrink-0 text-white/40 group-hover:text-red-400 transition-colors"
+                strokeWidth={2}
+              />
+              <span
+                className="text-white/40 text-xl leading-[35px] group-hover:text-red-400 transition-colors"
+                style={{ fontFamily: '"Pacifico", cursive' }}
+              >
+                Logout
+              </span>
+            </button>
           </nav>
 
-          {/* Main content */}
+          {/* ── Main Content ── */}
           <main
             className={cn(
               "flex-1 w-full min-w-0",
               !isChatPage && "px-3 sm:px-4 md:px-6 py-4",
-              !isChatPage && "lg:pl-[200px]",
+              !isChatPage && "lg:pl-[200px]"
             )}
           >
             <ErrorBoundary>
@@ -305,25 +350,28 @@ export function MainLayout({ children }: MainLayoutProps) {
             </ErrorBoundary>
           </main>
 
-          {/* Right sidebar - desktop only (hidden on mobile via HomeRightSidebar's hidden lg:flex) */}
           {showRightSidebar && <HomeRightSidebar />}
         </div>
 
-        {/* Bottom navigation - mobile/tablet only */}
+        {/* ── Mobile Bottom Nav ── */}
         {!isChatPage && (
           <Suspense fallback={null}>
             <nav
               className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2"
               style={{
                 background: "#1B2B3A",
-                height: 'calc(56px + env(safe-area-inset-bottom))',
+                height: "calc(56px + env(safe-area-inset-bottom))",
                 paddingBottom: "env(safe-area-inset-bottom)",
               }}
             >
               {navItems.map(({ href, label, icon: Icon }) => {
                 const isActive = pathname === href || (href !== "/home" && pathname.startsWith(href));
                 return (
-                  <Link key={href} href={href} className="flex flex-col items-center justify-center flex-1 py-2">
+                  <Link
+                    key={href}
+                    href={href}
+                    className="flex flex-col items-center justify-center flex-1 py-2"
+                  >
                     <Icon
                       className={cn(
                         "w-6 h-6 mb-0.5",
@@ -343,14 +391,29 @@ export function MainLayout({ children }: MainLayoutProps) {
                   </Link>
                 );
               })}
+
+              {/* Mobile Logout */}
+              <button
+                onClick={handleSignOut}
+                className="flex flex-col items-center justify-center flex-1 py-2 group"
+              >
+                <LogOut
+                  className="w-6 h-6 mb-0.5 text-white/40 group-hover:text-red-400 transition-colors"
+                  strokeWidth={2}
+                />
+                <span
+                  className="text-[10px] leading-tight text-white/40 group-hover:text-red-400 transition-colors"
+                  style={{ fontFamily: '"Raleway", sans-serif' }}
+                >
+                  Logout
+                </span>
+              </button>
             </nav>
           </Suspense>
         )}
       </div>
 
-      {showProfile && (
-        <ProfileDropdown onClose={() => setShowProfile(false)} />
-      )}
+      {showProfile && <ProfileDropdown onClose={() => setShowProfile(false)} />}
       <NotificationsDropdown isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
       <SearchDialog open={showSearch} onOpenChange={setShowSearch} />
     </>

@@ -1,4 +1,4 @@
-// Removed Firebase imports - using Supabase
+// Types for Yrdly — backed by Supabase
 
 export interface GeoPoint {
   latitude: number;
@@ -19,11 +19,9 @@ export interface Business {
   location: Location;
   image_urls?: string[];
   created_at: string;
-  // Location-based filtering fields
   state?: string | null;
   lga?: string | null;
   ward?: string | null;
-  // Additional fields needed for v0 design
   rating?: number;
   review_count?: number;
   hours?: string;
@@ -32,7 +30,6 @@ export interface Business {
   website?: string;
   owner_name?: string;
   owner_avatar?: string;
-  // Business detail page fields
   cover_image?: string;
   logo?: string;
   distance?: string;
@@ -61,7 +58,7 @@ export interface BusinessMessage {
   content: string;
   timestamp: string;
   is_read: boolean;
-  item_id?: string; // If discussing a specific catalog item
+  item_id?: string;
   created_at?: string;
 }
 
@@ -86,38 +83,27 @@ export interface Post {
   author_name: string;
   author_image?: string;
   text: string;
-  description?: string; // For marketplace listings
-  image_url?: string; // Single image URL
-  image_urls?: string[]; // Multiple image URLs
-  timestamp: string; // Supabase returns ISO string
+  description?: string;
+  image_url?: string;
+  image_urls?: string[];
+  timestamp: string;
   comment_count: number;
   category: PostCategory;
-  
-  // Location-based filtering fields
   state?: string | null;
   lga?: string | null;
   ward?: string | null;
-  
-  // Event-specific fields
   title?: string;
-  event_date?: string; // Changed from eventDate
-  event_time?: string; // Changed from eventTime
-  event_link?: string; // Changed from eventLink
-  event_location?: Location; // Changed from eventLocation
+  event_date?: string;
+  event_time?: string;
+  event_link?: string;
+  event_location?: Location;
   attendees?: string[];
-
-  // For Sale specific fields
   price?: number;
   condition?: string;
   is_sold?: boolean;
-
   liked_by: string[];
-  
-  // Additional Supabase fields
   created_at?: string;
   updated_at?: string;
-  
-  // Joined user data (when fetched with user relation)
   user?: {
     id: string;
     name: string;
@@ -132,11 +118,10 @@ export interface Comment {
   authorName: string;
   authorImage: string;
   text: string;
-  timestamp: string; // Changed from Timestamp to string for Supabase
+  timestamp: string;
   parentId: string | null;
-  reactions: { [key: string]: string[] }; // emoji -> userId[]
+  reactions: { [key: string]: string[] };
 }
-
 
 export interface User {
   id: string;
@@ -163,47 +148,44 @@ export interface User {
   };
   locationUpdatedAt?: string;
   notificationSettings?: NotificationSettings;
-  timestamp?: string; // Changed from Timestamp to string for Supabase
-  // Online status fields
+  timestamp?: string;
   isOnline?: boolean;
-  lastSeen?: string; // Changed from Timestamp to string for Supabase
+  lastSeen?: string;
 }
 
 export interface FriendRequest {
-    id: string;
-    from_user_id: string;
-    to_user_id: string;
-    participant_ids: string[];
-    status: 'pending' | 'accepted' | 'declined';
-    timestamp: string; // Changed from Timestamp to string for Supabase
+  id: string;
+  from_user_id: string;
+  to_user_id: string;
+  participant_ids: string[];
+  status: 'pending' | 'accepted' | 'declined';
+  timestamp: string;
 }
-
 
 export interface Conversation {
   id: string;
   participantIds: string[];
   participant: User;
   lastMessage?: {
-      id?: string;
-      senderId: string;
-      text: string;
-      timestamp: string;
-      isRead?: boolean;
-      readBy?: string[];
+    id?: string;
+    senderId: string;
+    text: string;
+    timestamp: string;
+    isRead?: boolean;
+    readBy?: string[];
   };
   messages: Message[];
   typing?: { [key: string]: boolean };
 }
 
 export interface Message {
-    id: string;
-    senderId: string;
-    sender: User;
-    text?: string; // Make text optional
-    imageUrl?: string; // Add imageUrl
-    timestamp: string; // Should be string for display
-    originalTimestamp?: any; // Original Firestore timestamp for date comparison
-    isRead: boolean;
+  id: string;
+  senderId: string;
+  sender: User;
+  text?: string;
+  imageUrl?: string;
+  timestamp: string;
+  isRead: boolean;
 }
 
 export interface NotificationSettings {
