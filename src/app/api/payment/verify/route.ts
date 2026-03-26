@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FlutterwaveService } from '@/lib/flutterwave-service';
-import { EscrowService } from '@/lib/escrow-service';
-import { ItemTrackingService } from '@/lib/item-tracking-service';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { EscrowStatus } from '@/types/escrow';
 
 export async function POST(request: NextRequest) {
@@ -15,42 +13,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify payment with Flutterwave
-    const verificationResult = await FlutterwaveService.verifyPayment(transactionReference);
-
-    if (verificationResult.success) {
-      // Update escrow transaction status
-      await EscrowService.updateStatus(
-        verificationResult.transactionReference!,
-        EscrowStatus.PAID,
-        {
-          flutterwaveTxRef: transactionReference,
-          paidAt: new Date(),
-        }
-      );
-
-      // Mark item as sold
-      const transaction = await EscrowService.getTransaction(verificationResult.transactionReference!);
-      if (transaction) {
-        await ItemTrackingService.markItemAsSold(
-          transaction.itemId,
-          transaction.id,
-          transaction.buyerId
-        );
+    // ── Verify payment with Flutterwave directly ──────────
+    const flwRes = await fetch(
+      `https://api.flutterwave.com/v3/transactions/${transactionReference}/verify`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+        },
       }
+    );
+    const flwData = await flwRes.json();
 
-      return NextResponse.json({
-        success: true,
-        message: 'Payment verified successfully',
-        transactionId: verificationResult.transactionReference,
-        amount: verificationResult.amount,
-      });
-    } else {
+    if (flwData.status !== 'success' || flwData.data?.status !== 'successful') {
       return NextResponse.json(
-        { error: verificationResult.error || 'Payment verification failed' },
+        { error: flwData.message || 'Payment verification failed' },
         { status: 400 }
       );
     }
+
+    const txRef: string = flwData.data.tx_ref;
+    const amount: number = parseFloat(flwData.data.amount);
+
+    // ── Update escrow transaction status (admin bypasses RLS) ──
+    const { error: updateError } = await supabaseAdmin
+      .from('escrow_transactions')
+      .update({
+        status: EscrowStatus.PAID,
+        payment_reference: transactionReference,
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', txRef);
+
+    if (updateError) {
+      console.error('Escrow update error:', updateError);
+      // Don't fail — payment was real, log and continue
+    }
+
+    // ── Mark item as sold ──────────────────────────────────
+    const { data: txRow } = await supabaseAdmin
+      .from('escrow_transactions')
+      .select('item_id, buyer_id')
+      .eq('id', txRef)
+      .single();
+
+    if (txRow) {
+      await supabaseAdmin
+        .from('posts')
+        .update({ is_sold: true, updated_at: new Date().toISOString() })
+        .eq('id', txRow.item_id);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Payment verified successfully',
+      transactionId: txRef,
+      amount,
+    });
   } catch (error) {
     console.error('Payment verification error:', error);
     return NextResponse.json(

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EscrowService } from "@/lib/escrow-service";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ItemTrackingService } from "@/lib/item-tracking-service";
-import { DeliveryOption, PaymentMethod } from "@/types/escrow";
+import { DeliveryOption, PaymentMethod, EscrowStatus } from "@/types/escrow";
+
 
 /**
  * POST /api/payment/initialize
@@ -59,19 +60,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ── Create escrow transaction ─────────────────────────
-    const transactionId = await EscrowService.createTransaction(
-      itemId,
-      buyerId,
-      sellerId,
-      price,
-      PaymentMethod.CARD,
-      { option: DeliveryOption.FACE_TO_FACE }
-    );
-
-    // ── Commission (3%) ───────────────────────────────────
+    // ── Create escrow transaction (admin client bypasses RLS) ──
     const commission = Math.round(price * 0.03);
     const totalAmount = price + commission;
+
+    const { data: txData, error: txError } = await supabaseAdmin
+      .from("escrow_transactions")
+      .insert({
+        item_id: itemId,
+        buyer_id: buyerId,
+        seller_id: sellerId,
+        amount: price,
+        commission,
+        total_amount: totalAmount,
+        seller_amount: price - commission,
+        status: EscrowStatus.PENDING,
+        payment_method: PaymentMethod.CARD,
+        delivery_details: { option: DeliveryOption.FACE_TO_FACE },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (txError) {
+      console.error("Escrow transaction error:", txError);
+      return NextResponse.json(
+        { error: "Failed to create transaction" },
+        { status: 500 }
+      );
+    }
+
+    const transactionId = txData.id;
+
+    // ── Commission already calculated above ───────────────
+
 
     // ── Build Flutterwave Standard payment payload ────────
     const appUrl =
