@@ -58,11 +58,6 @@ export function MainLayout({ children }: MainLayoutProps) {
     (pathname.startsWith("/messages/") && pathname !== "/messages") ||
     pathname.includes("/chat");
 
-  const handleProfileAction = (action: string) => {
-    setShowProfile(false);
-    if (action === "profile") router.push("/profile");
-    else if (action === "settings") router.push("/settings");
-  };
 
   useEffect(() => {
     if (!user) return;
@@ -202,14 +197,14 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative text-white hover:bg-white/10 rounded-full"
+                    className="relative text-[#899485] hover:text-white hover:bg-[#1B2B3A] rounded-full transition-colors"
                     onClick={() => setShowNotifications(!showNotifications)}
                   >
                     <Bell className="w-5 h-5" />
                     {unreadCount > 0 && (
                       <span
-                        className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full"
-                        style={{ background: "#388E3C", border: "1px solid #020817" }}
+                        className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full border-2"
+                        style={{ background: "#6edf51", borderColor: "#1B2B3A" }}
                       />
                     )}
                   </Button>
@@ -219,10 +214,9 @@ export function MainLayout({ children }: MainLayoutProps) {
                     className="rounded-full overflow-hidden p-0.5"
                     onClick={() => setShowProfile(!showProfile)}
                   >
-                    <Avatar className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-[#D9D9D9]">
+                    <Avatar className="w-8 h-8 md:w-9 md:h-9 rounded-full">
                       <AvatarImage src={profile?.avatar_url || "/diverse-user-avatars.png"} />
-                      <AvatarFallback className="bg-[#D9D9D9] text-[#15181D] text-sm">
-                        {profile?.name?.charAt(0) || "U"}
+                      <AvatarFallback style={{ background: "#388E3C", color: "#fff", fontFamily: "Raleway, sans-serif", fontWeight: 700 }}>{profile?.name?.charAt(0).toUpperCase() || "U"}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -355,7 +349,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       </div>
 
       {showProfile && (
-        <ProfileDropdown onClose={() => setShowProfile(false)} onAction={handleProfileAction} />
+        <ProfileDropdown onClose={() => setShowProfile(false)} />
       )}
       <NotificationsDropdown isOpen={showNotifications} onClose={() => setShowNotifications(false)} />
       <SearchDialog open={showSearch} onOpenChange={setShowSearch} />

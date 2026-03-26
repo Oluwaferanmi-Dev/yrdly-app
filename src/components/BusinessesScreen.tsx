@@ -1,38 +1,17 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Briefcase, 
-  Search, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Plus,
-  Heart,
-  Share,
-  MessageCircle,
-  Star,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  Clock,
-  Building
-} from "lucide-react";
+import { Heart, MessageCircle, Share2, MapPin, Briefcase, Plus, MoreVertical, Trash2, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 import type { Business } from "@/types";
 import { shortenAddress } from "@/lib/utils";
 import { CreateBusinessDialog } from "@/components/CreateBusinessDialog";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { useRouter } from "next/navigation";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { usePosts } from "@/hooks/use-posts";
+import { useToast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,16 +21,49 @@ import {
 import {
   AlertDialog,
   AlertDialogAction,
-  AlertDialogTrigger,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { usePosts } from "@/hooks/use-posts";
-import { useToast } from "@/hooks/use-toast";
+
+const GREEN = "#388E3C";
+const CARD = "#1d2025";
+const FONT = "Work Sans, sans-serif";
+const PACIFICO = "Pacifico, cursive";
+const JAKARTA = "Plus Jakarta Sans, sans-serif";
+
+const CATEGORY_ICONS: Record<string, string> = {
+  "Restaurant & Food": "🍲",
+  "Restaurant": "🍲",
+  "Food": "🍲",
+  "Health & Wellness": "💆",
+  "Health & Fitness": "💆",
+  "Fitness": "💆",
+  "Retail & Shopping": "🛍️",
+  "Retail": "🛍️",
+  "Shopping": "🛍️",
+  "Professional Services": "🛠️",
+  "Services": "🛠️",
+  "Arts & Crafts": "🎨",
+  "Creative": "🎨",
+  "Entertainment & Recreation": "✨",
+  "Nightlife": "✨",
+  "Entertainment": "✨",
+  "Beauty & Personal Care": "💄",
+  "Beauty": "💄",
+  "Technology & Electronics": "📱",
+  "Technology": "📱",
+  "Education & Training": "📚",
+  "Education": "📚",
+};
+
+function getIcon(cat: string) {
+  return CATEGORY_ICONS[cat] || "🏢";
+}
 
 interface BusinessesScreenProps {
   className?: string;
@@ -69,45 +81,22 @@ function BusinessCard({ business }: { business: Business }) {
   const handleDelete = async () => {
     try {
       await deleteBusiness(business.id);
-      toast({
-        title: "Success",
-        description: "Business deleted successfully",
-      });
-    } catch (error) {
-      console.error("Failed to delete business:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete business. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Business deleted successfully" });
+    } catch {
+      toast({ title: "Error", description: "Failed to delete business.", variant: "destructive" });
     }
   };
 
-  const handleLike = async (e: React.MouseEvent) => {
+  const handleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!user) return;
-
-    const newLikes = isLiked
-      ? [] // Since Business type doesn't have liked_by, we'll just toggle the state
-      : [user.id];
-
-    try {
-      // Since Business type doesn't have liked_by field, we'll just update the local state
-      setIsLiked(!isLiked);
-      setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
-    } catch (error) {
-      console.error('Error updating like:', error);
-    }
+    setIsLiked(!isLiked);
+    setLikeCount((c) => (isLiked ? c - 1 : c + 1));
   };
 
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (navigator.share) {
-      navigator.share({
-        title: business.name,
-        text: business.description || '',
-        url: window.location.href,
-      });
+      navigator.share({ title: business.name, text: business.description || "", url: window.location.href });
     } else {
       navigator.clipboard.writeText(window.location.href);
     }
@@ -115,443 +104,344 @@ function BusinessCard({ business }: { business: Business }) {
 
   const handleMessage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // TODO: Implement messaging functionality
-    toast({
-      title: "Message Business",
-      description: `Messaging ${business.name}`,
-    });
+    toast({ title: "Message Business", description: `Messaging ${business.name}` });
   };
 
+  const coverImg = business.image_urls?.[0];
+
   return (
-    <Card className="overflow-hidden flex flex-col h-full yrdly-shadow hover:shadow-lg transition-all">
-      {/* Business Images */}
-      {business.image_urls && business.image_urls.length > 0 ? (
-        business.image_urls.length > 1 ? (
-          <Carousel className="w-full">
-            <CarouselContent>
-              {business.image_urls.map((url, index) => (
-                <CarouselItem key={index}>
-                  <AspectRatio ratio={16 / 9}>
-                    <Image
-                      src={url}
-                      alt={`${business.name} image ${index + 1}`}
-                      fill
-                      className="object-cover"
-                    />
-                  </AspectRatio>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="left-2" />
-            <CarouselNext className="right-2" />
-          </Carousel>
+    <div
+      className="overflow-hidden group cursor-pointer"
+      style={{ background: CARD, borderRadius: 16, border: "1px solid rgba(64,73,61,0.1)" }}
+    >
+      {/* Image with hover scale */}
+      <div className="relative overflow-hidden" style={{ aspectRatio: "16/9" }}>
+        {coverImg ? (
+          <Image
+            src={coverImg}
+            alt={business.name}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
         ) : (
-          <AspectRatio ratio={16 / 9}>
-            <Image
-              src={business.image_urls[0]}
-              alt={`${business.name} image 1`}
-              fill
-              className="object-cover"
-            />
-          </AspectRatio>
-        )
-      ) : (
-        <AspectRatio ratio={16/9}>
-          <div className="bg-muted flex items-center justify-center h-full">
-            <Briefcase className="h-12 w-12 text-muted-foreground" />
+          <div className="w-full h-full flex items-center justify-center" style={{ background: "#272a2f" }}>
+            <Briefcase className="w-10 h-10" style={{ color: GREEN, opacity: 0.4 }} />
           </div>
-        </AspectRatio>
-      )}
-      
-      <CardHeader className="flex-row items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <CardTitle className="text-lg">{business.name}</CardTitle>
+        )}
+        {/* Like button overlay */}
+        <div className="absolute top-3 right-3">
+          <button
+            onClick={handleLike}
+            className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+            style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(8px)" }}
+          >
+            <Heart className="w-5 h-5" style={{ color: isLiked ? "#E53935" : "#fff", fill: isLiked ? "#E53935" : "none" }} />
+          </button>
+        </div>
+        {/* Owner badge */}
+        {isOwner && (
+          <div className="absolute top-3 left-3 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase text-white"
+            style={{ background: GREEN, fontFamily: FONT }}>
+            Your Business
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="p-5">
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: GREEN, fontFamily: FONT }}>
+              {business.category}
+            </p>
+            <h4 className="text-[17px] font-bold text-white truncate" style={{ fontFamily: JAKARTA }}>
+              {business.name}
+            </h4>
+          </div>
+          <div className="flex gap-2 ml-2">
+            {user?.id !== business.owner_id && (
+              <button onClick={handleMessage}>
+                <MessageCircle className="w-5 h-5 transition-colors" style={{ color: "#899485" }}
+                  onMouseEnter={(e) => ((e.currentTarget as SVGElement).style.color = GREEN)}
+                  onMouseLeave={(e) => ((e.currentTarget as SVGElement).style.color = "#899485")} />
+              </button>
+            )}
+            <button onClick={handleShare}>
+              <Share2 className="w-5 h-5 transition-colors" style={{ color: "#899485" }}
+                onMouseEnter={(e) => ((e.currentTarget as SVGElement).style.color = GREEN)}
+                onMouseLeave={(e) => ((e.currentTarget as SVGElement).style.color = "#899485")} />
+            </button>
             {isOwner && (
-              <Badge variant="secondary" className="bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                Your Business
-              </Badge>
+              <AlertDialog>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button><MoreVertical className="w-5 h-5" style={{ color: "#899485" }} /></button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" style={{ background: CARD, border: "1px solid rgba(64,73,61,0.2)" }}>
+                    <CreateBusinessDialog postToEdit={business}>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} style={{ fontFamily: FONT }}>
+                        <Edit className="mr-2 w-4 h-4" /> Edit
+                      </DropdownMenuItem>
+                    </CreateBusinessDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem style={{ fontFamily: FONT, color: "#E53935" }}>
+                        <Trash2 className="mr-2 w-4 h-4" /> Delete
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <AlertDialogContent style={{ background: CARD }}>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-white">Delete Business?</AlertDialogTitle>
+                    <AlertDialogDescription style={{ color: "#899485" }}>
+                      This will permanently delete this business listing.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} style={{ background: "#E53935" }}>Delete</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
-          <CardDescription>{business.category}</CardDescription>
         </div>
-        {isOwner && (
-          <AlertDialog>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <CreateBusinessDialog postToEdit={business}>
-                  <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    <span>Edit</span>
-                  </DropdownMenuItem>
-                </CreateBusinessDialog>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    <span>Delete</span>
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete this business listing.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+
+        {business.location?.address && (
+          <div className="flex items-center gap-1.5 mb-5 text-[13px]" style={{ color: "#899485", fontFamily: FONT }}>
+            <MapPin className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">{shortenAddress(business.location.address, 40)}</span>
+          </div>
         )}
-      </CardHeader>
 
-      <CardContent className="flex-grow space-y-3">
-        <p className="text-sm text-muted-foreground line-clamp-3">{business.description}</p>
-        
-        {/* Contact Info */}
-        <div className="space-y-2">
-          {business.location?.address && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate" title={business.location.address}>
-                {shortenAddress(business.location.address, 40)}
-              </span>
-            </div>
-          )}
-          {/* Phone and email would be added to Business type in the future */}
-        </div>
-      </CardContent>
-
-      <CardContent className="pt-0">
-        {/* Visit Button */}
-        <Button 
-          className="w-full mb-3 bg-primary text-primary-foreground hover:bg-primary/90"
+        <button
+          className="w-full py-3 rounded-full text-sm font-bold text-white transition-all active:scale-95"
+          style={{ background: GREEN, fontFamily: FONT }}
           onClick={() => router.push(`/businesses/${business.id}`)}
         >
           Visit Business
-        </Button>
-        
-        {/* Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`flex items-center gap-1 ${isLiked ? 'text-red-500' : ''}`}
-              onClick={handleLike}
-            >
-              <Heart className={`h-4 w-4 ${isLiked ? 'fill-red-500' : ''}`} />
-              <span>{likeCount}</span>
-            </Button>
-            {user?.id !== business.owner_id && (
-              <Button variant="ghost" size="sm" onClick={handleMessage}>
-                <MessageCircle className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleShare}>
-            <Share className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function EmptyBusinesses() {
-  return (
-    <div className="text-center py-16">
-      <div className="inline-block bg-muted p-4 rounded-full mb-4">
-        <Briefcase className="h-12 w-12 text-muted-foreground" />
+        </button>
       </div>
-      <h2 className="text-2xl font-bold">No businesses yet</h2>
-      <p className="text-muted-foreground mt-2">Be the first to add a local business to the directory!</p>
     </div>
   );
 }
 
 export function BusinessesScreen({ className }: BusinessesScreenProps) {
-  const { user } = useAuth();
   const router = useRouter();
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryStats, setCategoryStats] = useState<Array<{
-    name: string;
-    count: number;
-    icon: string;
-    color: string;
-  }>>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchBusinesses = async () => {
       try {
         const { data, error } = await supabase
-          .from('businesses')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching businesses:', error);
-          return;
-        }
-
-        setBusinesses(data as Business[]);
-        
-        // Calculate category stats from real data
-        const categoryCounts = (data || []).reduce((acc, business) => {
-          acc[business.category] = (acc[business.category] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        // Map categories to display format
-        const categoryMap: Record<string, { icon: string; color: string }> = {
-          'Food & Dining': { icon: '🍽️', color: 'bg-primary/10' },
-          'Restaurant': { icon: '🍽️', color: 'bg-primary/10' },
-          'Food': { icon: '🍽️', color: 'bg-primary/10' },
-          'Retail': { icon: '🛍️', color: 'bg-accent/10' },
-          'Shopping': { icon: '🛍️', color: 'bg-accent/10' },
-          'Health & Fitness': { icon: '💪', color: 'bg-green-100' },
-          'Fitness': { icon: '💪', color: 'bg-green-100' },
-          'Gym': { icon: '💪', color: 'bg-green-100' },
-          'Beauty': { icon: '✂️', color: 'bg-purple-100' },
-          'Salon': { icon: '✂️', color: 'bg-purple-100' },
-          'Spa': { icon: '✂️', color: 'bg-purple-100' },
-          'Electronics': { icon: '📱', color: 'bg-blue-100' },
-          'Technology': { icon: '📱', color: 'bg-blue-100' },
-          'Services': { icon: '🔧', color: 'bg-orange-100' },
-          'Automotive': { icon: '🚗', color: 'bg-gray-100' },
-          'Education': { icon: '📚', color: 'bg-indigo-100' },
-          'Entertainment': { icon: '🎬', color: 'bg-pink-100' },
-        };
-
-        const stats = Object.entries(categoryCounts).map(([category, count]) => ({
-          name: category,
-          count: count as number,
-          icon: categoryMap[category]?.icon || '🏢',
-          color: categoryMap[category]?.color || 'bg-gray-100'
-        }));
-
-        setCategoryStats(stats);
+          .from("businesses")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (error) { console.error(error); return; }
+        setBusinesses((data as Business[]) || []);
         setLoading(false);
-      } catch (error) {
-        console.error('Error fetching businesses:', error);
+      } catch (e) {
+        console.error(e);
         setLoading(false);
       }
     };
-
     fetchBusinesses();
 
-    // Set up real-time subscription for businesses
-    const channel = supabase
-      .channel('businesses-all')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'businesses',
-      }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          const newBusiness = payload.new as Business;
-          setBusinesses(prevBusinesses => [newBusiness, ...prevBusinesses]);
-        } else if (payload.eventType === 'UPDATE') {
-          const updatedBusiness = payload.new as Business;
-          setBusinesses(prevBusinesses => 
-            prevBusinesses.map(business => 
-              business.id === updatedBusiness.id ? updatedBusiness : business
-            )
-          );
-        } else if (payload.eventType === 'DELETE') {
-          const deletedId = payload.old.id;
-          setBusinesses(prevBusinesses => 
-            prevBusinesses.filter(business => business.id !== deletedId)
-          );
+    const ch = supabase
+      .channel("businesses-all")
+      .on("postgres_changes", { event: "*", schema: "public", table: "businesses" }, (payload) => {
+        if (payload.eventType === "INSERT") setBusinesses((p) => [payload.new as Business, ...p]);
+        else if (payload.eventType === "UPDATE") {
+          const u = payload.new as Business;
+          setBusinesses((p) => p.map((b) => (b.id === u.id ? u : b)));
+        } else if (payload.eventType === "DELETE") {
+          setBusinesses((p) => p.filter((b) => b.id !== payload.old.id));
         }
       })
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(ch); };
   }, []);
 
+  // Derive categories from real data
+  const categoryStats = useMemo(() => {
+    const counts: Record<string, number> = {};
+    businesses.forEach((b) => { if (b.category) counts[b.category] = (counts[b.category] || 0) + 1; });
+    return Object.entries(counts).map(([name, count]) => ({ name, count, icon: getIcon(name) }));
+  }, [businesses]);
+
   const filteredBusinesses = useMemo(() => {
-    if (!searchQuery) return businesses;
-    
-    return businesses.filter(business =>
-      business.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      business.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      business.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      business.location?.address?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [businesses, searchQuery]);
+    return businesses.filter((b) => {
+      const queryOk = !searchQuery ||
+        b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.location?.address?.toLowerCase().includes(searchQuery.toLowerCase());
+      const catOk = !selectedCategory || b.category === selectedCategory;
+      return queryOk && catOk;
+    });
+  }, [businesses, searchQuery, selectedCategory]);
+
+  const featured = filteredBusinesses[0];
+  const rest = filteredBusinesses.slice(1);
 
   return (
-    <div className={`p-4 space-y-6 ${className}`}>
-      {/* Header */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Local Businesses</h2>
-          <p className="text-muted-foreground">Discover and support businesses in your neighborhood</p>
-        </div>
+    <div className={`min-h-screen pb-28 ${className}`} style={{ background: "#101418" }}>
+      <div className="max-w-7xl mx-auto px-4 pt-6 space-y-10">
 
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search businesses..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-card border-border focus:border-primary"
-          />
-        </div>
-
-      </div>
-
-      {/* Featured Business */}
-      {filteredBusinesses.length > 0 && (
-        <Card 
-          className="p-0 overflow-hidden yrdly-shadow-lg border-0 cursor-pointer hover:shadow-xl transition-all"
-          onClick={() => router.push(`/businesses/${filteredBusinesses[0].id}`)}
-        >
-          <div className="relative h-32">
-            {(filteredBusinesses[0].image_urls && filteredBusinesses[0].image_urls.length > 0) ? (
-              <Image
-                src={filteredBusinesses[0].image_urls[0]}
-                alt={filteredBusinesses[0].name}
-                width={400}
-                height={128}
-                className="w-full h-full object-cover"
-                style={{ height: "auto" }}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-r from-primary/20 to-accent/20 flex items-center justify-center">
-                <Building className="w-12 h-12 text-muted-foreground" />
-              </div>
-            )}
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <h1 className="text-[20px]" style={{ fontFamily: PACIFICO, color: GREEN }}>
+            Local Businesses
+          </h1>
+          <div className="relative w-full md:w-80">
+            <input
+              type="text"
+              placeholder="Search neighborhood gems..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-full py-3 px-6 pr-12 text-sm text-white outline-none"
+              style={{ background: "#272a2f", fontFamily: FONT, caretColor: GREEN }}
+            />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xl" style={{ color: GREEN }}>⚙</span>
           </div>
-          <div className="p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <h4 className="text-xl font-bold text-foreground">{filteredBusinesses[0].name}</h4>
-                <p className="text-muted-foreground">{filteredBusinesses[0].category}</p>
-              </div>
-              <Badge className="bg-primary text-primary-foreground">Featured</Badge>
-            </div>
+        </div>
 
-            <div className="flex items-center gap-4">
-              {filteredBusinesses[0].rating && (
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm font-medium">{filteredBusinesses[0].rating}</span>
-                  <span className="text-sm text-muted-foreground">
-                    ({filteredBusinesses[0].review_count || 0} reviews)
-                  </span>
+        {/* Featured Hero Card */}
+        {loading ? (
+          <Skeleton className="h-64 w-full rounded-[16px]" style={{ background: CARD }} />
+        ) : featured ? (
+          <section
+            className="relative overflow-hidden cursor-pointer shadow-2xl"
+            style={{ borderRadius: 16, height: 280 }}
+            onClick={() => router.push(`/businesses/${featured.id}`)}
+          >
+            {/* Background image */}
+            <div className="absolute inset-0">
+              {featured.image_urls?.[0] ? (
+                <Image src={featured.image_urls[0]} alt={featured.name} fill className="object-cover transition-transform duration-700 hover:scale-105" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center" style={{ background: "#272a2f" }}>
+                  <Briefcase className="w-16 h-16" style={{ color: GREEN, opacity: 0.3 }} />
                 </div>
               )}
-              {filteredBusinesses[0].hours && (
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Clock className="w-4 h-4" />
-                  <span className="text-sm">{filteredBusinesses[0].hours}</span>
-                </div>
-              )}
+              {/* Gradient overlay */}
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #101418 0%, transparent 50%)" }} />
             </div>
 
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="w-4 h-4 text-primary" />
-              <span className="text-sm" title={filteredBusinesses[0].location.address}>
-                {shortenAddress(filteredBusinesses[0].location.address, 50)}
+            {/* Featured badge */}
+            <div className="absolute top-5 left-5">
+              <span className="rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest border"
+                style={{ background: "#06171B", color: GREEN, borderColor: "rgba(56,142,60,0.2)", fontFamily: FONT }}>
+                Featured
               </span>
             </div>
 
-            <p className="text-sm text-muted-foreground">{filteredBusinesses[0].description}</p>
-
-            <div className="flex gap-2">
-              <Button 
-                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={() => router.push(`/businesses/${filteredBusinesses[0].id}`)}
-              >
-                Visit Store
-              </Button>
-              {filteredBusinesses[0].phone && (
-                <Button
-                  variant="outline"
-                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent"
-                  onClick={() => window.open(`tel:${filteredBusinesses[0].phone}`)}
-                >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Call
-                </Button>
-              )}
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Business Categories */}
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-foreground">Categories</h3>
-        <div className="grid grid-cols-2 gap-3">
-          {categoryStats.map((category) => (
-            <Card key={category.name} className="p-4 yrdly-shadow hover:shadow-lg transition-shadow cursor-pointer">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg ${category.color} flex items-center justify-center`}>
-                  <span className="text-lg">{category.icon}</span>
-                </div>
+            {/* Bottom content (glassmorphism) */}
+            <div className="absolute bottom-0 left-0 right-0 p-6"
+              style={{ background: "rgba(16,20,24,0.5)", backdropFilter: "blur(12px)" }}>
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-3">
                 <div>
-                  <h4 className="font-semibold text-foreground">{category.name}</h4>
-                  <p className="text-sm text-muted-foreground">{category.count} businesses</p>
+                  {featured.rating && (
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span style={{ color: GREEN }}>★</span>
+                      <span className="font-bold text-sm" style={{ color: GREEN }}>{featured.rating}</span>
+                      <span className="text-sm" style={{ color: "#899485" }}>({featured.review_count || 0} reviews)</span>
+                    </div>
+                  )}
+                  <h2 className="text-[22px] font-extrabold text-white leading-tight" style={{ fontFamily: JAKARTA }}>
+                    {featured.name}
+                  </h2>
+                  <p className="text-sm max-w-md mt-1" style={{ color: "#bfcab9" }}>{featured.description}</p>
                 </div>
+                <button
+                  className="rounded-full px-7 py-3 text-sm font-bold text-white transition-all active:scale-95 shadow-lg whitespace-nowrap"
+                  style={{ background: GREEN, fontFamily: FONT }}
+                  onClick={(e) => { e.stopPropagation(); router.push(`/businesses/${featured.id}`); }}
+                >
+                  Visit Business
+                </button>
               </div>
-            </Card>
-          ))}
-        </div>
+            </div>
+          </section>
+        ) : null}
+
+        {/* Category Chips */}
+        {categoryStats.length > 0 && (
+          <section className="space-y-5">
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#bfcab9", fontFamily: FONT }}>
+              Explore Categories
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {categoryStats.map(({ name, icon }) => (
+                <button
+                  key={name}
+                  onClick={() => setSelectedCategory(selectedCategory === name ? null : name)}
+                  className="flex items-center gap-3 p-4 text-left transition-all"
+                  style={{
+                    background: selectedCategory === name ? "rgba(56,142,60,0.15)" : CARD,
+                    borderRadius: 16,
+                    border: selectedCategory === name ? `1px solid ${GREEN}` : "1px solid transparent",
+                  }}
+                >
+                  <span className="text-2xl">{icon}</span>
+                  <span className="font-semibold text-sm text-white" style={{ fontFamily: FONT }}>{name}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Business Grid */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#bfcab9", fontFamily: FONT }}>
+              {selectedCategory ? selectedCategory : "Nearby Professionals"}
+            </h3>
+            {selectedCategory && (
+              <button onClick={() => setSelectedCategory(null)} className="text-sm font-semibold" style={{ color: GREEN, fontFamily: FONT }}>
+                View All
+              </button>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-72 w-full rounded-[16px]" style={{ background: CARD }} />
+              ))}
+            </div>
+          ) : rest.length === 0 && !featured ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: CARD }}>
+                <Briefcase className="w-8 h-8" style={{ color: GREEN, opacity: 0.4 }} />
+              </div>
+              <h3 className="text-white text-lg mb-1" style={{ fontFamily: PACIFICO }}>No businesses yet</h3>
+              <p className="text-sm" style={{ color: "#BBBBBB", fontFamily: FONT }}>
+                Be the first to add a local business!
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {(rest.length > 0 ? rest : filteredBusinesses).map((b) => (
+                <BusinessCard key={b.id} business={b} />
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
-      {/* Nearby Businesses */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-foreground">Nearby Businesses</h3>
-      </div>
-
-      {/* Businesses Grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          <Skeleton className="h-80 w-full rounded-lg" />
-          <Skeleton className="h-80 w-full rounded-lg" />
-          <Skeleton className="h-80 w-full rounded-lg" />
-          <Skeleton className="h-80 w-full rounded-lg" />
-        </div>
-      ) : filteredBusinesses.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredBusinesses.map(business => (
-            <BusinessCard key={business.id} business={business} />
-          ))}
-        </div>
-      ) : (
-        <EmptyBusinesses />
-      )}
-
-      {/* Floating Create Button */}
-      <div className="fixed bottom-20 right-4 z-50">
-        <CreateBusinessDialog>
-          <Button
-            size="lg" 
-            className="rounded-full h-14 w-14 shadow-lg yrdly-gradient p-0"
-          >
-            <Plus className="h-6 w-6" />
-          </Button>
-        </CreateBusinessDialog>
-      </div>
+      {/* FAB */}
+      <CreateBusinessDialog>
+        <button
+          className="fixed bottom-20 right-4 w-14 h-14 rounded-full flex items-center justify-center z-50 transition-transform active:scale-90"
+          style={{ background: GREEN, boxShadow: "0 20px 40px rgba(0,0,0,0.4)" }}
+        >
+          <Plus className="w-7 h-7 text-white" />
+        </button>
+      </CreateBusinessDialog>
     </div>
   );
 }

@@ -1,21 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Bell, 
-  UserPlus, 
-  MessageCircle, 
-  Heart, 
-  Calendar,
-  Check,
-  X,
-  MoreHorizontal
-} from "lucide-react";
+import { Bell, UserPlus, MessageCircle, Heart, Calendar, Check, X, MoreHorizontal, MessageSquare } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -23,9 +11,17 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import * as Sentry from "@sentry/nextjs";
 
+const GREEN = "#388E3C";
+const GREEN_LIGHT = "#82DB7E";
+const CARD = "#1E2126";
+const SURFACE = "#101418";
+const FONT = "Work Sans, sans-serif";
+const RALEWAY = "Raleway, sans-serif";
+
 interface NotificationsDropdownProps {
   isOpen: boolean;
   onClose: () => void;
+  onNotificationCountChange?: (count: number) => void;
 }
 
 interface Notification {
@@ -42,32 +38,33 @@ interface Notification {
   from_user_avatar?: string;
 }
 
-function NotificationIcon({ type }: { type: string }) {
+// Map types to circular badge colors and icons
+function getNotificationBadge(type: string) {
   switch (type) {
     case 'friend_request':
-      return <UserPlus className="w-4 h-4 text-blue-500" />;
-    case 'message':
-      return <MessageCircle className="w-4 h-4 text-green-500" />;
+      return { icon: UserPlus, bg: "#006ec9", fg: "#ffffff" }; // Blue
     case 'post_like':
-      return <Heart className="w-4 h-4 text-red-500" />;
+      return { icon: Heart, bg: "#ffb4ab", fg: "#690005", fill: true }; // Red
+    case 'message':
+      return { icon: MessageSquare, bg: "#4da24e", fg: "#ffffff" }; // Green
     case 'post_comment':
-      return <MessageCircle className="w-4 h-4 text-purple-500" />;
+      return { icon: MessageCircle, bg: "#a5c8ff", fg: "#00315f" }; // Light Blue
     case 'event_invite':
-      return <Calendar className="w-4 h-4 text-orange-500" />;
-    case 'system':
-      return <Bell className="w-4 h-4 text-gray-500" />;
+      return { icon: Calendar, bg: "#fbbc04", fg: "#3f2b00" }; // Yellow/Orange
     default:
-      return <Bell className="w-4 h-4 text-gray-500" />;
+      return { icon: Bell, bg: "#32353a", fg: "#e1e2e9" }; // Gray
   }
 }
 
-function NotificationItem({ notification, onMarkAsRead, onDelete }: { 
-  notification: Notification; 
+function NotificationItem({ notification, onMarkAsRead, onDelete }: {
+  notification: Notification;
   onMarkAsRead: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
+  const badgeConfig = getNotificationBadge(notification.type);
+  const Icon = badgeConfig.icon;
 
   const handleAction = async (action: string) => {
     if (action === 'accept_friend') {
@@ -77,7 +74,6 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: {
           async (span) => {
             const toUserId = notification.user_id || currentUser?.id || "";
             let senderId = notification.from_user_id || "";
-            // Fallback: infer sender as the most recent pending request to this user
             if (!senderId && toUserId) {
               const { data: pending } = await supabase
                 .from('friend_requests')
@@ -90,128 +86,57 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: {
             }
             span.setAttribute("fromUserId", senderId || "");
             span.setAttribute("toUserId", toUserId);
+            if (!senderId || !toUserId) throw new Error("Missing user identifiers");
 
-            if (!senderId || !toUserId) {
-              throw new Error("Missing user identifiers for friend request");
-            }
-
-            // Check if already friends
-            const { data: currentUserDataCheck, error: currentUserErrCheck } = await supabase
-              .from('users')
-              .select('friends')
-              .eq('id', toUserId)
-              .single();
-
-            if (!currentUserErrCheck && currentUserDataCheck?.friends?.includes(senderId)) {
-              toast({ title: "Already friends", description: "You are already friends with this user." });
+            const { data: currentUserDataCheck } = await supabase.from('users').select('friends').eq('id', toUserId).single();
+            if (currentUserDataCheck?.friends?.includes(senderId)) {
+              toast({ title: "Already friends" });
               return;
             }
 
-        // Find friend request (check any status first, then specifically pending)
-        const { data: allRequests, error: allRequestsError } = await supabase
-          .from('friend_requests')
-          .select('*')
-          .eq('from_user_id', senderId)
-          .eq('to_user_id', toUserId)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-            if (allRequestsError) {
-              throw new Error("Failed to check friend request status.");
-            }
-
+            const { data: allRequests } = await supabase.from('friend_requests').select('*').eq('from_user_id', senderId).eq('to_user_id', toUserId).order('created_at', { ascending: false }).limit(1);
             if (!allRequests || allRequests.length === 0) {
-              // No friend request exists - mark notification as read and inform user
               await onMarkAsRead(notification.id);
-              toast({ 
-                title: "Friend request not found", 
-                description: "This friend request may have been cancelled or already handled.",
-                variant: "destructive"
-              });
+              toast({ title: "Request not found", variant: "destructive" });
               return;
             }
 
             const requestData = allRequests[0];
-
-            // If already accepted, just mark notification as read
             if (requestData.status === 'accepted') {
               await onMarkAsRead(notification.id);
-              toast({ 
-                title: "Already accepted", 
-                description: "You are already friends with this user." 
-              });
+              toast({ title: "Already friends" });
               return;
             }
-
-            // If not pending, inform user
             if (requestData.status !== 'pending') {
               await onMarkAsRead(notification.id);
-              toast({ 
-                title: "Request already handled", 
-                description: `This friend request was ${requestData.status}.`,
-                variant: "destructive"
-              });
+              toast({ title: "Request already handled", variant: "destructive" });
               return;
             }
 
-        // Update friend request status to accepted
-        const { error: updateError } = await supabase
-          .from('friend_requests')
-          .update({ status: 'accepted', updated_at: new Date().toISOString() })
-          .eq('id', requestData.id);
-
+            const { error: updateError } = await supabase.from('friend_requests').update({ status: 'accepted', updated_at: new Date().toISOString() }).eq('id', requestData.id);
             if (updateError) throw updateError;
 
-        // Add to both users' friends lists
-        const { data: currentUserData } = await supabase
-          .from('users')
-          .select('friends')
-          .eq('id', toUserId)
-          .single();
-
-        const { data: senderUserData } = await supabase
-          .from('users')
-          .select('friends')
-          .eq('id', senderId)
-          .single();
-
+            const { data: currentUserData } = await supabase.from('users').select('friends').eq('id', toUserId).single();
+            const { data: senderUserData } = await supabase.from('users').select('friends').eq('id', senderId).single();
+            
             const currentUserFriends = Array.isArray(currentUserData?.friends) ? currentUserData.friends : [];
             const senderUserFriends = Array.isArray(senderUserData?.friends) ? senderUserData.friends : [];
 
-        // Add sender to current user's friends list
-            const updatedCurrentUserFriends = Array.from(new Set([...currentUserFriends, senderId]));
-        await supabase
-          .from('users')
-          .update({ friends: updatedCurrentUserFriends })
-          .eq('id', toUserId);
+            await supabase.from('users').update({ friends: Array.from(new Set([...currentUserFriends, senderId])) }).eq('id', toUserId);
+            await supabase.from('users').update({ friends: Array.from(new Set([...senderUserFriends, toUserId])) }).eq('id', senderId);
 
-        // Add current user to sender's friends list
-            const updatedSenderFriends = Array.from(new Set([...senderUserFriends, toUserId]));
-        await supabase
-          .from('users')
-          .update({ friends: updatedSenderFriends })
-          .eq('id', senderId);
+            try {
+              const { NotificationTriggers } = await import('@/lib/notification-triggers');
+              if (senderId) await NotificationTriggers.onFriendRequestAccepted(senderId, toUserId);
+            } catch (error) { console.error(error); }
 
-        // Create notification for the sender
-        try {
-          const { NotificationTriggers } = await import('@/lib/notification-triggers');
-          if (senderId) {
-            await NotificationTriggers.onFriendRequestAccepted(senderId, toUserId);
-          }
-        } catch (error) {
-          console.error('Error creating friend request accepted notification:', error);
-        }
-
-        // Mark this notification as read
-        await onMarkAsRead(notification.id);
-
-        toast({ title: "Friend request accepted!" });
+            await onMarkAsRead(notification.id);
+            toast({ title: "Friend request accepted!" });
           }
         );
       } catch (error: any) {
         Sentry.captureException(error);
-        const message = error?.message || "Failed to accept friend request.";
-        toast({ variant: "destructive", title: "Error", description: message });
+        toast({ variant: "destructive", title: "Error", description: error?.message || "Failed" });
       }
     } else if (action === 'decline_friend') {
       try {
@@ -232,359 +157,221 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: {
             }
             span.setAttribute("fromUserId", senderId || "");
             span.setAttribute("toUserId", toUserId);
+            if (!senderId || !toUserId) throw new Error("Missing identifiers");
 
-            if (!senderId || !toUserId) {
-              throw new Error("Missing user identifiers for friend request");
-            }
-        // Delete the friend request
-        const { error } = await supabase
-          .from('friend_requests')
-          .delete()
-          .eq('from_user_id', senderId)
-          .eq('to_user_id', toUserId)
-          .eq('status', 'pending');
-
+            const { error } = await supabase.from('friend_requests').delete().eq('from_user_id', senderId).eq('to_user_id', toUserId).eq('status', 'pending');
             if (error) throw error;
-
-        // Mark this notification as read
-        await onMarkAsRead(notification.id);
-
-        toast({ title: "Friend request declined." });
+            await onMarkAsRead(notification.id);
+            toast({ title: "Friend request declined." });
           }
         );
       } catch (error: any) {
         Sentry.captureException(error);
-        const message = error?.message || "Failed to decline friend request.";
-        toast({ variant: "destructive", title: "Error", description: message });
+        toast({ variant: "destructive", title: "Error", description: error?.message || "Failed" });
       }
     } else if (action === 'reply_message') {
-      // TODO: Navigate to messages
       toast({ title: "Opening conversation..." });
     }
   };
 
   return (
-    <div className={`p-3 border-b border-border last:border-b-0 hover:bg-muted/50 transition-colors ${!notification.is_read ? 'bg-primary/5' : ''}`}>
-      <div className="flex items-start gap-3">
-        {/* Icon */}
-        <div className="flex-shrink-0 mt-1 w-5 h-5">
-          <NotificationIcon type={notification.type} />
+    <div
+      className="px-4 py-4 flex gap-3 relative transition-colors"
+      style={{
+        background: notification.is_read ? "transparent" : "rgba(56,142,60,0.08)",
+        borderBottom: "0.2px solid rgba(64,73,61,0.2)",
+        opacity: notification.is_read ? 0.8 : 1,
+      }}
+    >
+      {/* Avatar + Badge */}
+      <div className="relative flex-shrink-0">
+        <Avatar className="w-10 h-10 ring-1 ring-white/10">
+          <AvatarImage src={notification.from_user_avatar || "/placeholder.svg"} className="object-cover" />
+          <AvatarFallback style={{ background: "#272a2f", color: "#fff", fontSize: 14 }}>
+            {notification.from_user_name?.charAt(0) || "U"}
+          </AvatarFallback>
+        </Avatar>
+        <div
+          className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center border-2"
+          style={{ background: badgeConfig.bg, borderColor: CARD }}
+        >
+          <Icon className="w-3 h-3" style={{ color: badgeConfig.fg, fill: badgeConfig.fill ? badgeConfig.fg : "none" }} />
         </div>
+      </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-sm text-foreground truncate">{notification.title}</h4>
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{notification.message}</p>
-              
-              {/* From User */}
-              {notification.from_user_name && (
-                <div className="flex items-center gap-2 mt-2">
-                  <Avatar className="w-5 h-5 flex-shrink-0">
-                    <AvatarImage src={notification.from_user_avatar || "/placeholder.svg"} />
-                    <AvatarFallback className="text-xs">
-                      {notification.from_user_name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-muted-foreground truncate">
-                    from {notification.from_user_name}
-                  </span>
-                </div>
-              )}
-
-              {/* Time */}
-              <p className="text-xs text-muted-foreground mt-1">
-                {formatDistanceToNowStrict(new Date(notification.created_at), { addSuffix: true })}
-              </p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              {!notification.is_read && (
-                <Badge variant="destructive" className="text-xs px-1 py-0">
-                  New
-                </Badge>
-              )}
-              
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                    <MoreHorizontal className="w-3 h-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {!notification.is_read && (
-                    <DropdownMenuItem onClick={() => onMarkAsRead(notification.id)}>
-                      <Check className="w-3 h-3 mr-2" />
-                      Mark as Read
-                    </DropdownMenuItem>
-                  )}
-                  {notification.type === 'friend_request' && (
-                    <>
-                      <DropdownMenuItem onClick={() => handleAction('accept_friend')}>
-                        <UserPlus className="w-3 h-3 mr-2" />
-                        Accept
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleAction('decline_friend')}>
-                        <X className="w-3 h-3 mr-2" />
-                        Decline
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  {notification.type === 'message' && (
-                    <DropdownMenuItem onClick={() => handleAction('reply_message')}>
-                      <MessageCircle className="w-3 h-3 mr-2" />
-                      Reply
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem 
-                    onClick={() => onDelete(notification.id)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <X className="w-3 h-3 mr-2" />
-                    Delete
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between items-start mb-1">
+          <span className="text-[10px]" style={{ color: "#bfcab9", fontFamily: FONT }}>
+            from{" "}
+            <span className="font-semibold text-white">
+              {notification.from_user_name || "Someone"}
+            </span>
+          </span>
+          <div className="flex items-center gap-2">
+            {!notification.is_read && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase" style={{ background: "#1B0F16", color: GREEN_LIGHT, fontFamily: FONT }}>
+                New
+              </span>
+            )}
+            {/* Actions Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="text-[#899485] hover:text-white transition-colors">
+                  <MoreHorizontal className="w-3 h-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" style={{ background: SURFACE, border: "1px solid rgba(130,219,126,0.2)", fontFamily: FONT }}>
+                {!notification.is_read && (
+                  <DropdownMenuItem onClick={() => onMarkAsRead(notification.id)} className="text-white hover:bg-[#1E2126] cursor-pointer">
+                    <Check className="w-4 h-4 mr-2" style={{ color: GREEN_LIGHT }} /> Mark as Read
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                )}
+                {notification.type === 'friend_request' && (
+                  <>
+                    <DropdownMenuItem onClick={() => handleAction('accept_friend')} className="text-white hover:bg-[#1E2126] cursor-pointer">
+                      <UserPlus className="w-4 h-4 mr-2" style={{ color: "#006ec9" }} /> Accept
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAction('decline_friend')} className="text-[#E53935] hover:bg-[#1E2126] cursor-pointer">
+                      <X className="w-4 h-4 mr-2" /> Decline
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuItem onClick={() => onDelete(notification.id)} className="text-[#E53935] hover:bg-[#1E2126] cursor-pointer">
+                  <X className="w-4 h-4 mr-2" /> Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
+
+        <p className="text-sm text-white line-clamp-2 leading-tight" style={{ fontFamily: FONT }}>
+          {notification.message}
+        </p>
+
+        <span className="text-[9px] mt-2 block" style={{ color: "#899485", fontFamily: FONT }}>
+          {formatDistanceToNowStrict(new Date(notification.created_at), { addSuffix: true })}
+        </span>
       </div>
     </div>
   );
 }
 
-function EmptyNotifications() {
-  return (
-    <div className="text-center py-8">
-      <div className="inline-block bg-muted p-3 rounded-full mb-3">
-        <Bell className="h-8 w-8 text-muted-foreground" />
-      </div>
-      <h3 className="text-sm font-semibold text-foreground">No notifications</h3>
-      <p className="text-xs text-muted-foreground mt-1">You&apos;re all caught up!</p>
-    </div>
-  );
-}
-
-export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdownProps) {
+export function NotificationsDropdown({ isOpen, onClose, onNotificationCountChange }: NotificationsDropdownProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !isOpen) return;
-
+    if (!user) return;
     const fetchNotifications = async () => {
       try {
-        const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(10); // Limit to 10 most recent
-
-        if (error) {
-          console.error('Error fetching notifications:', error);
-          return;
+        const { data } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10);
+        if (data) {
+          const formatted = data.map(notif => ({
+            id: notif.id, user_id: notif.user_id, type: notif.type, title: notif.title,
+            message: notif.message, data: notif.data, is_read: notif.is_read, created_at: notif.created_at,
+            from_user_id: notif.sender_id || notif.data?.from_user_id,
+            from_user_name: notif.data?.fromUserName || notif.data?.from_user_name,
+            from_user_avatar: notif.data?.from_user_avatar,
+          }));
+          setNotifications(formatted as Notification[]);
         }
-
-        const formattedNotifications = (data || []).map(notif => ({
-          id: notif.id,
-          user_id: notif.user_id,
-          type: notif.type,
-          title: notif.title,
-          message: notif.message,
-          data: notif.data,
-          is_read: notif.is_read,
-          created_at: notif.created_at,
-          from_user_id: notif.sender_id || notif.data?.from_user_id,
-          from_user_name: notif.data?.fromUserName || notif.data?.from_user_name,
-          from_user_avatar: notif.data?.from_user_avatar,
-        })) as Notification[];
-
-        setNotifications(formattedNotifications);
         setLoading(false);
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-        setLoading(false);
-      }
+      } catch (e) { setLoading(false); }
     };
 
     fetchNotifications();
 
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('notifications')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`
-      }, (payload) => {
+    const channel = supabase.channel('notifications')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
         if (payload.eventType === 'INSERT') {
-          const newNotification = payload.new as any;
+          const n = payload.new as any;
           setNotifications(prev => [{
-            id: newNotification.id,
-            user_id: newNotification.user_id,
-            type: newNotification.type,
-            title: newNotification.title,
-            message: newNotification.message,
-            data: newNotification.data,
-            is_read: newNotification.is_read,
-            created_at: newNotification.created_at,
-            from_user_id: newNotification.sender_id || newNotification.data?.from_user_id,
-            from_user_name: newNotification.data?.fromUserName || newNotification.data?.from_user_name,
-            from_user_avatar: newNotification.data?.from_user_avatar,
-          }, ...prev.slice(0, 9)]); // Keep only 10 most recent
+            id: n.id, user_id: n.user_id, type: n.type, title: n.title, message: n.message, data: n.data,
+            is_read: n.is_read, created_at: n.created_at, from_user_id: n.sender_id || n.data?.from_user_id,
+            from_user_name: n.data?.fromUserName || n.data?.from_user_name, from_user_avatar: n.data?.from_user_avatar,
+          }, ...prev.slice(0, 9)]);
         } else if (payload.eventType === 'UPDATE') {
-          const updatedNotification = payload.new as any;
-          setNotifications(prev => 
-            prev.map(notif => 
-              notif.id === updatedNotification.id ? {
-                ...notif,
-                is_read: updatedNotification.is_read,
-              } : notif
-            )
-          );
+          const u = payload.new as any;
+          setNotifications(prev => prev.map(notif => notif.id === u.id ? { ...notif, is_read: u.is_read } : notif));
         } else if (payload.eventType === 'DELETE') {
-          const deletedId = payload.old.id;
-          setNotifications(prev => prev.filter(notif => notif.id !== deletedId));
+          setNotifications(prev => prev.filter(notif => notif.id !== payload.old.id));
         }
-      })
-      .subscribe();
+      }).subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, isOpen]);
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
 
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  // Report count up
+  useEffect(() => {
+    if (onNotificationCountChange) onNotificationCountChange(unreadCount);
+  }, [unreadCount, onNotificationCountChange]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', id);
+      await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+      setNotifications(prev => prev.map(notif => notif.id === id ? { ...notif, is_read: true } : notif));
+    } catch { toast({ title: "Error", description: "Failed to mark read.", variant: "destructive" }); }
+  };
 
-      if (error) throw error;
-
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === id ? { ...notif, is_read: true } : notif
-        )
-      );
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      toast({
-        title: "Error",
-        description: "Failed to mark notification as read.",
-        variant: "destructive",
-      });
-    }
+  const handleMarkAllRead = async () => {
+    const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+    if (unreadIds.length === 0) return;
+    const promises = unreadIds.map(id => supabase.from('notifications').update({ is_read: true }).eq('id', id));
+    await Promise.all(promises);
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
   };
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await supabase.from('notifications').delete().eq('id', id);
       setNotifications(prev => prev.filter(notif => notif.id !== id));
-      toast({ title: "Notification deleted" });
-    } catch (error) {
-      console.error('Error deleting notification:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete notification.",
-        variant: "destructive",
-      });
-    }
+    } catch { toast({ title: "Error", description: "Failed to delete.", variant: "destructive" }); }
   };
-
-  const handleClearAllNotifications = async () => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('user_id', user?.id);
-
-      if (error) throw error;
-
-      setNotifications([]);
-      toast({ 
-        title: "Success", 
-        description: "All notifications cleared" 
-      });
-    } catch (error) {
-      console.error('Error clearing all notifications:', error);
-      toast({
-        title: "Error",
-        description: "Failed to clear all notifications.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50" onClick={onClose}>
-      <div className="absolute top-16 right-4 w-80 max-h-96 bg-background border border-border rounded-lg shadow-lg yrdly-shadow" onClick={(e) => e.stopPropagation()}>
+    <>
+      <div className="fixed inset-0 z-[55]" onClick={onClose} />
+      <div 
+        className="fixed top-20 right-4 w-[320px] shadow-[0_20px_40px_rgba(0,0,0,0.6)] z-[60] overflow-hidden rounded-[11px]"
+        style={{ background: CARD, border: "1px solid rgba(64,73,61,0.2)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-semibold text-foreground">Notifications</h3>
-              <p className="text-xs text-muted-foreground">
-                {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    notifications.forEach(notif => {
-                      if (!notif.is_read) {
-                        handleMarkAsRead(notif.id);
-                      }
-                    });
-                  }}
-                >
-                  <Check className="w-3 h-3 mr-1" />
-                  Mark All Read
-                </Button>
-              )}
-              {notifications.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearAllNotifications}
-                  className="h-6 text-xs px-2 text-muted-foreground hover:text-destructive"
-                >
-                  <X className="w-3 h-3 mr-1" />
-                  Clear All
-                </Button>
-              )}
-            </div>
+        <div className="flex justify-between items-center px-4 py-4 border-b" style={{ borderColor: "rgba(64,73,61,0.1)" }}>
+          <div className="flex items-center gap-2">
+            <h2 className="font-bold text-[15px] text-white" style={{ fontFamily: RALEWAY }}>Notifications</h2>
+            {unreadCount > 0 && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#4da24e", color: "#003207", fontFamily: FONT }}>
+                {unreadCount}
+              </span>
+            )}
           </div>
+          {unreadCount > 0 && (
+            <button 
+              onClick={handleMarkAllRead}
+              className="text-[10px] font-bold uppercase tracking-tight px-3 py-1 rounded-full transition-colors"
+              style={{ color: GREEN_LIGHT, border: `1px solid rgba(130,219,126,0.3)`, fontFamily: FONT }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(130,219,126,0.05)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              Mark All Read
+            </button>
+          )}
         </div>
 
-        {/* Notifications List */}
-        <div className="max-h-64 overflow-y-auto">
+        {/* List */}
+        <div className="max-h-[400px] overflow-y-auto" style={{ scrollbarWidth: "none" }}>
           {loading ? (
             <div className="p-4 space-y-3">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full rounded-[11px]" style={{ background: SURFACE }} />
+              <Skeleton className="h-16 w-full rounded-[11px]" style={{ background: SURFACE }} />
             </div>
           ) : notifications.length > 0 ? (
             notifications.map((notification) => (
@@ -596,19 +383,25 @@ export function NotificationsDropdown({ isOpen, onClose }: NotificationsDropdown
               />
             ))
           ) : (
-            <EmptyNotifications />
+            <div className="text-center py-10">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3" style={{ background: "rgba(56,142,60,0.1)" }}>
+                <Bell className="h-6 w-6" style={{ color: GREEN_LIGHT, opacity: 0.7 }} />
+              </div>
+              <h3 className="text-sm font-semibold text-white" style={{ fontFamily: RALEWAY }}>No notifications</h3>
+              <p className="text-[11px] mt-1" style={{ color: "#899485", fontFamily: FONT }}>You&apos;re all caught up.</p>
+            </div>
           )}
         </div>
 
         {/* Footer */}
         {notifications.length > 0 && (
-          <div className="p-3 border-t border-border">
-            <Button variant="ghost" size="sm" className="w-full text-xs">
+          <div className="px-4 py-3 text-center" style={{ background: "#272a2f" }}>
+            <button className="font-bold text-xs hover:underline" style={{ color: "#a5c8ff", fontFamily: FONT }}>
               View All Notifications
-            </Button>
+            </button>
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

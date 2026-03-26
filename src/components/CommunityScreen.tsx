@@ -1,1142 +1,541 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Users, 
-  Search, 
-  MapPin, 
-  MessageCircle, 
-  Heart,
-  Share,
-  Calendar,
-  Bell,
-  TrendingUp,
-  UserPlus,
-  Check,
-  X
-} from "lucide-react";
+import { Users, Zap, FileText, Search, Plus, Check, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Post } from "@/types";
 import { useToast } from "@/hooks/use-toast";
-import { CommentSection } from "./CommentSection";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import Image from "next/image";
+import { PostCard } from "@/components/PostCard";
+import { CreatePostDialog } from "@/components/CreatePostDialog";
+import { usePosts } from "@/hooks/use-posts";
+
+const GREEN = "#388E3C";
+const CARD = "#1E2126";
+const FONT = "Raleway, sans-serif";
+const PACIFICO = "Pacifico, cursive";
 
 interface CommunityScreenProps {
   className?: string;
 }
 
-const PostSkeleton = () => (
-  <Card className="yrdly-shadow">
-    <CardContent className="p-4">
-      <div className="flex items-start gap-3 mb-3">
-        <Skeleton className="h-10 w-10 rounded-full" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-3 w-20" />
+function fmt(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+}
+
+function StatCard({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: React.ElementType;
+  value: string | number;
+  label: string;
+}) {
+  return (
+    <div
+      className="flex flex-col items-center text-center p-4 space-y-2"
+      style={{ background: CARD, borderRadius: 11 }}
+    >
+      <div
+        className="w-10 h-10 rounded-full flex items-center justify-center"
+        style={{ background: "rgba(56,142,60,0.2)" }}
+      >
+        <Icon className="w-5 h-5" style={{ color: GREEN }} />
+      </div>
+      <div>
+        <div className="text-xl font-bold text-white" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+          {value}
+        </div>
+        <div
+          className="text-[10px] uppercase tracking-wider"
+          style={{ color: "#899485", fontFamily: FONT }}
+        >
+          {label}
         </div>
       </div>
-      <div className="space-y-2 mb-3">
-        <Skeleton className="h-5 w-3/4" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-4 w-2/3" />
-      </div>
-      <div className="flex items-center gap-4 pt-3 border-t border-border">
-        <Skeleton className="h-6 w-12" />
-        <Skeleton className="h-6 w-12" />
-        <Skeleton className="h-6 w-12" />
-      </div>
-    </CardContent>
-  </Card>
-);
+    </div>
+  );
+}
 
 export function CommunityScreen({ className }: CommunityScreenProps) {
   const { user: currentUser, profile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { posts, loading: postsLoading, createPost, deletePost } = usePosts();
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
-  const [openCommentPostId, setOpenCommentPostId] = useState<string | null>(null);
-  const [friendshipStatus, setFriendshipStatus] = useState<Record<string, 'friends' | 'request_sent' | 'request_received' | 'none'>>({});
+  const [friendshipStatus, setFriendshipStatus] = useState<
+    Record<string, "friends" | "request_sent" | "request_received" | "none">
+  >({});
   const [pendingFriendRequests, setPendingFriendRequests] = useState<any[]>([]);
   const [friendRequestsLoading, setFriendRequestsLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    activeToday: 0,
-    newPosts24h: 0
-  });
+  const [stats, setStats] = useState({ totalUsers: 0, activeToday: 0, newPosts24h: 0 });
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // Fetch community posts and stats from Supabase
+  /* ── Stats ── */
   useEffect(() => {
     if (!currentUser) return;
-
-    const fetchPosts = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('posts')
-          .select('*')
-          .order('timestamp', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching posts:', error);
-          return;
-        }
-
-        setPosts(data || []);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching posts:', error);
-        setLoading(false);
-      }
-    };
-
     const fetchStats = async () => {
-      try {
-        // Get total users count
-        const { count: totalUsers, error: usersError } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true });
-
-        if (usersError) {
-          console.error('Error fetching users count:', usersError);
-        }
-
-        // Get users active today (users who posted or commented in last 24 hours)
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        
-        // Get unique users who posted in last 24 hours
-        const { data: activePosters, error: postersError } = await supabase
-          .from('posts')
-          .select('user_id')
-          .gte('timestamp', yesterday.toISOString());
-        
-        // Get unique users who commented in last 24 hours
-        const { data: activeCommenters, error: commentersError } = await supabase
-          .from('comments')
-          .select('user_id')
-          .gte('timestamp', yesterday.toISOString());
-        
-        // Combine and count unique active users
-        const activeUserIds = new Set([
-          ...(activePosters?.map(p => p.user_id) || []),
-          ...(activeCommenters?.map(c => c.user_id) || [])
-        ]);
-        
-        const activeToday = activeUserIds.size;
-
-        if (postersError || commentersError) {
-          console.error('Error fetching active users:', postersError || commentersError);
-        }
-
-        // Get posts from last 24 hours
-        const { count: newPosts24h, error: postsError } = await supabase
-          .from('posts')
-          .select('*', { count: 'exact', head: true })
-          .gte('timestamp', yesterday.toISOString());
-
-        if (postsError) {
-          console.error('Error fetching new posts:', postsError);
-        }
-
-        setStats({
-          totalUsers: totalUsers || 0,
-          activeToday: activeToday || 0,
-          newPosts24h: newPosts24h || 0
-        });
-      } catch (error) {
-        console.error('Error fetching stats:', error);
-      }
+      const { count: totalUsers } = await supabase
+        .from("users")
+        .select("*", { count: "exact", head: true });
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const { data: activePosters } = await supabase
+        .from("posts")
+        .select("user_id")
+        .gte("timestamp", yesterday.toISOString());
+      const { data: activeCommenters } = await supabase
+        .from("comments")
+        .select("user_id")
+        .gte("timestamp", yesterday.toISOString());
+      const activeUserIds = new Set([
+        ...(activePosters?.map((p) => p.user_id) || []),
+        ...(activeCommenters?.map((c) => c.user_id) || []),
+      ]);
+      const { count: newPosts24h } = await supabase
+        .from("posts")
+        .select("*", { count: "exact", head: true })
+        .gte("timestamp", yesterday.toISOString());
+      setStats({
+        totalUsers: totalUsers || 0,
+        activeToday: activeUserIds.size,
+        newPosts24h: newPosts24h || 0,
+      });
     };
-
-    fetchPosts();
     fetchStats();
-
-    // Set up real-time subscription for posts
-    const channel = supabase
-      .channel('community_posts')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'posts'
-      }, (payload) => {
-        fetchPosts(); // Refresh posts
-        fetchStats(); // Refresh stats
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [currentUser]);
 
-  // Handle click outside to close search results
+  /* ── Pending Friend Requests ── */
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+    if (!currentUser) return;
+    const fetch = async () => {
+      setFriendRequestsLoading(true);
+      const { data } = await supabase
+        .from("friend_requests")
+        .select(
+          `id, from_user_id, created_at,
+           users!friend_requests_from_user_id_fkey(id, name, avatar_url, bio, location)`
+        )
+        .eq("to_user_id", currentUser.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      setPendingFriendRequests(data || []);
+      setFriendRequestsLoading(false);
+    };
+    fetch();
+  }, [currentUser]);
+
+  /* ── Click outside search ── */
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setShowUserSearch(false);
         setUsers([]);
       }
     };
-
-    if (showUserSearch) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    if (showUserSearch) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [showUserSearch]);
 
-  // Fetch pending friend requests
-  useEffect(() => {
-    if (!currentUser) return;
-
-    const fetchPendingFriendRequests = async () => {
-      try {
-        setFriendRequestsLoading(true);
-        
-        // Get friend requests where current user is the recipient
-        const { data: requests, error } = await supabase
-          .from('friend_requests')
-          .select(`
-            id,
-            from_user_id,
-            created_at,
-            users!friend_requests_from_user_id_fkey (
-              id,
-              name,
-              avatar_url,
-              bio,
-              location
-            )
-          `)
-          .eq('to_user_id', currentUser.id)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error fetching friend requests:', error);
-          return;
-        }
-
-        setPendingFriendRequests(requests || []);
-      } catch (error) {
-        console.error('Error fetching friend requests:', error);
-      } finally {
-        setFriendRequestsLoading(false);
-      }
-    };
-
-    fetchPendingFriendRequests();
-  }, [currentUser]);
-
-  const filteredPosts = useMemo(() => {
-    if (!searchQuery) return posts;
-    
-    return posts.filter(post => 
-      post.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.author_name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [posts, searchQuery]);
-
-  const checkFriendshipStatus = async (userId: string): Promise<'friends' | 'request_sent' | 'request_received' | 'none'> => {
-    if (!currentUser || !profile) return 'none';
-    
-    // Check if they're already friends
-    if (profile.friends?.includes(userId)) {
-      return 'friends';
-    }
-    
-    // Check for pending friend requests
-    const { data: requests, error } = await supabase
-      .from('friend_requests')
-      .select('*')
-      .or(`and(from_user_id.eq.${currentUser.id},to_user_id.eq.${userId}),and(from_user_id.eq.${userId},to_user_id.eq.${currentUser.id})`)
-      .eq('status', 'pending');
-    
-    if (error) {
-      console.error('Error checking friendship status:', error);
-      return 'none';
-    }
-    
+  const checkFriendshipStatus = async (userId: string) => {
+    if (!currentUser || !profile) return "none" as const;
+    if (profile.friends?.includes(userId)) return "friends" as const;
+    const { data: requests } = await supabase
+      .from("friend_requests")
+      .select("*")
+      .or(
+        `and(from_user_id.eq.${currentUser.id},to_user_id.eq.${userId}),and(from_user_id.eq.${userId},to_user_id.eq.${currentUser.id})`
+      )
+      .eq("status", "pending");
     if (requests && requests.length > 0) {
-      const request = requests[0];
-      return request.from_user_id === currentUser.id ? 'request_sent' : 'request_received';
+      return requests[0].from_user_id === currentUser.id
+        ? ("request_sent" as const)
+        : ("request_received" as const);
     }
-    
-    return 'none';
+    return "none" as const;
   };
 
   const searchUsers = async (query: string) => {
-    if (!query.trim()) {
-      setUsers([]);
-      setShowUserSearch(false);
-      setFriendshipStatus({});
-      return;
-    }
-
+    if (!query.trim()) { setUsers([]); setShowUserSearch(false); return; }
     setUserSearchLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name, avatar_url, created_at')
-        .ilike('name', `%${query}%`)
-        .neq('id', currentUser?.id) // Exclude current user from search results
+      const { data } = await supabase
+        .from("users")
+        .select("id, name, avatar_url, created_at")
+        .ilike("name", `%${query}%`)
+        .neq("id", currentUser?.id)
         .limit(10);
-
-      if (error) throw error;
-      
       const usersData = data || [];
       setUsers(usersData);
       setShowUserSearch(true);
-      
-      // Check friendship status for each user
-      const statusPromises = usersData.map(async (user) => {
-        const status = await checkFriendshipStatus(user.id);
-        return { userId: user.id, status };
-      });
-      
-      const statusResults = await Promise.all(statusPromises);
-      const statusMap = statusResults.reduce((acc, { userId, status }) => {
-        acc[userId] = status;
-        return acc;
-      }, {} as Record<string, 'friends' | 'request_sent' | 'request_received' | 'none'>);
-      
-      setFriendshipStatus(statusMap);
-    } catch (error) {
-      console.error('Error searching users:', error);
-      toast({
-        title: "Error",
-        description: "Failed to search users",
-        variant: "destructive",
-      });
-    } finally {
+      const statuses = await Promise.all(
+        usersData.map(async (u) => ({ userId: u.id, status: await checkFriendshipStatus(u.id) }))
+      );
+      setFriendshipStatus(
+        statuses.reduce((acc, { userId, status }) => ({ ...acc, [userId]: status }), {})
+      );
+    } catch { /* ignore */ } finally {
       setUserSearchLoading(false);
     }
   };
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    if (value.trim()) {
-      searchUsers(value);
-    } else {
-      setShowUserSearch(false);
-      setUsers([]);
-      setFriendshipStatus({});
-    }
+    if (value.trim()) searchUsers(value);
+    else { setShowUserSearch(false); setUsers([]); }
   };
 
-  const handleFriendAction = async (userId: string, action: 'add' | 'remove' | 'accept' | 'decline') => {
+  const handleFriendAction = async (
+    userId: string,
+    action: "add" | "remove" | "accept" | "decline"
+  ) => {
     if (!currentUser) return;
-    
     try {
-      if (action === 'add') {
-        // Send friend request
-        const { error } = await supabase
-          .from('friend_requests')
-          .insert({
-            from_user_id: currentUser.id,
-            to_user_id: userId,
-            participant_ids: [currentUser.id, userId].sort(),
-            status: 'pending',
-            created_at: new Date().toISOString(),
-          });
-        
-        if (error) throw error;
-        
-        // Update friendship status
-        setFriendshipStatus(prev => ({ ...prev, [userId]: 'request_sent' }));
-        
-        // Trigger notification for friend request
+      if (action === "add") {
+        await supabase.from("friend_requests").insert({
+          from_user_id: currentUser.id,
+          to_user_id: userId,
+          participant_ids: [currentUser.id, userId].sort(),
+          status: "pending",
+          created_at: new Date().toISOString(),
+        });
+        setFriendshipStatus((p) => ({ ...p, [userId]: "request_sent" }));
         try {
-          const { NotificationTriggers } = await import('@/lib/notification-triggers');
+          const { NotificationTriggers } = await import("@/lib/notification-triggers");
           await NotificationTriggers.onFriendRequestSent(currentUser.id, userId);
-        } catch (error) {
-          console.error('Error creating friend request notification:', error);
-        }
-        
-        toast({
-          title: "Friend Request Sent",
-          description: "Your friend request has been sent.",
-        });
-      } else if (action === 'remove') {
-        // Remove friend
-        const { data: currentUserData } = await supabase
-          .from('users')
-          .select('friends')
-          .eq('id', currentUser.id)
+        } catch {}
+        toast({ title: "Friend Request Sent" });
+      } else if (action === "accept") {
+        const { data: req } = await supabase
+          .from("friend_requests")
+          .select("*")
+          .eq("from_user_id", userId)
+          .eq("to_user_id", currentUser.id)
+          .eq("status", "pending")
           .single();
-
-        const updatedFriends = currentUserData?.friends?.filter((id: string) => id !== userId) || [];
-
+        if (!req) return;
         await supabase
-          .from('users')
-          .update({ friends: updatedFriends })
-          .eq('id', currentUser.id);
-
-        // Also remove from target user's friends list
-        const { data: targetUserData } = await supabase
-          .from('users')
-          .select('friends')
-          .eq('id', userId)
-          .single();
-
-        const targetUpdatedFriends = targetUserData?.friends?.filter((id: string) => id !== currentUser.id) || [];
-
-        await supabase
-          .from('users')
-          .update({ friends: targetUpdatedFriends })
-          .eq('id', userId);
-        
-        // Update friendship status
-        setFriendshipStatus(prev => ({ ...prev, [userId]: 'none' }));
-        
-        toast({
-          title: "Friend Removed",
-          description: "You are no longer friends with this user.",
-        });
-      } else if (action === 'accept') {
-        // Accept friend request
-        const { data: requestData, error: requestError } = await supabase
-          .from('friend_requests')
-          .select('*')
-          .eq('from_user_id', userId)
-          .eq('to_user_id', currentUser.id)
-          .eq('status', 'pending')
-          .single();
-
-        if (requestError || !requestData) {
-          toast({ variant: "destructive", title: "Error", description: "Friend request not found." });
-          return;
-        }
-
-        // Update friend request status to accepted
-        const { error: updateError } = await supabase
-          .from('friend_requests')
-          .update({ status: 'accepted', updated_at: new Date().toISOString() })
-          .eq('id', requestData.id);
-
-        if (updateError) throw updateError;
-
-        // Add to both users' friends lists
-        const { data: currentUserData } = await supabase
-          .from('users')
-          .select('friends')
-          .eq('id', currentUser.id)
-          .single();
-
-        const { data: senderUserData } = await supabase
-          .from('users')
-          .select('friends')
-          .eq('id', userId)
-          .single();
-
-        const currentUserFriends = currentUserData?.friends || [];
-        const senderUserFriends = senderUserData?.friends || [];
-
-        // Add sender to current user's friends list
-        const updatedCurrentUserFriends = [...currentUserFriends, userId];
-        await supabase
-          .from('users')
-          .update({ friends: updatedCurrentUserFriends })
-          .eq('id', currentUser.id);
-
-        // Add current user to sender's friends list
-        const updatedSenderFriends = [...senderUserFriends, currentUser.id];
-        await supabase
-          .from('users')
-          .update({ friends: updatedSenderFriends })
-          .eq('id', userId);
-
-        // Create notification for the sender
+          .from("friend_requests")
+          .update({ status: "accepted", updated_at: new Date().toISOString() })
+          .eq("id", req.id);
+        const { data: cu } = await supabase.from("users").select("friends").eq("id", currentUser.id).single();
+        const { data: su } = await supabase.from("users").select("friends").eq("id", userId).single();
+        await supabase.from("users").update({ friends: [...(cu?.friends || []), userId] }).eq("id", currentUser.id);
+        await supabase.from("users").update({ friends: [...(su?.friends || []), currentUser.id] }).eq("id", userId);
+        setPendingFriendRequests((p) => p.filter((r) => r.from_user_id !== userId));
+        setFriendshipStatus((p) => ({ ...p, [userId]: "friends" }));
         try {
-          const { NotificationTriggers } = await import('@/lib/notification-triggers');
+          const { NotificationTriggers } = await import("@/lib/notification-triggers");
           await NotificationTriggers.onFriendRequestAccepted(userId, currentUser.id);
-        } catch (error) {
-          console.error('Error creating friend request accepted notification:', error);
-        }
-
-        // Update friendship status
-        setFriendshipStatus(prev => ({ ...prev, [userId]: 'friends' }));
-
-        toast({
-          title: "Friend Request Accepted",
-          description: "You are now friends with this user.",
-        });
-      } else if (action === 'decline') {
-        // Decline friend request
-        const { error } = await supabase
-          .from('friend_requests')
+        } catch {}
+        toast({ title: "Friend Request Accepted" });
+      } else if (action === "decline") {
+        await supabase
+          .from("friend_requests")
           .delete()
-          .eq('from_user_id', userId)
-          .eq('to_user_id', currentUser.id)
-          .eq('status', 'pending');
-
-        if (error) throw error;
-
-        // Update friendship status
-        setFriendshipStatus(prev => ({ ...prev, [userId]: 'none' }));
-
-        toast({
-          title: "Friend Request Declined",
-          description: "Friend request has been declined.",
-        });
+          .eq("from_user_id", userId)
+          .eq("to_user_id", currentUser.id)
+          .eq("status", "pending");
+        setPendingFriendRequests((p) => p.filter((r) => r.from_user_id !== userId));
+        setFriendshipStatus((p) => ({ ...p, [userId]: "none" }));
+        toast({ title: "Friend Request Declined" });
+      } else if (action === "remove") {
+        const { data: cu } = await supabase.from("users").select("friends").eq("id", currentUser.id).single();
+        const { data: tu } = await supabase.from("users").select("friends").eq("id", userId).single();
+        await supabase.from("users").update({ friends: (cu?.friends || []).filter((id: string) => id !== userId) }).eq("id", currentUser.id);
+        await supabase.from("users").update({ friends: (tu?.friends || []).filter((id: string) => id !== currentUser.id) }).eq("id", userId);
+        setFriendshipStatus((p) => ({ ...p, [userId]: "none" }));
+        toast({ title: "Friend Removed" });
       }
     } catch (error) {
-      console.error('Error handling friend action:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to process friend request. Please try again.",
-      });
+      console.error("Error handling friend action:", error);
+      toast({ variant: "destructive", title: "Error", description: "Action failed." });
     }
   };
 
-  const handleFriendRequestAction = async (requestId: string, fromUserId: string, action: 'accept' | 'decline') => {
-    if (!currentUser) return;
-
-    try {
-      if (action === 'accept') {
-        // Accept friend request
-        const { error: updateError } = await supabase
-          .from('friend_requests')
-          .update({ status: 'accepted', updated_at: new Date().toISOString() })
-          .eq('id', requestId);
-
-        if (updateError) throw updateError;
-
-        // Update friends lists
-        console.log('🔍 Fetching current user friends for:', currentUser.id);
-        const { data: currentUserData, error: currentUserError } = await supabase
-          .from('users')
-          .select('friends')
-          .eq('id', currentUser.id)
-          .single();
-
-        if (currentUserError) {
-          console.error('❌ Error fetching current user data:', currentUserError);
-          throw currentUserError;
-        }
-
-        console.log('🔍 Fetching sender user friends for:', fromUserId);
-        const { data: senderUserData, error: senderUserError } = await supabase
-          .from('users')
-          .select('friends')
-          .eq('id', fromUserId)
-          .single();
-
-        if (senderUserError) {
-          console.error('❌ Error fetching sender user data:', senderUserError);
-          throw senderUserError;
-        }
-
-        const currentUserFriends = currentUserData?.friends || [];
-        const senderUserFriends = senderUserData?.friends || [];
-
-        console.log('📊 Current user friends before update:', currentUserFriends);
-        console.log('📊 Sender user friends before update:', senderUserFriends);
-
-        const updatedCurrentUserFriends = [...currentUserFriends, fromUserId];
-        console.log('📊 Updated current user friends:', updatedCurrentUserFriends);
-        
-        const { error: updateCurrentUserError } = await supabase
-          .from('users')
-          .update({ friends: updatedCurrentUserFriends })
-          .eq('id', currentUser.id);
-
-        if (updateCurrentUserError) {
-          console.error('❌ Error updating current user friends:', updateCurrentUserError);
-          throw updateCurrentUserError;
-        }
-        console.log('✅ Current user friends updated successfully');
-
-        const updatedSenderFriends = [...senderUserFriends, currentUser.id];
-        console.log('📊 Updated sender friends:', updatedSenderFriends);
-        
-        const { error: updateSenderError } = await supabase
-          .from('users')
-          .update({ friends: updatedSenderFriends })
-          .eq('id', fromUserId);
-
-        if (updateSenderError) {
-          console.error('❌ Error updating sender friends:', updateSenderError);
-          throw updateSenderError;
-        }
-        console.log('✅ Sender friends updated successfully');
-
-        // Create notification for the sender
-        try {
-          const { NotificationTriggers } = await import('@/lib/notification-triggers');
-          await NotificationTriggers.onFriendRequestAccepted(fromUserId, currentUser.id);
-        } catch (error) {
-          console.error('Error creating friend request accepted notification:', error);
-        }
-
-        toast({
-          title: "Friend Request Accepted",
-          description: "You are now friends with this user.",
-        });
-      } else if (action === 'decline') {
-        // Decline friend request
-        const { error } = await supabase
-          .from('friend_requests')
-          .delete()
-          .eq('id', requestId);
-
-        if (error) throw error;
-
-        toast({
-          title: "Friend Request Declined",
-          description: "Friend request has been declined.",
-        });
-      }
-
-      // Remove the request from the pending list
-      setPendingFriendRequests(prev => prev.filter(req => req.id !== requestId));
-    } catch (error) {
-      console.error('Error handling friend request action:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to process friend request. Please try again.",
-      });
-    }
+  const getLocation = (loc: unknown): string => {
+    if (!loc || typeof loc !== "object") return "";
+    const o = loc as Record<string, unknown>;
+    if (typeof o.lga === "string" && typeof o.state === "string")
+      return `${o.lga}, ${o.state}`;
+    if (typeof o.state === "string") return o.state;
+    return "";
   };
 
-  const handleMessageUser = async (userId: string) => {
-    if (!currentUser) return;
-
-    try {
-      // Check if conversation already exists
-      const sortedParticipantIds = [currentUser.id, userId].sort();
-      const { data: existingConversations, error: fetchError } = await supabase
-        .from('conversations')
-        .select('id')
-        .contains('participant_ids', sortedParticipantIds)
-        .eq('type', 'friend');
-
-      if (fetchError) throw fetchError;
-
-      let conversationId: string;
-
-      if (existingConversations && existingConversations.length > 0) {
-        conversationId = existingConversations[0].id;
-      } else {
-        // Create new conversation
-        const { data: newConv, error: createError } = await supabase
-          .from('conversations')
-          .insert({
-            participant_ids: sortedParticipantIds,
-            type: 'friend',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .select('id')
-          .single();
-
-        if (createError) throw createError;
-        conversationId = newConv.id;
-      }
-
-      router.push(`/messages/${conversationId}`);
-    } catch (error) {
-      console.error('Error creating conversation:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not open conversation. Please try again.",
-      });
-    }
-  };
-
-  const handleLike = async (postId: string) => {
-    if (!currentUser) return;
-
-    try {
-      // Get current post data
-      const { data: postData, error: fetchError } = await supabase
-        .from('posts')
-        .select('liked_by')
-        .eq('id', postId)
-        .single();
-
-      if (fetchError) {
-        console.error('Error fetching post:', fetchError);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to like post. Please try again.",
-        });
-        return;
-      }
-
-      const currentLikedBy = postData.liked_by || [];
-      const userHasLiked = currentLikedBy.includes(currentUser.id);
-
-      let newLikedBy;
-      if (userHasLiked) {
-        // Remove user from liked_by array
-        newLikedBy = currentLikedBy.filter((id: string) => id !== currentUser.id);
-      } else {
-        // Add user to liked_by array
-        newLikedBy = [...currentLikedBy, currentUser.id];
-      }
-
-      // Update the post
-      const { error: updateError } = await supabase
-        .from('posts')
-        .update({ liked_by: newLikedBy })
-        .eq('id', postId);
-
-      if (updateError) {
-        console.error('Error updating post:', updateError);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to like post. Please try again.",
-        });
-      }
-    } catch (error) {
-      console.error('Error handling like:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to like post. Please try again.",
-      });
-    }
-  };
-
-  const handleComment = (postId: string) => {
-    setOpenCommentPostId(postId);
-  };
-
-  const handleShare = async (postId: string) => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Check out this post on Yrdly',
-          text: 'Check out this post on Yrdly',
-          url: window.location.origin + `/posts/${postId}`
-        });
-      } else {
-        // Fallback to clipboard
-        await navigator.clipboard.writeText(window.location.origin + `/posts/${postId}`);
-        toast({
-          title: "Link copied",
-          description: "Post link has been copied to clipboard.",
-        });
-      }
-    } catch (error) {
-      console.error('Error sharing:', error);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="p-4 space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <PostSkeleton key={i} />
-        ))}
-      </div>
+  const filteredPosts = useMemo(() => {
+    if (!searchQuery || showUserSearch) return posts;
+    const q = searchQuery.toLowerCase();
+    return posts.filter(
+      (p) =>
+        p.text?.toLowerCase().includes(q) ||
+        p.title?.toLowerCase().includes(q) ||
+        p.author_name?.toLowerCase().includes(q)
     );
-  }
+  }, [posts, searchQuery, showUserSearch]);
 
   return (
-    <div className={`p-4 space-y-6 ${className}`}>
-      {/* Page Header */}
-      <div className="space-y-3">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Community</h2>
-          <p className="text-muted-foreground">What&apos;s happening in your neighborhood</p>
-        </div>
+    <div className="min-h-screen pb-32" style={{ background: "#15181D" }}>
+      <div className="max-w-2xl mx-auto px-4 pt-6 space-y-8">
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search for neighbors..."
-            className="pl-10"
+        {/* ── Header ── */}
+        <header className="space-y-1">
+          <h1 className="text-[20px] text-white" style={{ fontFamily: PACIFICO }}>
+            Community
+          </h1>
+          <p className="text-[12px]" style={{ fontFamily: FONT, fontStyle: "italic", fontWeight: 300, color: "#BBBBBB" }}>
+            Connecting neighbors, one story at a time.
+          </p>
+        </header>
+
+        {/* ── Search ── */}
+        <div className="relative" ref={searchRef}>
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#899485" }} />
+          <input
+            type="text"
+            placeholder="Search for neighbors or posts..."
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
+            className="w-full rounded-full px-6 pl-11 py-4 text-sm text-white outline-none focus:ring-1 focus:ring-[#388E3C]/50"
+            style={{
+              background: "#272a2f",
+              border: "0.5px solid #388E3C",
+              fontFamily: FONT,
+            }}
           />
-        </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="p-4 text-center yrdly-shadow">
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-            <Users className="w-4 h-4 text-primary" />
-          </div>
-          <div className="text-lg font-bold text-foreground">{stats.totalUsers.toLocaleString()}</div>
-          <div className="text-xs text-muted-foreground">Neighbors</div>
-        </Card>
-        <Card className="p-4 text-center yrdly-shadow">
-          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
-            <TrendingUp className="w-4 h-4 text-green-600" />
-          </div>
-          <div className="text-lg font-bold text-foreground">{stats.activeToday.toLocaleString()}</div>
-          <div className="text-xs text-muted-foreground">Active Today</div>
-        </Card>
-        <Card className="p-4 text-center yrdly-shadow">
-          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
-            <Bell className="w-4 h-4 text-green-600" />
-          </div>
-          <div className="text-lg font-bold text-foreground">{stats.newPosts24h.toLocaleString()}</div>
-          <div className="text-xs text-muted-foreground">New Posts</div>
-        </Card>
-      </div>
-
-      {/* Pending Friend Requests */}
-      {pendingFriendRequests.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="font-semibold text-foreground flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-primary" />
-            Friend Requests ({pendingFriendRequests.length})
-          </h3>
-          <div className="space-y-2">
-            {pendingFriendRequests.map((request) => {
-              const sender = request.users;
-              return (
-                <Card key={request.id} className="p-4 yrdly-shadow">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="w-12 h-12">
-                      <AvatarImage src={sender?.avatar_url || "/placeholder.svg"} />
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {sender?.name?.substring(0, 2).toUpperCase() || "U"}
+          {/* User search results dropdown */}
+          {showUserSearch && users.length > 0 && (
+            <div
+              className="absolute top-full mt-2 w-full z-20 overflow-hidden"
+              style={{ background: CARD, borderRadius: 11, border: "0.5px solid rgba(255,255,255,0.08)" }}
+            >
+              {userSearchLoading ? (
+                <div className="p-4 space-y-3">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <Skeleton className="w-10 h-10 rounded-full" style={{ background: "#272a2f" }} />
+                      <Skeleton className="h-4 w-32" style={{ background: "#272a2f" }} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                users.map((u) => (
+                  <div
+                    key={u.id}
+                    className="flex items-center gap-3 px-4 py-3"
+                    style={{ borderBottom: "0.5px solid rgba(255,255,255,0.05)" }}
+                  >
+                    <Avatar className="w-10 h-10 flex-shrink-0">
+                      <AvatarImage src={u.avatar_url} />
+                      <AvatarFallback style={{ background: GREEN, color: "#fff", fontFamily: FONT, fontWeight: 700 }}>
+                        {u.name?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-foreground truncate">
-                        {sender?.name || "Unknown User"}
-                      </h4>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {sender?.bio || "No bio available"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(request.created_at).toLocaleDateString()}
+                      <p className="text-white text-[13px] truncate" style={{ fontFamily: FONT, fontWeight: 600 }}>
+                        {u.name}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleFriendRequestAction(request.id, request.from_user_id, 'accept')}
-                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                      >
-                        <Check className="w-4 h-4 mr-1" />
-                        Accept
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleFriendRequestAction(request.id, request.from_user_id, 'decline')}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Decline
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* User Search Results */}
-      {showUserSearch && (
-        <div ref={searchRef} className="space-y-4 mb-6">
-          <h3 className="font-semibold text-foreground">Users</h3>
-          {userSearchLoading ? (
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i} className="p-3">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-24" />
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : users.length > 0 ? (
-            <div className="space-y-2">
-              {users.map((user) => {
-                const status = friendshipStatus[user.id] || 'none';
-                return (
-                  <Card 
-                    key={user.id} 
-                    className="p-3 hover:bg-muted/50 transition-colors"
-                    onClick={() => router.push(`/profile/${user.id}`)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="flex items-center gap-3 flex-1 cursor-pointer"
-                        onClick={() => router.push(`/profile/${user.id}`)}
-                      >
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={user.avatar_url || "/placeholder.svg"} />
-                          <AvatarFallback className="bg-primary text-primary-foreground">
-                            {user.name?.substring(0, 2).toUpperCase() || "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-foreground truncate">
-                            {user.name || "Unknown User"}
-                          </h4>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {user.email}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {status === 'request_received' ? (
-                          <>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFriendAction(user.id, 'accept');
-                              }}
-                              className="text-green-600 hover:text-green-700"
-                            >
-                              <Check className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFriendAction(user.id, 'decline');
-                              }}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </>
-                        ) : (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (status === 'friends') {
-                                handleMessageUser(user.id);
-                              } else if (status === 'none') {
-                                handleFriendAction(user.id, 'add');
-                              } else if (status === 'request_sent') {
-                                // Could add cancel request functionality here
-                                toast({
-                                  title: "Friend Request Pending",
-                                  description: "You have already sent a friend request to this user.",
-                                });
-                              }
-                            }}
+                    <div className="flex gap-2">
+                      {friendshipStatus[u.id] === "none" && (
+                        <button
+                          onClick={() => handleFriendAction(u.id, "add")}
+                          className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase"
+                          style={{ background: GREEN, fontFamily: FONT }}
+                        >
+                          Add
+                        </button>
+                      )}
+                      {friendshipStatus[u.id] === "request_sent" && (
+                        <button
+                          className="rounded-full px-3 py-1 text-[11px] text-[#BBBBBB] font-bold uppercase"
+                          style={{ border: "0.5px solid #388E3C", fontFamily: FONT }}
+                          disabled
+                        >
+                          Sent
+                        </button>
+                      )}
+                      {friendshipStatus[u.id] === "friends" && (
+                        <button
+                          onClick={() => handleFriendAction(u.id, "remove")}
+                          className="rounded-full px-3 py-1 text-[11px] font-bold uppercase"
+                          style={{ border: "0.5px solid rgba(229,57,53,0.4)", color: "#E53935", fontFamily: FONT }}
+                        >
+                          Remove
+                        </button>
+                      )}
+                      {friendshipStatus[u.id] === "request_received" && (
+                        <>
+                          <button
+                            onClick={() => handleFriendAction(u.id, "accept")}
+                            className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase"
+                            style={{ background: GREEN, fontFamily: FONT }}
                           >
-                            {status === 'friends' ? (
-                              <MessageCircle className="w-4 h-4" />
-                            ) : status === 'request_sent' ? (
-                              <UserPlus className="w-4 h-4 opacity-50" />
-                            ) : (
-                              <UserPlus className="w-4 h-4" />
-                            )}
-                          </Button>
-                        )}
-                      </div>
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleFriendAction(u.id, "decline")}
+                            className="rounded-full px-3 py-1 text-[11px] font-bold uppercase"
+                            style={{ border: "0.5px solid rgba(229,57,53,0.4)", color: "#E53935", fontFamily: FONT }}
+                          >
+                            Decline
+                          </button>
+                        </>
+                      )}
                     </div>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-sm text-muted-foreground">No users found</p>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
-      )}
 
-      <div className="space-y-4">
-        <h3 className="font-semibold text-foreground">Community Feed</h3>
+        {/* ── Stats Row ── */}
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard icon={Users} value={fmt(stats.totalUsers)} label="Neighbors" />
+          <StatCard icon={Zap} value={fmt(stats.activeToday)} label="Active Today" />
+          <StatCard icon={FileText} value={fmt(stats.newPosts24h)} label="New Posts" />
+        </div>
 
-        {filteredPosts.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="inline-block bg-muted p-4 rounded-full mb-4">
-              <MessageCircle className="h-12 w-12 text-muted-foreground" />
+        {/* ── Friend Requests ── */}
+        {(pendingFriendRequests.length > 0 || friendRequestsLoading) && (
+          <section className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-white font-semibold text-lg" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+                Friend Requests
+              </h2>
+              <button className="text-[11px] font-bold uppercase tracking-widest" style={{ color: GREEN, fontFamily: FONT }}>
+                View All
+              </button>
             </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">No posts yet</h3>
-            <p className="text-sm text-muted-foreground">
-              {searchQuery ? "No posts match your search" : "Be the first to share something with your community"}
-            </p>
-          </div>
-        ) : (
-          filteredPosts.map((post) => (
-            <Card key={post.id} className="p-4 yrdly-shadow">
-              <div className="flex items-start gap-3 mb-3">
-                <Avatar 
-                  className="w-10 h-10 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => {
-                    if (post.user_id) {
-                      router.push(`/profile/${post.user_id}`);
-                    }
-                  }}
-                >
-                  <AvatarImage src={post.author_image || "/placeholder.svg"} />
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    {post.author_name?.substring(0, 2).toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 
-                      className="font-semibold text-foreground truncate cursor-pointer hover:underline"
-                      onClick={() => {
-                        if (post.user_id) {
-                          router.push(`/profile/${post.user_id}`);
-                        }
-                      }}
+            <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+              {friendRequestsLoading
+                ? [1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="min-w-[180px] flex flex-col items-center p-4 space-y-3"
+                      style={{ background: "#1d2025", borderRadius: 11 }}
                     >
-                      {post.author_name || "Unknown User"}
-                    </h4>
-                    {post.category === "Event" && (
-                      <Badge className="bg-primary text-primary-foreground flex-shrink-0">Event</Badge>
-                    )}
-                    {post.category === "Business" && (
-                      <Badge className="bg-accent text-accent-foreground flex-shrink-0">Business</Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(post.timestamp).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2 mb-3">
-                {/* Post Image */}
-                {(post.image_url || (post.image_urls && post.image_urls.length > 0)) && (
-                  <div className="mb-3">
-                    <Image
-                      src={post.image_url || post.image_urls?.[0] || "/placeholder.svg"}
-                      alt={post.title || "Post image"}
-                      width={400}
-                      height={192}
-                      className="w-full h-auto object-contain max-h-96 rounded-lg"
-                      style={{ height: "auto" }}
-                    />
-                  </div>
-                )}
-                
-                {post.title && (
-                  <h3 className="font-semibold text-foreground">{post.title}</h3>
-                )}
-                <p className="text-muted-foreground text-sm leading-relaxed">{post.text}</p>
-
-                {post.category === "Event" && post.event_date && (
-                  <div className="bg-primary/5 p-3 rounded-lg border border-primary/20 space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span className="text-foreground">{post.event_date}</span>
+                      <Skeleton className="w-16 h-16 rounded-full" style={{ background: "#272a2f" }} />
+                      <Skeleton className="h-4 w-24" style={{ background: "#272a2f" }} />
+                      <Skeleton className="h-8 w-full rounded-full" style={{ background: "#272a2f" }} />
                     </div>
-                    {post.event_location?.address && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
-                        <span className="text-muted-foreground">{post.event_location.address}</span>
+                  ))
+                : pendingFriendRequests.map((req) => {
+                    const sender = req.users;
+                    if (!sender) return null;
+                    const loc = getLocation(sender.location);
+                    return (
+                      <div
+                        key={req.id}
+                        className="min-w-[180px] flex flex-col items-center p-4 space-y-3 flex-shrink-0"
+                        style={{ background: "#1d2025", borderRadius: 11 }}
+                      >
+                        <Avatar
+                          className="w-16 h-16 cursor-pointer"
+                          onClick={() => router.push(`/profile/${sender.id}`)}
+                        >
+                          <AvatarImage src={sender.avatar_url} />
+                          <AvatarFallback
+                            style={{ background: GREEN, color: "#fff", fontFamily: FONT, fontWeight: 700, fontSize: 22 }}
+                          >
+                            {sender.name?.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="text-center">
+                          <p className="text-white text-sm font-semibold" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+                            {sender.name}
+                          </p>
+                          {loc && (
+                            <p className="text-[10px]" style={{ color: "#899485", fontFamily: FONT }}>
+                              {loc}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex gap-2 w-full">
+                          <button
+                            onClick={() => handleFriendAction(sender.id, "accept")}
+                            className="flex-1 py-2 rounded-full text-[10px] font-bold uppercase text-white"
+                            style={{ background: GREEN, fontFamily: FONT }}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleFriendAction(sender.id, "decline")}
+                            className="flex-1 py-2 rounded-full text-[10px] font-bold uppercase"
+                            style={{
+                              border: "1px solid rgba(229,57,53,0.3)",
+                              color: "#E53935",
+                              fontFamily: FONT,
+                            }}
+                          >
+                            Decline
+                          </button>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {post.event_location?.address && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="w-4 h-4 flex-shrink-0" />
-                    <span>{post.event_location.address}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-4 pt-3 border-t border-border">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className={`text-muted-foreground hover:text-red-500 ${post.liked_by?.includes(currentUser?.id || '') ? 'text-red-500' : ''}`}
-                  onClick={() => handleLike(post.id)}
-                >
-                  <Heart className={`w-4 h-4 mr-1 ${post.liked_by?.includes(currentUser?.id || '') ? 'fill-current' : ''}`} />
-                  <span className="text-sm">{post.liked_by?.length || 0}</span>
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-muted-foreground hover:text-primary"
-                  onClick={() => handleComment(post.id)}
-                >
-                  <MessageCircle className="w-4 h-4 mr-1" />
-                  <span className="text-sm">{post.comment_count || 0}</span>
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-muted-foreground hover:text-accent"
-                  onClick={() => handleShare(post.id)}
-                >
-                  <Share className="w-4 h-4 mr-1" />
-                  <span className="text-sm">Share</span>
-                </Button>
-              </div>
-            </Card>
-          ))
+                    );
+                  })}
+            </div>
+          </section>
         )}
+
+        {/* ── Recent Updates Feed ── */}
+        <section className="space-y-4">
+          <h2 className="text-white font-semibold text-lg" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+            Recent Updates
+          </h2>
+
+          {postsLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-40 w-full rounded-[11px]" style={{ background: CARD }} />
+              ))}
+            </div>
+          ) : filteredPosts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                style={{ background: CARD }}
+              >
+                <FileText className="w-8 h-8" style={{ color: GREEN, opacity: 0.5 }} />
+              </div>
+              <h3 className="text-white text-lg mb-2" style={{ fontFamily: PACIFICO }}>
+                No posts yet
+              </h3>
+              <p className="text-[13px]" style={{ color: "#BBBBBB", fontFamily: FONT }}>
+                Be the first to share something with your neighbors!
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredPosts.map((post) => (
+                <PostCard key={post.id} post={post} onDelete={deletePost} onCreatePost={createPost} />
+              ))}
+            </div>
+          )}
+        </section>
       </div>
 
-      {/* Instagram-style Comment Modal */}
-      {openCommentPostId && (() => {
-        const post = posts.find(p => p.id === openCommentPostId);
-        if (!post) return null;
-        
-        // Create author object from post data
-        const author = {
-          id: post.user_id,
-          uid: post.user_id,
-          name: post.author_name || 'Unknown User',
-          avatar_url: post.author_image || '',
-          timestamp: post.timestamp
-        };
-
-        return (
-          <Sheet open={!!openCommentPostId} onOpenChange={(open) => !open && setOpenCommentPostId(null)}>
-            <SheetContent side="bottom" className="p-0 flex flex-col h-[90vh] max-h-screen rounded-t-2xl">
-              <SheetHeader className="p-4 border-b flex-shrink-0">
-                <SheetTitle className="text-center">Comments</SheetTitle>
-              </SheetHeader>
-              <CommentSection 
-                postId={openCommentPostId}
-                post={post}
-                author={author}
-                onClose={() => setOpenCommentPostId(null)}
-              />
-            </SheetContent>
-          </Sheet>
-        );
-      })()}
+      {/* ── FAB ── */}
+      <CreatePostDialog createPost={createPost}>
+        <button
+          className="fixed bottom-20 right-4 w-14 h-14 rounded-full flex items-center justify-center z-40 transition-transform active:scale-90"
+          style={{
+            background: GREEN,
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+          }}
+        >
+          <Plus className="w-7 h-7 text-white" />
+        </button>
+      </CreatePostDialog>
     </div>
   );
 }

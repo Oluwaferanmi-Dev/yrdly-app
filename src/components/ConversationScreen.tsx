@@ -1,24 +1,23 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
 import { StorageService } from "@/lib/storage-service";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ImagePlus, Send, MessageCircle, Users, ArrowLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { ArrowLeft, ImagePlus, Send, MessageCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { ActivityIndicator } from "@/components/ActivityIndicator";
-import { TypingIndicator, MultipleTypingIndicator } from "@/components/TypingIndicator";
 import { useTypingDetection } from "@/hooks/use-typing-detection";
 import type { User } from "@/types";
 import Image from "next/image";
 
-interface Conversation {
+const GREEN = "#388E3C";
+const CARD = "#1E2126";
+const BG = "#0b0e13";
+const FONT = "Raleway, sans-serif";
+
+interface ConversationRow {
   id: string;
   participant_ids: string[];
   last_message_text: string | null;
@@ -26,7 +25,6 @@ interface Conversation {
   last_message_sender_id: string | null;
   created_at: string;
   updated_at: string;
-  unread_count?: number;
 }
 
 interface ChatMessage {
@@ -37,19 +35,34 @@ interface ChatMessage {
   content?: string;
   image_url: string | null;
   created_at: string;
-  updated_at?: string;
   is_read: boolean;
+  read_by?: string[];
 }
 
 interface ConversationScreenProps {
   conversationId: string;
 }
 
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function getActivityStatus(lastSeen: string | null | undefined): string {
+  if (!lastSeen) return "Last seen recently";
+  const diff = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 60000);
+  if (diff < 1) return "Active now";
+  if (diff < 5) return "Last seen just now";
+  if (diff < 60) return `Last seen ${diff} min ago`;
+  const h = Math.floor(diff / 60);
+  if (h < 24) return `Last seen ${h}h ago`;
+  return `Last seen ${Math.floor(h / 24)}d ago`;
+}
+
 export function ConversationScreen({ conversationId }: ConversationScreenProps) {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+
+  const [conversation, setConversation] = useState<ConversationRow | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [participants, setParticipants] = useState<Record<string, User>>({});
   const [newMessage, setNewMessage] = useState("");
@@ -57,706 +70,335 @@ export function ConversationScreen({ conversationId }: ConversationScreenProps) 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messageInputRef = useRef<HTMLInputElement>(null);
 
-  // Typing detection
   const { otherTypingUsers, handleTyping, stopTyping } = useTypingDetection(conversationId);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+  useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
+  /* ── Load conversation ── */
   useEffect(() => {
     if (!user) return;
-
-    const fetchConversations = async () => {
-      try {
-        const { data: conversationsData, error: conversationsError } = await supabase
-          .from('conversations')
-          .select('*')
-          .contains('participant_ids', [user.id])
-          .order('updated_at', { ascending: false });
-
-        if (conversationsError) {
-          console.error('Error fetching conversations:', conversationsError);
-          return;
-        }
-
-        setConversations(conversationsData || []);
-
-        const conversation = conversationsData?.find(conv => conv.id === conversationId);
-        if (conversation) {
-          setSelectedConversation(conversation);
-        }
-      } catch (error) {
-        console.error('Error fetching conversations:', error);
-      }
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("conversations").select("*")
+        .contains("participant_ids", [user.id])
+        .order("updated_at", { ascending: false });
+      const conv = data?.find((c) => c.id === conversationId) || null;
+      setConversation(conv);
     };
-
-    fetchConversations();
+    fetch();
   }, [user, conversationId]);
 
+  /* ── Load participants ── */
   useEffect(() => {
-    if (!selectedConversation) return;
-
-    const fetchParticipants = async () => {
-      try {
-        const participantIds = selectedConversation.participant_ids;
-        const { data: participantsData, error: participantsError } = await supabase
-          .from('users')
-          .select('id, name, email, avatar_url, created_at')
-          .in('id', participantIds);
-
-        if (participantsError) {
-          console.error('Error fetching participants:', participantsError);
-          return;
-        }
-
-        const participantsMap: Record<string, User> = {};
-        participantsData?.forEach(participant => {
-          participantsMap[participant.id] = {
-            ...participant,
-            uid: participant.id,
-            avatar_url: participant.avatar_url,
-            timestamp: participant.created_at,
-          };
-        });
-
-        setParticipants(participantsMap);
-      } catch (error) {
-        console.error('Error fetching participants:', error);
-      }
+    if (!conversation) return;
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("users").select("id, name, email, avatar_url, created_at, last_seen, is_online")
+        .in("id", conversation.participant_ids);
+      const map: Record<string, User> = {};
+      data?.forEach((p) => {
+        map[p.id] = { ...p, uid: p.id, timestamp: p.created_at };
+      });
+      setParticipants(map);
     };
+    fetch();
+  }, [conversation]);
 
-    fetchParticipants();
-  }, [selectedConversation]);
-
+  /* ── Load messages ── */
   useEffect(() => {
-    if (!selectedConversation) return;
-
-    const fetchMessages = async () => {
-      try {
-        const { data: messagesData, error: messagesError } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('conversation_id', selectedConversation.id)
-          .order('created_at', { ascending: true });
-
-        if (messagesError) {
-          console.error('Error fetching messages:', messagesError);
-          return;
-        }
-
-        setMessages(messagesData || []);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching messages:', error);
-      }
+    if (!conversation) return;
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("messages").select("*")
+        .eq("conversation_id", conversation.id)
+        .order("created_at", { ascending: true });
+      setMessages(data || []);
+      setLoading(false);
     };
+    fetch();
+  }, [conversation]);
 
-    fetchMessages();
-  }, [selectedConversation]);
-
+  /* ── Mark as read ── */
   useEffect(() => {
-    if (!selectedConversation || !user) return;
-
-    const markMessagesAsRead = async () => {
-      try {
-        const { data: unreadMessages, error: fetchError } = await supabase
-          .from('messages')
-          .select('id, read_by')
-          .eq('conversation_id', selectedConversation.id)
-          .neq('sender_id', user.id)
-          .eq('is_read', false);
-
-        if (fetchError) {
-          console.error('Error fetching unread messages:', fetchError);
-          return;
-        }
-
-        if (!unreadMessages || unreadMessages.length === 0) {
-          return;
-        }
-
-        for (const message of unreadMessages) {
-          const currentReadBy = message.read_by || [];
-          const updatedReadBy = [...currentReadBy, user.id];
-
-          const { error: updateError } = await supabase
-            .from('messages')
-            .update({ 
-              is_read: true,
-              read_by: updatedReadBy
-            })
-            .eq('id', message.id);
-
-          if (updateError) {
-            console.error('Error updating message read status:', updateError);
-          }
-        }
-
-        const { error: conversationUpdateError } = await supabase
-          .from('conversations')
-          .update({ 
-            unread_count: 0,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', selectedConversation.id);
-
-        if (conversationUpdateError) {
-          console.error('Error updating conversation unread count:', conversationUpdateError);
-        }
-
-      } catch (error) {
-        console.error('Error in markMessagesAsRead:', error);
+    if (!conversation || !user) return;
+    const mark = async () => {
+      const { data: unread } = await supabase
+        .from("messages").select("id, read_by")
+        .eq("conversation_id", conversation.id)
+        .neq("sender_id", user.id).eq("is_read", false);
+      if (!unread || unread.length === 0) return;
+      for (const msg of unread) {
+        await supabase.from("messages")
+          .update({ is_read: true, read_by: [...(msg.read_by || []), user.id] })
+          .eq("id", msg.id);
       }
+      await supabase.from("conversations")
+        .update({ unread_count: 0, updated_at: new Date().toISOString() })
+        .eq("id", conversation.id);
     };
+    mark();
+  }, [conversation, user]);
 
-    markMessagesAsRead();
-  }, [selectedConversation, user]);
-
+  /* ── Real-time messages ── */
   useEffect(() => {
-    if (!selectedConversation) return;
-
-    const channel = supabase
-      .channel(`messages-${selectedConversation.id}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'messages',
-        filter: `conversation_id=eq.${selectedConversation.id}`
-      }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          const newMessage = payload.new as ChatMessage;
-          setMessages(prev => [...prev, newMessage]);
-        } else if (payload.eventType === 'UPDATE') {
-          const updatedMessage = payload.new as ChatMessage;
-          setMessages(prev => prev.map(msg => 
-            msg.id === updatedMessage.id ? updatedMessage : msg
-          ));
-        } else if (payload.eventType === 'DELETE') {
-          const deletedId = payload.old.id;
-          setMessages(prev => prev.filter(msg => msg.id !== deletedId));
-        }
-      })
+    if (!conversation) return;
+    const ch = supabase.channel(`messages-${conversation.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages", filter: `conversation_id=eq.${conversation.id}` },
+        (payload) => {
+          if (payload.eventType === "INSERT") setMessages((p) => [...p, payload.new as ChatMessage]);
+          else if (payload.eventType === "UPDATE") setMessages((p) => p.map((m) => m.id === payload.new.id ? payload.new as ChatMessage : m));
+          else if (payload.eventType === "DELETE") setMessages((p) => p.filter((m) => m.id !== payload.old.id));
+        })
       .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [conversation]);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [selectedConversation]);
-
-  const getOtherParticipant = useCallback((conversation: Conversation) => {
-    const otherId = conversation.participant_ids.find(id => id !== user?.id);
-    return otherId ? participants[otherId] : null;
-  }, [user?.id, participants]);
-
-  // Get activity status based on last_seen timestamp
-  const getActivityStatus = useCallback((lastSeen: string | null) => {
-    if (!lastSeen) return "Last seen recently";
-    
-    const lastSeenTime = new Date(lastSeen);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - lastSeenTime.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return "Online";
-    if (diffInMinutes < 5) return "Last seen just now";
-    if (diffInMinutes < 60) return `Last seen ${diffInMinutes} minutes ago`;
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `Last seen ${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `Last seen ${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
-    
-    return "Last seen recently";
-  }, []);
-
-  const handleSendMessage = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!user || !selectedConversation || !newMessage.trim() && !selectedFile) {
-      return;
-    }
-
-    setSending(true);
-    try {
-      let imageUrl = null;
-      
-      if (selectedFile) {
-        const { url, error } = await StorageService.uploadChatImage(selectedConversation.id, selectedFile);
-        if (error) {
-          console.error('Error uploading image:', error);
-          return;
-        }
-        imageUrl = url;
-      }
-
-      const messageData = {
-        conversation_id: selectedConversation.id,
-        sender_id: user.id,
-        text: newMessage.trim() || '',
-        image_url: imageUrl,
-        created_at: new Date().toISOString(),
-        is_read: true, // Mark as read for the sender
-        read_by: [user.id], // Add sender to read_by array
-      };
-
-      const { error } = await supabase
-        .from('messages')
-        .insert(messageData);
-
-      if (error) {
-        console.error('Error sending message:', error);
-        return;
-      }
-
-      // Update conversation timestamp
-      await supabase
-        .from('conversations')
-        .update({ 
-          updated_at: new Date().toISOString(),
-          last_message_text: newMessage.trim() || (imageUrl ? '📷 Photo' : ''),
-          last_message_timestamp: new Date().toISOString(),
-          last_message_sender_id: user.id,
-        })
-        .eq('id', selectedConversation.id);
-
-      // Send notification to other participants
-      const otherParticipantIds = selectedConversation.participant_ids.filter(id => id !== user.id);
-      for (const participantId of otherParticipantIds) {
-        try {
-          const { NotificationTriggers } = await import('@/lib/notification-triggers');
-          await NotificationTriggers.onMessageSent(
-            participantId,
-            user.id,
-            selectedConversation.id,
-            newMessage.trim() || (imageUrl ? '📷 Photo' : '')
-          );
-        } catch (error) {
-          console.error('Error creating message notification:', error);
-        }
-      }
-
-      setNewMessage("");
-      setSelectedFile(null);
-      setImagePreview(null);
-      
-      // Stop typing when message is sent
-      stopTyping();
-    } catch (error) {
-      console.error('Error sending message:', error);
-    } finally {
-      setSending(false);
-    }
-  }, [user, selectedConversation, newMessage, selectedFile, stopTyping]);
-
-  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        console.error('Invalid file type:', file.type);
-        return;
-      }
-      
-      // Validate file size (max 10MB)
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) {
-        console.error('File too large:', file.size, 'bytes');
-        return;
-      }
-      
-      setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  }, []);
-
-  const removeImagePreview = useCallback(() => {
-    setSelectedFile(null);
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, []);
-
-
-  // Update user activity status
-  const updateUserActivity = useCallback(async () => {
+  /* ── Activity ── */
+  useEffect(() => {
     if (!user) return;
-
-    try {
-      await supabase
-        .from('users')
-        .update({ 
-          last_seen: new Date().toISOString(),
-          is_online: true
-        })
-        .eq('id', user.id);
-    } catch (error) {
-      console.error('Error updating user activity:', error);
-    }
+    const update = async () => {
+      await supabase.from("users").update({ last_seen: new Date().toISOString(), is_online: true }).eq("id", user.id);
+    };
+    update();
+    const interval = setInterval(update, 30000);
+    const onVisible = () => { if (!document.hidden) update(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
   }, [user]);
 
-  // Update activity on component mount and periodically
-  useEffect(() => {
-    if (!user) return;
+  const otherParticipant = conversation
+    ? participants[conversation.participant_ids.find((id) => id !== user?.id) || ""]
+    : null;
 
-    // Update immediately
-    updateUserActivity();
-
-    // Update every 30 seconds
-    const interval = setInterval(updateUserActivity, 30000);
-
-    // Update on page visibility change
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        updateUserActivity();
+  const handleSend = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !conversation || (!newMessage.trim() && !selectedFile)) return;
+    setSending(true);
+    try {
+      let imageUrl: string | null = null;
+      if (selectedFile) {
+        const { url, error } = await StorageService.uploadChatImage(conversation.id, selectedFile);
+        if (!error) imageUrl = url;
       }
-    };
+      await supabase.from("messages").insert({
+        conversation_id: conversation.id, sender_id: user.id,
+        text: newMessage.trim() || "", image_url: imageUrl,
+        created_at: new Date().toISOString(), is_read: true, read_by: [user.id],
+      });
+      await supabase.from("conversations").update({
+        updated_at: new Date().toISOString(),
+        last_message_text: newMessage.trim() || (imageUrl ? "📷 Photo" : ""),
+        last_message_timestamp: new Date().toISOString(),
+        last_message_sender_id: user.id,
+      }).eq("id", conversation.id);
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+      const others = conversation.participant_ids.filter((id) => id !== user.id);
+      for (const pid of others) {
+        try {
+          const { NotificationTriggers } = await import("@/lib/notification-triggers");
+          await NotificationTriggers.onMessageSent(pid, user.id, conversation.id, newMessage.trim() || (imageUrl ? "📷 Photo" : ""));
+        } catch {}
+      }
+      setNewMessage(""); setSelectedFile(null); setImagePreview(null);
+      stopTyping();
+    } catch (e) { console.error(e); } finally { setSending(false); }
+  }, [user, conversation, newMessage, selectedFile, stopTyping]);
 
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [user, updateUserActivity]);
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !file.type.startsWith("image/") || file.size > 10 * 1024 * 1024) return;
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
 
-  // Real-time subscription for user activity updates
-  useEffect(() => {
-    if (!selectedConversation) return;
-
-    const otherParticipant = getOtherParticipant(selectedConversation);
-    if (!otherParticipant) return;
-
-    const channel = supabase
-      .channel(`user-activity-${otherParticipant.id}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'users',
-        filter: `id=eq.${otherParticipant.id}`
-      }, (payload) => {
-        // Update the participant data
-        setParticipants(prev => ({
-          ...prev,
-          [otherParticipant.id]: {
-            ...prev[otherParticipant.id],
-            ...payload.new
-          }
-        }));
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [selectedConversation, getOtherParticipant]);
-
+  /* ─── Render ─── */
   if (loading) {
     return (
-      <div className="flex flex-col h-full">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" />
-            <div className="space-y-2 flex-1">
-              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse w-1/3" />
-              <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded animate-pulse w-1/4" />
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 p-4 space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse" />
-              <div className="space-y-2 flex-1">
-                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse w-3/4" />
-                <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse w-1/2" />
-              </div>
-            </div>
-          ))}
+      <div className="flex flex-col h-screen" style={{ background: BG }}>
+        <div className="h-16 animate-pulse" style={{ background: CARD }} />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-[#388E3C] border-t-transparent animate-spin" />
         </div>
       </div>
     );
   }
 
-  if (!selectedConversation) {
+  if (!conversation || !otherParticipant) {
     return (
-      <div className="flex flex-col h-full">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/messages")}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="text-center flex-1">
-              <h2 className="text-lg font-semibold">Conversation not found</h2>
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center p-4">
-          <div className="text-center">
-            <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Conversation not found</h3>
-            <p className="text-muted-foreground mb-4">
-              This conversation doesn&apos;t exist or you don&apos;t have access to it.
-            </p>
-            <Button onClick={() => router.push("/messages")}>
-              Back to Messages
-            </Button>
-          </div>
-        </div>
+      <div className="flex flex-col h-screen items-center justify-center" style={{ background: BG }}>
+        <MessageCircle className="w-12 h-12 mb-4" style={{ color: GREEN, opacity: 0.4 }} />
+        <p className="text-white mb-4" style={{ fontFamily: FONT }}>Conversation not found</p>
+        <button onClick={() => router.push("/messages")} className="rounded-full px-6 py-2 text-white text-sm" style={{ background: GREEN, fontFamily: FONT }}>
+          Back to Messages
+        </button>
       </div>
     );
   }
 
-  const otherParticipant = getOtherParticipant(selectedConversation);
-
-  if (!otherParticipant) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push("/messages")}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="text-center flex-1">
-              <h2 className="text-lg font-semibold">Loading...</h2>
-            </div>
-          </div>
-        </div>
-        <div className="flex-1 flex items-center justify-center p-4">
-          <div className="text-center">
-            <MessageCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Loading participant...</h3>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const activityStatus = getActivityStatus((otherParticipant as any).last_seen);
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* Header */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm flex-shrink-0">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/messages")}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div 
-            className="relative cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => router.push(`/profile/${otherParticipant.id}`)}
-          >
-            <div className="relative">
-              <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600">
-                <AvatarImage src={otherParticipant.avatar_url} alt={otherParticipant.name} />
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
-                  {otherParticipant.name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              <ActivityIndicator 
-                userId={otherParticipant.id} 
-                size="md"
-                className="absolute -bottom-1 -right-1"
-              />
-            </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">
-              {otherParticipant.name}
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              {getActivityStatus(otherParticipant.lastSeen || null)}
-            </p>
-          </div>
+    <div className="flex flex-col h-screen" style={{ background: BG }}>
+      {/* ── Header ── */}
+      <header className="flex items-center px-4 py-3 flex-shrink-0"
+        style={{ background: CARD, boxShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
+        <button onClick={() => router.push("/messages")} className="mr-3 p-2 rounded-full transition-colors"
+          style={{ color: "#e1e2e9" }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}>
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div className="relative cursor-pointer" onClick={() => router.push(`/profile/${otherParticipant.id}`)}>
+          <Avatar className="w-12 h-12">
+            <AvatarImage src={otherParticipant.avatar_url} alt={otherParticipant.name} />
+            <AvatarFallback style={{ background: GREEN, color: "#fff", fontFamily: FONT, fontWeight: 700 }}>
+              {otherParticipant.name?.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2"
+            style={{ background: GREEN, borderColor: CARD }} />
         </div>
-      </div>
+        <div className="ml-3 flex-1 min-w-0">
+          <h1 className="text-[16px] font-bold text-white truncate" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+            {otherParticipant.name}
+          </h1>
+          <p className="text-[12px]" style={{ fontFamily: FONT, color: "#BBBBBB" }}>
+            {activityStatus}
+          </p>
+        </div>
+      </header>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-4">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center py-8">
-              <MessageCircle className="w-12 h-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No messages yet</h3>
-              <p className="text-muted-foreground">
-                Start a conversation with {otherParticipant.name}
-              </p>
-            </div>
-          ) : (
-            messages.map((message) => {
-              const sender = participants[message.sender_id];
-              const isOwnMessage = message.sender_id === user?.id;
-              
-              return (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex gap-3 mb-4 px-2",
-                    isOwnMessage ? "justify-end" : "justify-start"
-                  )}
-                >
-                  {!isOwnMessage && sender && (
-                    <Avatar className="w-8 h-8 flex-shrink-0">
-                      <AvatarImage src={sender.avatar_url} alt={sender.name} />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
-                        {sender.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div
-                    className={cn(
-                      "max-w-[60%] rounded-2xl px-4 py-3 shadow-sm relative group",
-                      isOwnMessage
-                        ? "bg-blue-500 text-white ml-auto"
-                        : "bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 mr-auto"
-                    )}
-                  >
-                    {message.image_url && (
-                      <div className="mb-2">
-                        <Image
-                          src={message.image_url}
-                          alt="Message image"
-                          width={200}
-                          height={200}
-                          className="rounded-lg max-w-full h-auto"
-                        />
-                      </div>
-                    )}
-                    <p className="text-sm break-words leading-relaxed">{message.text || message.content}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs opacity-60">
-                          {new Date(message.created_at).toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </p>
-                      </div>
+      {/* ── Messages ── */}
+      <main className="flex-1 overflow-y-auto px-4 py-6 space-y-4" style={{ background: BG }}>
+        {/* Date marker */}
+        <div className="flex justify-center">
+          <span className="text-[10px] font-bold uppercase tracking-widest rounded-full px-3 py-1"
+            style={{ color: "#899485", background: "#1d2025", fontFamily: FONT }}>Today</span>
+        </div>
+
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <MessageCircle className="w-12 h-12 mb-3" style={{ color: GREEN, opacity: 0.4 }} />
+            <p className="text-white text-sm" style={{ fontFamily: FONT }}>No messages yet. Say hello!</p>
+          </div>
+        ) : (
+          messages.map((msg) => {
+            const isOwn = msg.sender_id === user?.id;
+            const sender = participants[msg.sender_id];
+            return (
+              <div key={msg.id} className={`flex items-end gap-3 max-w-[85%] ${isOwn ? "self-end ml-auto flex-row-reverse" : "self-start"}`}>
+                {!isOwn && (
+                  <Avatar className="w-8 h-8 flex-shrink-0">
+                    <AvatarImage src={sender?.avatar_url} />
+                    <AvatarFallback style={{ background: GREEN, color: "#fff", fontFamily: FONT, fontWeight: 700, fontSize: 12 }}>
+                      {sender?.name?.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+                <div className="flex flex-col gap-1">
+                  {msg.image_url && (
+                    <div className="rounded-[10px] overflow-hidden border" style={{ borderColor: "rgba(255,255,255,0.05)", maxWidth: 192 }}>
+                      <Image src={msg.image_url} alt="Message image" width={192} height={192} className="w-full h-auto object-cover" />
                     </div>
-                  </div>
+                  )}
+                  {(msg.text || msg.content) && (
+                    <div
+                      className="px-4 py-3 text-white text-[13px] leading-relaxed"
+                      style={{
+                        background: isOwn ? GREEN : CARD,
+                        borderRadius: isOwn ? "20px 20px 4px 20px" : "20px 20px 20px 4px",
+                        fontFamily: FONT,
+                      }}
+                    >
+                      {msg.text || msg.content}
+                    </div>
+                  )}
+                  <span className={`text-[10px] ${isOwn ? "text-right mr-1" : "ml-1"}`} style={{ color: "#899485", fontFamily: FONT }}>
+                    {formatTime(msg.created_at)}
+                  </span>
                 </div>
-              );
-            })
-          )}
-          
-          {/* Typing Indicator */}
-          {otherTypingUsers.length > 0 && (
-            <div className="px-2">
-              {otherTypingUsers.length === 1 ? (
-                <TypingIndicator 
-                  isVisible={true}
-                  userName={otherTypingUsers[0].user_name}
-                />
-              ) : (
-                <MultipleTypingIndicator 
-                  isVisible={true}
-                  userNames={otherTypingUsers.map(u => u.user_name)}
-                />
-              )}
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* Message Input - Fixed at bottom */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm flex-shrink-0">
-        
-        <form onSubmit={handleSendMessage} className="flex items-end gap-2">
-          <div className="flex-1 relative">
-            {imagePreview && (
-              <div className="mb-2 relative">
-                <Image
-                  src={imagePreview}
-                  alt="Preview"
-                  width={100}
-                  height={100}
-                  className="rounded-lg max-w-20 h-20 object-cover"
-                />
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="sm"
-                  className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
-                  onClick={removeImagePreview}
-                >
-                  ×
-                </Button>
               </div>
-            )}
-            <Input
-              ref={messageInputRef}
-              value={newMessage}
-              onChange={(e) => {
-                setNewMessage(e.target.value);
-                handleTyping(); // Detect typing
-              }}
-              placeholder="Type a message..."
-              className="pr-12"
-              disabled={sending}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSendMessage(e);
-                }
-              }}
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleImageSelect}
-              className="hidden"
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 h-8 w-8"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={sending}
-            >
-              <ImagePlus className="h-4 w-4" />
-            </Button>
+            );
+          })
+        )}
+
+        {/* Typing indicator */}
+        {otherTypingUsers.length > 0 && (
+          <div className="flex items-center gap-2 self-start">
+            <div className="flex items-center gap-2 rounded-full px-3 py-2" style={{ background: "#272a2f" }}>
+              <div className="flex gap-1">
+                {[0, 150, 300].map((delay) => (
+                  <div key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce"
+                    style={{ background: GREEN, animationDelay: `-${delay}ms` }} />
+                ))}
+              </div>
+              <span className="text-[12px]" style={{ color: "#BBBBBB", fontFamily: FONT }}>
+                {otherTypingUsers[0]?.user_name} is typing...
+              </span>
+            </div>
           </div>
-          <Button
+        )}
+
+        <div ref={messagesEndRef} />
+      </main>
+
+      {/* ── Input ── */}
+      <footer className="flex-shrink-0 p-4 pb-8" style={{ background: CARD, borderTop: "0.5px solid rgba(255,255,255,0.08)" }}>
+        {/* Image preview */}
+        {imagePreview && (
+          <div className="relative mb-3 inline-block">
+            <Image src={imagePreview} alt="Preview" width={80} height={80} className="rounded-[10px] w-20 h-20 object-cover" />
+            <button
+              onClick={() => { setSelectedFile(null); setImagePreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+              className="absolute -top-2 -right-2 w-6 h-6 rounded-full text-white text-xs flex items-center justify-center"
+              style={{ background: "#E53935" }}>×</button>
+          </div>
+        )}
+        <form onSubmit={handleSend} className="flex items-center gap-3">
+          <button type="button" onClick={() => fileInputRef.current?.click()}
+            className="p-2 rounded-full flex-shrink-0 transition-colors"
+            style={{ color: GREEN }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}>
+            <ImagePlus className="w-6 h-6" />
+          </button>
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              placeholder="Message..."
+              value={newMessage}
+              onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSend(e as any); } }}
+              disabled={sending}
+              className="w-full rounded-full px-5 py-3 text-[14px] text-white outline-none focus:ring-1 focus:ring-[#388E3C]"
+              style={{ background: "#272a2f", fontFamily: FONT, caretColor: GREEN }}
+            />
+            <button type="button" onClick={() => fileInputRef.current?.click()}
+              className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+              style={{ color: "#899485" }}>
+              <ImagePlus className="w-5 h-5" />
+            </button>
+          </div>
+          <button
             type="submit"
-            size="sm"
             disabled={(!newMessage.trim() && !selectedFile) || sending}
-            className="px-3"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+            className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-transform active:scale-95 shadow-lg"
+            style={{ background: GREEN }}>
+            <Send className="w-5 h-5 text-white" />
+          </button>
         </form>
-      </div>
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+      </footer>
     </div>
   );
 }

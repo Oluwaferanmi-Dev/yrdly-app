@@ -1,61 +1,43 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, MessageCircle, Store, Users, ShoppingBag } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Search, MessageCircle, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
-import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { ActivityIndicator } from "@/components/ActivityIndicator";
-import type { User } from "@/types";
 import Image from "next/image";
+import { ActivityIndicator } from "@/components/ActivityIndicator";
 
-// Helper function to deduplicate conversations
+const GREEN = "#388E3C";
+const CARD = "#1E2126";
+const FONT = "Raleway, sans-serif";
+const PACIFICO = "Pacifico, cursive";
+
 function deduplicateConversations(conversations: Conversation[]): Conversation[] {
   const seen = new Map<string, Conversation>();
-  
   for (const conv of conversations) {
     let key: string;
-    
-    if (conv.type === 'business') {
-      // For business conversations, create a unique key based on business_id and catalog_item_id
+    if (conv.type === "business") {
       const context = conv.context as any;
-      const catalogItemId = context?.catalog_item_id || undefined;
-      if (catalogItemId) {
-        // Catalog item conversation - key by business_id + catalog_item_id
-        key = `business:${conv.participantId}:catalog:${catalogItemId}`;
-      } else {
-        // General business conversation - key by business_id only
-        key = `business:${conv.participantId}`;
-      }
-    } else if (conv.type === 'marketplace') {
-      // For marketplace, key by participant and item
-      const itemId = conv.context?.itemId || 'general';
+      const catalogItemId = context?.catalog_item_id;
+      key = catalogItemId
+        ? `business:${conv.participantId}:catalog:${catalogItemId}`
+        : `business:${conv.participantId}`;
+    } else if (conv.type === "marketplace") {
+      const itemId = conv.context?.itemId || "general";
       key = `marketplace:${conv.participantId}:item:${itemId}`;
     } else {
-      // For friend conversations, key by participant
       key = `friend:${conv.participantId}`;
     }
-    
-    // If we've seen this key before, keep the one with the most recent timestamp
     const existing = seen.get(key);
     if (!existing) {
       seen.set(key, conv);
-    } else {
-      // Compare timestamps - keep the more recent one
-      const existingDate = new Date(existing.timestamp);
-      const currentDate = new Date(conv.timestamp);
-      if (currentDate > existingDate) {
-        seen.set(key, conv);
-      }
+    } else if (new Date(conv.timestamp) > new Date(existing.timestamp)) {
+      seen.set(key, conv);
     }
   }
-  
   return Array.from(seen.values());
 }
 
@@ -77,490 +59,310 @@ interface Conversation {
     businessId?: string;
     businessName?: string;
     businessLogo?: string;
-    catalog_item_id?: string; // For catalog item conversations
+    catalog_item_id?: string;
   };
 }
 
-interface MessagesScreenProps {
-  onOpenChat?: (conversation: Conversation) => void;
-  selectedConversationId?: string;
-}
+type Tab = "all" | "friends" | "marketplace" | "businesses";
 
-export function MessagesScreen({ onOpenChat, selectedConversationId }: MessagesScreenProps) {
-  const { user, profile } = useAuth();
-  const [activeTab, setActiveTab] = useState<"all" | "friends" | "marketplace" | "businesses">("friends");
+export function MessagesScreen() {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<Tab>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
 
   useEffect(() => {
     if (!user) return;
-
     const fetchConversations = async () => {
       try {
-        const { data: conversationsData, error: conversationsError } = await supabase
-          .from('conversations')
-          .select(`
-            *,
-            messages(
-              id,
-              sender_id,
-              is_read,
-              read_by
-            )
-          `)
-          .contains('participant_ids', [user.id])
-          .order('updated_at', { ascending: false });
+        const { data, error } = await supabase
+          .from("conversations")
+          .select(`*, messages(id, sender_id, is_read, read_by)`)
+          .contains("participant_ids", [user.id])
+          .order("updated_at", { ascending: false });
 
-        if (conversationsError) {
-          console.error('Error fetching conversations:', conversationsError);
-          return;
-        }
+        if (error) { console.error(error); return; }
 
-        if (conversationsData && conversationsData.length > 0) {
-        }
-
-        // Count unread messages for each conversation
-        const conversationsWithUnreadCount = await Promise.all((conversationsData || []).map(async (conv) => {
-          if (conv.type === 'marketplace') {
-            const { data: chatMessages, error: chatMessagesError } = await supabase
-              .from('chat_messages')
-              .select('sender_id, created_at')
-              .eq('chat_id', conv.id)
-              .order('created_at', { ascending: true });
-
-            if (chatMessagesError) {
-              console.error('Error fetching chat messages:', chatMessagesError);
-              return { ...conv, unread_count: 0 };
+        const withCounts = await Promise.all(
+          (data || []).map(async (conv) => {
+            if (conv.type === "marketplace") {
+              const { data: chatMsgs } = await supabase
+                .from("chat_messages")
+                .select("sender_id, created_at")
+                .eq("chat_id", conv.id)
+                .order("created_at", { ascending: true });
+              const last = chatMsgs?.[chatMsgs.length - 1];
+              if (!last || last.sender_id === user.id) return { ...conv, unread_count: 0 };
+              return { ...conv, unread_count: (chatMsgs || []).filter((m: any) => m.sender_id !== user.id).length };
             }
+            const last = conv.messages?.[conv.messages.length - 1];
+            if (!last || last.sender_id === user.id) return { ...conv, unread_count: 0 };
+            const unread = (conv.messages || []).filter(
+              (m: any) => m.sender_id !== user.id && (!m.is_read || !m.read_by?.includes(user.id))
+            ).length;
+            return { ...conv, unread_count: unread };
+          })
+        );
 
-            if (!chatMessages || chatMessages.length === 0) {
-              return {
-                ...conv,
-                unread_count: 0
-              };
-            }
-
-            const lastMessage = chatMessages?.[chatMessages.length - 1];
-            const lastMessageSentByUser = lastMessage?.sender_id === user.id;
-            
-            // If you sent the last message, consider it read
-            if (lastMessageSentByUser) {
-              return {
-                ...conv,
-                unread_count: 0
-              };
-            }
-            
-            // Count messages from others as unread
-            const unreadCount = chatMessages?.filter((msg: any) => 
-              msg.sender_id !== user.id
-            ).length || 0;
-            
+        const transformed: Conversation[] = withCounts.map((conv) => {
+          const otherId = conv.participant_ids?.find((id: string) => id !== user.id);
+          if (conv.type === "business") {
+            const ctx = conv.context as any;
             return {
-              ...conv,
-              unread_count: unreadCount
-            };
-          } else {
-            const lastMessage = conv.messages?.[conv.messages.length - 1];
-            const lastMessageSentByUser = lastMessage?.sender_id === user.id;
-            
-            // If you sent the last message, consider it read
-            if (lastMessageSentByUser) {
-              return {
-                ...conv,
-                unread_count: 0
-              };
-            }
-            
-            // Count unread messages from others
-            const unreadCount = conv.messages?.filter((msg: any) => 
-              msg.sender_id !== user.id && 
-              (!msg.is_read || !msg.read_by?.includes(user.id))
-            ).length || 0;
-            
-            return {
-              ...conv,
-              unread_count: unreadCount
-            };
-          }
-        }));
-
-        const transformedConversations: Conversation[] = conversationsWithUnreadCount.map(conv => {
-          const otherParticipantId = conv.participant_ids?.find((id: string) => id !== user.id);
-          
-          if (conv.type === 'business') {
-            // Extract catalog_item_id from context JSONB if present
-            const contextData = conv.context as { catalog_item_id?: string; catalog_item_business_id?: string } | null;
-            const catalogItemId = contextData?.catalog_item_id || undefined; // Convert null to undefined
-            
-            return {
-              id: conv.id,
-              type: conv.type as "friend" | "marketplace" | "business",
+              id: conv.id, type: "business",
               participantId: conv.business_id || conv.id,
               participantName: conv.business_name || "Business",
               participantAvatar: conv.business_logo || "/placeholder.svg",
               lastMessage: conv.last_message_text || conv.last_message || "No messages yet",
               timestamp: new Date(conv.updated_at).toLocaleDateString(),
-              unreadCount: conv.unread_count || 0,
-              isOnline: false,
+              unreadCount: conv.unread_count || 0, isOnline: false,
               context: {
-                businessId: conv.business_id,
-                businessName: conv.business_name,
-                businessLogo: conv.business_logo,
-                // Include catalog item context if present
-                catalog_item_id: catalogItemId, // Store catalog item ID for deduplication
-                itemId: conv.item_id,
-                itemTitle: conv.item_title,
-                itemImage: conv.item_image,
-                itemPrice: conv.item_price
-              }
+                businessId: conv.business_id, businessName: conv.business_name,
+                businessLogo: conv.business_logo, catalog_item_id: ctx?.catalog_item_id,
+                itemId: conv.item_id, itemTitle: conv.item_title,
+                itemImage: conv.item_image, itemPrice: conv.item_price,
+              },
             };
           }
-
-          if (conv.type === 'marketplace') {
+          if (conv.type === "marketplace") {
             return {
-              id: conv.id,
-              type: conv.type as "friend" | "marketplace" | "business",
-              participantId: otherParticipantId || conv.id,
-              participantName: "Unknown User", // We'll fetch this separately
+              id: conv.id, type: "marketplace",
+              participantId: otherId || conv.id, participantName: "Unknown User",
               participantAvatar: "/placeholder.svg",
               lastMessage: conv.last_message_text || conv.last_message || "No messages yet",
               timestamp: new Date(conv.updated_at).toLocaleDateString(),
-              unreadCount: conv.unread_count || 0,
-              isOnline: false,
-              context: {
-                itemTitle: conv.item_title,
-                itemImage: conv.item_image,
-                itemPrice: conv.item_price
-              }
+              unreadCount: conv.unread_count || 0, isOnline: false,
+              context: { itemTitle: conv.item_title, itemImage: conv.item_image, itemPrice: conv.item_price },
             };
           }
-          
           return {
-            id: conv.id,
-            type: conv.type as "friend" | "marketplace" | "business",
-            participantId: otherParticipantId || conv.id,
-            participantName: "Unknown User", // We'll fetch this separately
+            id: conv.id, type: "friend",
+            participantId: otherId || conv.id, participantName: "Unknown User",
             participantAvatar: "/placeholder.svg",
             lastMessage: conv.last_message_text || conv.last_message || "No messages yet",
             timestamp: new Date(conv.updated_at).toLocaleDateString(),
-            unreadCount: conv.unread_count || 0,
-            isOnline: false, // You can implement online status later
-            context: conv.context
+            unreadCount: conv.unread_count || 0, isOnline: false, context: conv.context,
           };
         });
 
-        // Deduplicate conversations - especially important for business conversations
-        const deduplicatedConversations = deduplicateConversations(transformedConversations);
-        
-        setConversations(deduplicatedConversations);
-        
-        const fetchParticipantDetails = async () => {
-          const participantIds = transformedConversations
-            .filter(conv => conv.type !== 'business')
-            .map(conv => conv.participantId)
-            .filter(id => id !== user.id);
-          
-          if (participantIds.length > 0) {
-            const { data: usersData, error: usersError } = await supabase
-              .from('users')
-              .select('id, name, avatar_url')
-              .in('id', participantIds);
-            
-            if (!usersError && usersData) {
-              setConversations(prevConversations => 
-                prevConversations.map(conv => {
-                  if (conv.type === 'business') return conv;
-                  
-                  const participant = usersData.find(user => user.id === conv.participantId);
-                  if (participant) {
-                    return {
-                      ...conv,
-                      participantName: participant.name || "Unknown User",
-                      participantAvatar: participant.avatar_url || "/placeholder.svg"
-                    };
-                  }
-                  return conv;
-                })
-              );
-            }
+        const deduped = deduplicateConversations(transformed);
+        setConversations(deduped);
+
+        // Resolve participant names/avatars
+        const friendIds = transformed
+          .filter((c) => c.type !== "business")
+          .map((c) => c.participantId)
+          .filter((id) => id !== user.id);
+        if (friendIds.length > 0) {
+          const { data: usersData } = await supabase
+            .from("users").select("id, name, avatar_url").in("id", friendIds);
+          if (usersData) {
+            setConversations((prev) =>
+              prev.map((c) => {
+                if (c.type === "business") return c;
+                const u = usersData.find((u) => u.id === c.participantId);
+                return u ? { ...c, participantName: u.name || "Unknown", participantAvatar: u.avatar_url || "/placeholder.svg" } : c;
+              })
+            );
           }
-        };
-        
-        fetchParticipantDetails();
+        }
         setLoading(false);
-      } catch (error) {
-        console.error('Error fetching conversations:', error);
+      } catch (e) {
+        console.error(e);
         setLoading(false);
       }
     };
-
     fetchConversations();
 
-    // Set up real-time subscription for conversations
-    const channel = supabase
-      .channel('conversations')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'conversations',
-        filter: `participant_ids.cs.{${user.id}}`
-      }, (payload) => {
-        fetchConversations(); // Refresh conversations
-      })
+    const ch = supabase.channel("conversations")
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations", filter: `participant_ids.cs.{${user.id}}` }, fetchConversations)
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(ch); };
   }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel('messages-updates')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'messages',
-        filter: `read_by.cs.{${user.id}}`
-      }, (payload) => {
-        // TODO: Refresh conversations to update unread counts
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
-  useEffect(() => {
-    if (selectedConversationId && conversations.length > 0) {
-      const conversation = conversations.find(conv => conv.id === selectedConversationId);
-      if (conversation) {
-        setSelectedConversation(conversation);
-      }
-    } else {
-      setSelectedConversation(null);
-    }
-  }, [selectedConversationId, conversations]);
-
-  useEffect(() => {
-    if (!selectedConversationId) {
-      setSelectedConversation(null);
-    }
-  }, [selectedConversationId]);
-
 
   const filteredConversations = useMemo(() => {
-    const matchesTab = (conv: Conversation) => {
-      if (activeTab === "all") return true;
-      if (activeTab === "friends") {
-        return conv.type !== "marketplace" && conv.type !== "business";
-      }
-      if (activeTab === "marketplace" && conv.type === "marketplace") return true;
-      if (activeTab === "businesses" && conv.type === "business") return true;
-      return false;
-    };
-
-    const matchesSearch = (conv: Conversation) => {
-      if (!searchQuery) return true;
-      return conv.participantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-             conv.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
-    };
-
-    const filtered = conversations.filter(conv => matchesTab(conv) && matchesSearch(conv));
-    return filtered;
+    return conversations.filter((c) => {
+      const tabOk =
+        activeTab === "all" ||
+        (activeTab === "friends" && c.type === "friend") ||
+        (activeTab === "marketplace" && c.type === "marketplace") ||
+        (activeTab === "businesses" && c.type === "business");
+      const searchOk = !searchQuery ||
+        c.participantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
+      return tabOk && searchOk;
+    });
   }, [conversations, activeTab, searchQuery]);
 
-  const unreadCounts = useMemo(() => {
-    return {
-      all: conversations.reduce((sum, conv) => sum + conv.unreadCount, 0),
-      friends: conversations.filter(c => c.type !== "marketplace" && c.type !== "business").reduce((sum, conv) => sum + conv.unreadCount, 0),
-      marketplace: conversations.filter(c => c.type === "marketplace").reduce((sum, conv) => sum + conv.unreadCount, 0),
-      businesses: conversations.filter(c => c.type === "business").reduce((sum, conv) => sum + conv.unreadCount, 0),
-    };
-  }, [conversations]);
+  const unreadCounts = useMemo(() => ({
+    all: conversations.reduce((s, c) => s + c.unreadCount, 0),
+    friends: conversations.filter((c) => c.type === "friend").reduce((s, c) => s + c.unreadCount, 0),
+    marketplace: conversations.filter((c) => c.type === "marketplace").reduce((s, c) => s + c.unreadCount, 0),
+    businesses: conversations.filter((c) => c.type === "business").reduce((s, c) => s + c.unreadCount, 0),
+  }), [conversations]);
 
-
-  if (loading) {
-    return (
-      <div className="p-4 space-y-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex items-center gap-4">
-            <Skeleton className="h-12 w-12 rounded-full" />
-            <div className="space-y-2 flex-1">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const TABS: { key: Tab; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "friends", label: "Friends" },
+    { key: "marketplace", label: "Marketplace" },
+    { key: "businesses", label: "Business" },
+  ];
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 border-b border-border bg-card">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Messages</h2>
-          <p className="text-xs sm:text-sm text-muted-foreground">Stay connected with your community</p>
+    <div className="min-h-screen" style={{ background: "#15181D" }}>
+      {/* Sticky Header */}
+      <div
+        className="sticky top-0 z-40 px-4 pt-5 pb-4 space-y-4"
+        style={{ background: CARD, borderRadius: "0 0 11px 11px", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}
+      >
+        <div className="flex justify-between items-center">
+          <h1 className="text-[18px] text-white" style={{ fontFamily: PACIFICO }}>Messages</h1>
+          <Edit className="w-5 h-5" style={{ color: GREEN }} />
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "rgba(137,148,133,0.6)" }} />
+          <input
+            type="text"
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-background border-border focus:border-primary text-sm"
+            className="w-full rounded-full py-3 pl-11 pr-4 text-sm text-white outline-none"
+            style={{ background: "#272a2f", border: "0.5px solid rgba(130,219,126,0.4)", fontFamily: FONT }}
           />
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-muted h-10 sm:h-12">
-            <TabsTrigger value="friends" className="text-xs sm:text-sm relative flex items-center px-2">
-              <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-              <span className="hidden xs:inline">Friends</span>
-              <span className="xs:hidden">Fr</span>
-              {unreadCounts.friends > 0 && (
-                <Badge className="ml-1 h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground text-xs">
-                  {unreadCounts.friends}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="marketplace" className="text-xs sm:text-sm relative flex items-center px-2">
-              <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-              <span className="hidden xs:inline">Market</span>
-              <span className="xs:hidden">Mk</span>
-              {unreadCounts.marketplace > 0 && (
-                <Badge className="ml-1 h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground text-xs">
-                  {unreadCounts.marketplace}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="businesses" className="text-xs sm:text-sm relative flex items-center px-2">
-              <Store className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-              <span className="hidden xs:inline">Business</span>
-              <span className="xs:hidden">Bs</span>
-              {unreadCounts.businesses > 0 && (
-                <Badge className="ml-1 h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground text-xs">
-                  {unreadCounts.businesses}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="all" className="text-xs sm:text-sm relative flex items-center px-2">
-              All
-              {unreadCounts.all > 0 && (
-                <Badge className="ml-1 h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground text-xs">
-                  {unreadCounts.all}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Filter Tabs */}
+        <div
+          className="flex items-center gap-1 p-1 overflow-x-auto"
+          style={{ border: "0.5px solid rgba(130,219,126,0.3)", borderRadius: 9999, background: "#0b0e13" }}
+        >
+          {TABS.map(({ key, label }) => {
+            const isActive = activeTab === key;
+            const count = unreadCounts[key] || unreadCounts[key === "businesses" ? "businesses" : key as keyof typeof unreadCounts];
+            return (
+              <div key={key} className="relative flex-shrink-0">
+                <button
+                  onClick={() => setActiveTab(key)}
+                  className="whitespace-nowrap rounded-full px-5 py-2 text-xs font-bold uppercase tracking-wider transition-colors"
+                  style={{
+                    background: isActive ? "#1B2B3A" : "transparent",
+                    color: isActive ? GREEN : "#9ca3af",
+                    fontFamily: FONT,
+                  }}
+                >
+                  {label}
+                </button>
+                {unreadCounts[key as keyof typeof unreadCounts] > 0 && (
+                  <span
+                    className="absolute top-0 right-0 w-2 h-2 rounded-full"
+                    style={{ background: GREEN, border: "1px solid #0b0e13" }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
-        {filteredConversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center p-6 sm:p-8">
-            <MessageCircle className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground mb-3 sm:mb-4" />
-            <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2">No conversations yet</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              {searchQuery
-                ? "No conversations match your search"
-                : "Start chatting with neighbors, sellers, or businesses"}
+      {/* List */}
+      <div className="px-4 mt-4 pb-24 space-y-3">
+        {loading ? (
+          [...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3 p-4" style={{ background: CARD, borderRadius: 11 }}>
+              <Skeleton className="w-14 h-14 rounded-[11px]" style={{ background: "#272a2f" }} />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" style={{ background: "#272a2f" }} />
+                <Skeleton className="h-3 w-48" style={{ background: "#272a2f" }} />
+              </div>
+            </div>
+          ))
+        ) : filteredConversations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <MessageCircle className="w-12 h-12 mb-4" style={{ color: GREEN, opacity: 0.4 }} />
+            <h3 className="text-white text-lg mb-1" style={{ fontFamily: PACIFICO }}>No conversations</h3>
+            <p className="text-sm" style={{ color: "#BBBBBB", fontFamily: FONT }}>
+              {searchQuery ? "No matches found" : "Start chatting with your neighbors"}
             </p>
           </div>
         ) : (
-          filteredConversations.map((conversation) => (
-            <Link key={conversation.id} href={`/messages/${conversation.id}`}>
-              <Card className="p-3 sm:p-4 yrdly-shadow hover:shadow-lg transition-all cursor-pointer hover:border-primary/50">
-                <div className="flex items-start gap-2 sm:gap-3">
-                  {/* Avatar */}
-                  <div className="relative flex-shrink-0">
-                    <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
-                      <AvatarImage src={conversation.participantAvatar || "/placeholder.svg"} />
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
-                        {conversation.participantName.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <ActivityIndicator 
-                      userId={conversation.participantId} 
-                      size="sm"
-                      className="absolute -bottom-1 -right-1"
-                    />
-                    <div className="absolute -top-1 -right-1">
-                      {conversation.type === "marketplace" && (
-                        <div className="w-4 h-4 sm:w-5 sm:h-5 bg-accent text-accent-foreground rounded-full flex items-center justify-center">
-                          <ShoppingBag className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                        </div>
-                      )}
-                      {conversation.type === "business" && (
-                        <div className="w-4 h-4 sm:w-5 sm:h-5 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
-                          <Store className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                        </div>
-                      )}
-                    </div>
+          filteredConversations.map((conv) => {
+            const isMarketplace = conv.type === "marketplace";
+            const isBusiness = conv.type === "business";
+            const hasItemContext = isMarketplace || isBusiness;
+            const unread = conv.unreadCount > 0;
+
+            return (
+              <Link key={conv.id} href={`/messages/${conv.id}`}>
+                <div
+                  className="flex items-center gap-3 p-4 transition-colors"
+                  style={{
+                    background: CARD,
+                    borderRadius: 11,
+                    borderLeft: unread ? `4px solid ${GREEN}` : "4px solid transparent",
+                  }}
+                >
+                  {/* Avatar / Thumbnail */}
+                  <div className="relative w-14 h-14 flex-shrink-0">
+                    {hasItemContext && conv.context?.itemImage ? (
+                      <Image
+                        src={conv.context.itemImage}
+                        alt=""
+                        width={56} height={56}
+                        className="w-full h-full object-cover"
+                        style={{ borderRadius: 11 }}
+                      />
+                    ) : (
+                      <Avatar className="w-14 h-14">
+                        <AvatarImage src={conv.participantAvatar} />
+                        <AvatarFallback style={{ background: GREEN, color: "#fff", fontFamily: FONT, fontWeight: 700 }}>
+                          {conv.participantName.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                    {/* Online dot */}
+                    {!hasItemContext && (
+                      <div className="absolute -bottom-0.5 -right-0.5">
+                        <ActivityIndicator userId={conv.participantId} size="sm" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h4 className="font-semibold text-foreground truncate text-sm sm:text-base">{conversation.participantName}</h4>
-                      <span className="text-xs text-muted-foreground flex-shrink-0">{conversation.timestamp}</span>
+                    <div className="flex justify-between items-start mb-0.5">
+                      <span className="text-white text-[14px] truncate" style={{ fontFamily: FONT, fontWeight: 700 }}>
+                        {conv.participantName}
+                      </span>
+                      <span
+                        className="text-[10px] flex-shrink-0 ml-2"
+                        style={{ color: unread ? GREEN : "#899485", fontFamily: FONT, fontWeight: unread ? 700 : 400 }}
+                      >
+                        {conv.timestamp}
+                      </span>
                     </div>
-
-                    {(conversation.type === "marketplace" || conversation.type === "business") && (
-                      <div className="flex items-center gap-2 mb-2 p-2 bg-muted/50 rounded-lg">
-                        <Image
-                          src={
-                            conversation.type === "marketplace" 
-                              ? (conversation.context?.itemImage || "/placeholder.svg")
-                              : (conversation.context?.itemImage || conversation.context?.businessLogo || "/placeholder.svg")
-                          }
-                          alt=""
-                          width={40}
-                          height={40}
-                          className="w-8 h-8 sm:w-10 sm:h-10 rounded object-cover flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground truncate">
-                            {conversation.type === "marketplace" 
-                              ? (conversation.context?.itemTitle || "Item")
-                              : (conversation.context?.itemTitle || conversation.context?.businessName || "Business")
-                            }
-                          </p>
-                          {(conversation.type === "marketplace" || (conversation.type === "business" && conversation.context?.itemPrice)) && conversation.context?.itemPrice && (
-                            <p className="text-xs font-semibold text-primary">
-                              ₦{conversation.context.itemPrice.toLocaleString()}
-                            </p>
-                          )}
-                        </div>
+                    {conv.context?.itemPrice && (
+                      <div className="text-[12px] font-bold mb-0.5" style={{ color: "#6edf51", fontFamily: FONT }}>
+                        ₦{conv.context.itemPrice.toLocaleString()}
                       </div>
                     )}
-
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{conversation.lastMessage}</p>
+                    <p className="text-[12px] truncate" style={{ color: unread ? "#e1e2e9" : "#899485", fontFamily: FONT, fontWeight: unread ? 500 : 400 }}>
+                      {conv.lastMessage}
+                    </p>
                   </div>
 
-                  {/* Unread badge */}
-                  {conversation.unreadCount > 0 && (
-                    <Badge className="bg-primary text-primary-foreground flex-shrink-0 text-xs h-5 w-5 p-0 flex items-center justify-center">
-                      {conversation.unreadCount}
-                    </Badge>
+                  {/* Unread dot */}
+                  {unread && (
+                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: GREEN }} />
                   )}
                 </div>
-              </Card>
-            </Link>
-          ))
+              </Link>
+            );
+          })
         )}
       </div>
     </div>
   );
 }
-

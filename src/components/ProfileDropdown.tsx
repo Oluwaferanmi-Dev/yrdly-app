@@ -1,68 +1,153 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Settings, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-supabase-auth";
+import { AuthService } from "@/lib/auth-service";
 
 interface ProfileDropdownProps {
   onClose: () => void;
-  onAction: (action: string) => void;
 }
 
-export function ProfileDropdown({ onClose, onAction }: ProfileDropdownProps) {
-  const router = useRouter();
-  const { signOut, user, profile } = useAuth();
+const FONT = "Raleway, sans-serif";
+const GREEN = "#388E3C";
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      router.push("/login");
-    } catch (error) {
-      console.error("Error signing out:", error);
-    }
+export function ProfileDropdown({ onClose }: ProfileDropdownProps) {
+  const router = useRouter();
+  const { user, profile } = useAuth();
+
+  const displayName = profile?.name || user?.user_metadata?.name || "User";
+  const email = user?.email || "user@example.com";
+  const avatarUrl =
+    profile?.avatar_url ||
+    user?.user_metadata?.avatar_url ||
+    "/placeholder.svg";
+
+  const navigate = (path: string) => {
+    onClose();
+    router.push(path);
   };
 
+  const handleLogout = async () => {
+    onClose();
+    await AuthService.signOut();
+    router.push("/login");
+  };
+
+  const menuItems = [
+    {
+      label: "Profile",
+      icon: User,
+      onClick: () => navigate("/profile"),
+    },
+    {
+      label: "Settings",
+      icon: Settings,
+      onClick: () => navigate("/settings"),
+    },
+  ];
+
   return (
+    /* full-screen backdrop to close on outside click */
     <div className="fixed inset-0 z-50" onClick={onClose}>
       <div
-        className="absolute top-16 right-4 w-64 bg-card border border-border rounded-lg yrdly-shadow-lg"
+        className="absolute top-[68px] right-3 w-[220px] overflow-hidden"
+        style={{
+          background: "#1E2126",
+          borderRadius: 11,
+          border: "0.5px solid rgba(255,255,255,0.08)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center gap-3">
-            <Avatar className="w-12 h-12">
-              <AvatarImage src={profile?.avatar_url || "/placeholder.svg"} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
-                {profile?.name?.charAt(0) || "U"}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="font-semibold text-foreground">{profile?.name || "User"}</h3>
-              <p className="text-sm text-muted-foreground">{user?.email || "user@example.com"}</p>
-            </div>
+        {/* ── User info ── */}
+        <div
+          className="flex items-center gap-3 px-4 py-4"
+          style={{ borderBottom: "0.5px solid rgba(255,255,255,0.1)" }}
+        >
+          <Avatar className="w-10 h-10 flex-shrink-0">
+            <AvatarImage src={avatarUrl} alt={displayName} />
+            <AvatarFallback
+              style={{ background: GREEN, color: "#fff", fontFamily: FONT, fontWeight: 700 }}
+            >
+              {displayName.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p
+              className="truncate text-white text-[14px] leading-[18px]"
+              style={{ fontFamily: FONT, fontWeight: 700 }}
+            >
+              {displayName}
+            </p>
+            <p
+              className="truncate text-[12px] leading-[16px]"
+              style={{ fontFamily: FONT, fontWeight: 300, color: "#BBBBBB" }}
+            >
+              {email}
+            </p>
           </div>
         </div>
 
-        <div className="p-2">
-          <Button variant="ghost" className="w-full justify-start" onClick={() => onAction("profile")}>
-            <User className="w-4 h-4 mr-3" />
-            Profile
-          </Button>
-          <Button variant="ghost" className="w-full justify-start" onClick={() => onAction("settings")}>
-            <Settings className="w-4 h-4 mr-3" />
-            Settings
-          </Button>
-          <div className="border-t border-border my-2"></div>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-red-600 hover:text-red-600 hover:bg-red-50"
+        {/* ── Menu items ── */}
+        <div className="py-1">
+          {menuItems.map(({ label, icon: Icon, onClick }) => (
+            <button
+              key={label}
+              onClick={onClick}
+              className="w-full flex items-center gap-3 px-4 py-3 transition-colors"
+              style={{ fontFamily: FONT, background: "transparent" }}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.background =
+                  "rgba(255,255,255,0.05)")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.background =
+                  "transparent")
+              }
+            >
+              <Icon
+                className="w-[18px] h-[18px] flex-shrink-0"
+                style={{ color: "#BBBBBB" }}
+              />
+              <span
+                className="text-[14px] text-white"
+                style={{ fontFamily: FONT, fontWeight: 400 }}
+              >
+                {label}
+              </span>
+            </button>
+          ))}
+
+          {/* divider */}
+          <div style={{ borderTop: "0.5px solid rgba(255,255,255,0.1)", margin: "2px 0" }} />
+
+          {/* Logout */}
+          <button
             onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 transition-colors"
+            style={{ fontFamily: FONT, background: "transparent" }}
+            onMouseEnter={(e) =>
+              ((e.currentTarget as HTMLButtonElement).style.background =
+                "rgba(229,57,53,0.08)")
+            }
+            onMouseLeave={(e) =>
+              ((e.currentTarget as HTMLButtonElement).style.background =
+                "transparent")
+            }
           >
-            <LogOut className="w-4 h-4 mr-3" />
-            Logout
-          </Button>
+            <LogOut
+              className="w-[18px] h-[18px] flex-shrink-0"
+              style={{ color: "#E53935" }}
+            />
+            <span
+              className="text-[14px]"
+              style={{ fontFamily: FONT, fontWeight: 400, color: "#E53935" }}
+            >
+              Logout
+            </span>
+          </button>
         </div>
       </div>
     </div>

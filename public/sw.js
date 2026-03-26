@@ -1,5 +1,5 @@
-// __CACHE_VERSION__ is replaced at build time so each deploy gets a fresh cache
-const CACHE_VERSION = '__CACHE_VERSION__';
+// local-1774541683066 is replaced at build time so each deploy gets a fresh cache
+const CACHE_VERSION = 'local-1774541683066';
 const CACHE_NAME = 'yrdly-' + CACHE_VERSION;
 const STATIC_CACHE = 'yrdly-static-' + CACHE_VERSION;
 const DATA_CACHE = 'yrdly-data-' + CACHE_VERSION;

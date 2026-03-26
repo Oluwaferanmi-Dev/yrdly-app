@@ -2,40 +2,24 @@
 "use client";
 
 import { useState } from 'react';
-import { Search, LogOut, MessageCircle, Map, Settings, User as UserIcon } from 'lucide-react';
+import { Search, MessageCircle, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-supabase-auth';
-import { AuthService } from '@/lib/auth-service';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { NotificationsPanel } from './NotificationsPanel';
 import { SearchDialog } from '../SearchDialog';
 import { useUnreadMessages } from '@/hooks/use-unread-messages';
-import { cn } from '@/lib/utils';
+import { ProfileDropdown } from '@/components/ProfileDropdown';
 
 export function AppHeader() {
   const { user, profile } = useAuth();
-  const router = useRouter();
   const pathname = usePathname();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const unreadMessagesCount = useUnreadMessages();
-
-  const handleLogout = async () => {
-    const { error } = await AuthService.signOut();
-    if (!error) {
-      router.push('/login');
-    }
-  };
 
   const avatar_url = profile?.avatar_url || user?.user_metadata?.avatar_url || `https://placehold.co/100x100.png`;
   const displayName = profile?.name || user?.user_metadata?.name || 'User';
@@ -65,8 +49,8 @@ export function AppHeader() {
           )}
           <Link href="/map" className="md:hidden">
             <Button variant="ghost" size="icon" className="rounded-full">
-                <Map className="h-5 w-5" />
-                <span className="sr-only">Map</span>
+              <Map className="h-5 w-5" />
+              <span className="sr-only">Map</span>
             </Button>
           </Link>
           <Link href="/messages">
@@ -81,39 +65,31 @@ export function AppHeader() {
             </Button>
           </Link>
           <NotificationsPanel />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
-                 <Avatar className="h-8 w-8">
-                   <AvatarImage src={avatar_url} alt={displayName} data-ai-hint="person portrait" />
-                   <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
-                 </Avatar>
-               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/settings/profile">
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </Link>
-              </DropdownMenuItem>
-               <DropdownMenuItem asChild>
-                 <Link href="/settings">
-                   <Settings className="mr-2 h-4 w-4" />
-                   <span>Settings</span>
-                 </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+
+          {/* Profile avatar trigger */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+            onClick={() => setIsProfileOpen((v) => !v)}
+          >
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={avatar_url} alt={displayName} data-ai-hint="person portrait" />
+              <AvatarFallback
+                style={{ background: "#388E3C", color: "#fff", fontFamily: "Raleway, sans-serif", fontWeight: 700 }}
+              >
+                {displayName.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </Button>
         </div>
       </header>
+
+      {/* New dark-themed profile dropdown */}
+      {isProfileOpen && (
+        <ProfileDropdown onClose={() => setIsProfileOpen(false)} />
+      )}
+
       <SearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} />
     </>
   );

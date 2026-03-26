@@ -2,31 +2,135 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  ArrowLeftIcon,
-  UserIcon,
-  BellIcon,
-  MapPinIcon,
-  QuestionMarkCircleIcon,
-  ArrowRightOnRectangleIcon,
-  ChevronRightIcon,
-  MoonIcon,
-  GlobeAltIcon,
-  LockClosedIcon,
-  EyeIcon,
-  ChatBubbleLeftRightIcon,
-  CalendarIcon,
-  ShoppingCartIcon,
-} from "@heroicons/react/24/outline";
+  User,
+  MapPin,
+  Lock,
+  ShieldCheck,
+  Moon,
+  Bell,
+  Mail,
+  HelpCircle,
+  FileText,
+  ChevronRight,
+  Pencil,
+} from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useTheme } from "@/components/ThemeProvider";
 
+const FONT = "Raleway, sans-serif";
+const PACIFICO = "Pacifico, cursive";
+const GREEN = "#388E3C";
+const CARD = "#1E2126";
+
 interface SettingsScreenProps {
   onBack?: () => void;
+}
+
+/* ── Custom Toggle ── */
+function Toggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200"
+      style={{ background: checked ? GREEN : "#272a2f" }}
+    >
+      <span
+        className="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
+        style={{
+          transform: checked ? "translateX(20px)" : "translateX(2px)",
+          marginTop: 2,
+        }}
+      />
+    </button>
+  );
+}
+
+/* ── Row components ── */
+function NavRow({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: React.ElementType;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-between px-4 py-4 transition-colors"
+      style={{ background: CARD, borderRadius: 11 }}
+      onMouseEnter={(e) =>
+        ((e.currentTarget as HTMLElement).style.background = "#252a30")
+      }
+      onMouseLeave={(e) =>
+        ((e.currentTarget as HTMLElement).style.background = CARD)
+      }
+    >
+      <div className="flex items-center gap-3">
+        <Icon className="w-5 h-5 flex-shrink-0" style={{ color: GREEN }} />
+        <span
+          className="text-white text-[14px]"
+          style={{ fontFamily: FONT }}
+        >
+          {label}
+        </span>
+      </div>
+      <ChevronRight className="w-5 h-5" style={{ color: "#6b7280" }} />
+    </button>
+  );
+}
+
+function ToggleRow({
+  icon: Icon,
+  label,
+  checked,
+  onChange,
+}: {
+  icon: React.ElementType;
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div
+      className="flex items-center justify-between px-4 py-4"
+      style={{ background: CARD, borderRadius: 11 }}
+    >
+      <div className="flex items-center gap-3">
+        <Icon className="w-5 h-5 flex-shrink-0" style={{ color: GREEN }} />
+        <span
+          className="text-white text-[14px]"
+          style={{ fontFamily: FONT }}
+        >
+          {label}
+        </span>
+      </div>
+      <Toggle checked={checked} onChange={onChange} />
+    </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2
+      className="text-white text-[16px] px-1"
+      style={{ fontFamily: PACIFICO, fontWeight: 400 }}
+    >
+      {children}
+    </h2>
+  );
 }
 
 export function SettingsScreen({ onBack }: SettingsScreenProps) {
@@ -34,17 +138,17 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
   const { theme, setTheme } = useTheme();
   const { user, profile, signOut, updateProfile } = useAuth();
 
-
   const [privacy, setPrivacy] = useState({
-    profileVisible: true,
+    privateAccount: profile?.shareLocation ?? false,
     locationVisible: profile?.shareLocation ?? false,
     onlineStatus: true,
   });
 
-  // Update privacy state when profile changes
+  const [isDark, setIsDark] = useState(theme === "dark");
+
   useEffect(() => {
     if (profile) {
-      setPrivacy(prev => ({
+      setPrivacy((prev) => ({
         ...prev,
         locationVisible: profile.shareLocation ?? false,
       }));
@@ -60,223 +164,183 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
     }
   };
 
-  const handleBack = () => {
-    if (onBack) {
-      onBack();
-    } else {
-      router.back();
-    }
-  };
-
-  const handleEditProfile = () => {
-    router.push("/settings/profile");
-  };
-
-  const handleLocationSettings = () => {
-    router.push("/settings/location");
-  };
-
-  const handleHelp = () => {
-    router.push("/help");
-  };
-
-  const handlePrivacy = () => {
-    router.push("/settings/privacy");
-  };
-
-  const handleSecurity = () => {
-    router.push("/settings/security");
-  };
-
   const handleLocationSharingToggle = async (checked: boolean) => {
     try {
       await updateProfile({
         shareLocation: checked,
         updated_at: new Date().toISOString(),
       });
-      setPrivacy({ ...privacy, locationVisible: checked });
+      setPrivacy((prev) => ({ ...prev, locationVisible: checked }));
     } catch (error) {
-      console.error('Error updating location sharing preference:', error);
+      console.error("Error updating location sharing preference:", error);
     }
   };
 
-  return (
-    <div className="p-4 space-y-6 pb-24 max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={handleBack} className="p-0">
-          <ArrowLeftIcon className="w-5 h-5" />
-        </Button>
-        <h2 className="text-2xl font-bold text-foreground">Settings</h2>
-      </div>
+  const handleDarkModeToggle = (checked: boolean) => {
+    setIsDark(checked);
+    setTheme(checked ? "dark" : "light");
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(checked ? "dark" : "light");
+  };
 
-      {/* Profile Section */}
-      <Card className="p-4 yrdly-shadow">
-        <div className="flex items-center gap-4">
+  const displayName = profile?.name || user?.user_metadata?.name || "User";
+  const email = user?.email || "user@example.com";
+  const avatarUrl = profile?.avatar_url || "/placeholder.svg";
+
+  return (
+    <div
+      className="min-h-screen pb-32"
+      style={{ background: "#15181D" }}
+    >
+      <div className="max-w-2xl mx-auto px-4 pt-8 space-y-8">
+
+        {/* ── Profile Card ── */}
+        <section
+          className="flex items-center gap-4 p-4"
+          style={{ background: CARD, borderRadius: 11 }}
+        >
           <Avatar className="w-16 h-16 flex-shrink-0">
-            <AvatarImage src={profile?.avatar_url || "/placeholder.svg"} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-              {profile?.name?.charAt(0) || "U"}
+            <AvatarImage src={avatarUrl} alt={displayName} />
+            <AvatarFallback
+              style={{
+                background: GREEN,
+                color: "#fff",
+                fontFamily: FONT,
+                fontWeight: 700,
+                fontSize: 24,
+              }}
+            >
+              {displayName.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground truncate">{profile?.name || "User"}</h3>
-            <p className="text-sm text-muted-foreground truncate">{user?.email || "user@example.com"}</p>
-            <p className="text-sm text-muted-foreground truncate">
-              {profile?.location ? 
-                (typeof profile.location === 'string' ? profile.location : 
-                 `${profile.location.lga || ''}, ${profile.location.state || ''}`.trim().replace(/^,\s*|,\s*$/g, '') || 'Location not set') : 
-                "Location not set"}
+            <h1
+              className="text-white text-[14px] truncate"
+              style={{ fontFamily: FONT, fontWeight: 700 }}
+            >
+              {displayName}
+            </h1>
+            <p
+              className="text-[12px] truncate"
+              style={{ fontFamily: FONT, color: "#BBBBBB" }}
+            >
+              {email}
             </p>
           </div>
-          <Button variant="ghost" size="sm" className="flex-shrink-0" onClick={handleEditProfile}>
-            <ChevronRightIcon className="w-5 h-5" />
-          </Button>
+          <button
+            onClick={() => router.push("/settings/profile")}
+            className="p-2 rounded-full transition-colors"
+            style={{ background: "#272a2f" }}
+            onMouseEnter={(e) =>
+              ((e.currentTarget as HTMLElement).style.background =
+                "rgba(255,255,255,0.05)")
+            }
+            onMouseLeave={(e) =>
+              ((e.currentTarget as HTMLElement).style.background = "#272a2f")
+            }
+          >
+            <Pencil className="w-4 h-4" style={{ color: GREEN }} />
+          </button>
+        </section>
+
+        {/* ── Account ── */}
+        <div className="space-y-3">
+          <SectionLabel>Account</SectionLabel>
+          <NavRow
+            icon={User}
+            label="Edit Profile"
+            onClick={() => router.push("/settings/profile")}
+          />
+          <NavRow
+            icon={MapPin}
+            label="Location"
+            onClick={() => router.push("/settings/location")}
+          />
         </div>
-      </Card>
 
-      {/* Account Settings */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-foreground">Account</h3>
+        {/* ── Privacy & Security ── */}
+        <div className="space-y-3">
+          <SectionLabel>Privacy &amp; Security</SectionLabel>
+          <ToggleRow
+            icon={Lock}
+            label="Private Account"
+            checked={privacy.privateAccount}
+            onChange={(v) =>
+              setPrivacy((prev) => ({ ...prev, privateAccount: v }))
+            }
+          />
+          <NavRow
+            icon={ShieldCheck}
+            label="Security Checkup"
+            onClick={() => router.push("/settings/security")}
+          />
+        </div>
 
-        <Card className="yrdly-shadow">
-          <Button variant="ghost" className="w-full justify-between p-4 h-auto" onClick={handleEditProfile}>
-            <div className="flex items-center gap-3">
-              <UserIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground">Edit Profile</span>
-            </div>
-            <ChevronRightIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          </Button>
-        </Card>
+        {/* ── Appearance ── */}
+        <div className="space-y-3">
+          <SectionLabel>Appearance</SectionLabel>
+          <ToggleRow
+            icon={Moon}
+            label="Dark mode"
+            checked={isDark}
+            onChange={handleDarkModeToggle}
+          />
+        </div>
 
-        <Card className="yrdly-shadow">
-          <Button variant="ghost" className="w-full justify-between p-4 h-auto" onClick={handleLocationSettings}>
-            <div className="flex items-center gap-3">
-              <MapPinIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground">Location Settings</span>
-            </div>
-            <ChevronRightIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          </Button>
-        </Card>
-      </div>
+        {/* ── Notifications ── */}
+        <div className="space-y-3">
+          <SectionLabel>Notifications</SectionLabel>
+          <NavRow
+            icon={Bell}
+            label="Push Notifications"
+            onClick={() => router.push("/settings/notifications")}
+          />
+          <NavRow
+            icon={Mail}
+            label="Email Preferences"
+            onClick={() => router.push("/settings/notifications")}
+          />
+        </div>
 
+        {/* ── Support ── */}
+        <div className="space-y-3">
+          <SectionLabel>Support</SectionLabel>
+          <NavRow
+            icon={HelpCircle}
+            label="Help Center"
+            onClick={() => router.push("/help")}
+          />
+          <NavRow
+            icon={FileText}
+            label="Privacy Policy"
+            onClick={() => router.push("/settings/privacy")}
+          />
+        </div>
 
-      {/* Privacy & Security */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-foreground">Privacy & Security</h3>
-
-        <Card className="p-4 space-y-4 yrdly-shadow">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <EyeIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground">Profile Visible</span>
-            </div>
-            <Switch
-              checked={privacy.profileVisible}
-              onCheckedChange={(checked) => setPrivacy({ ...privacy, profileVisible: checked })}
-              className="cursor-pointer"
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <MapPinIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground">Share Location</span>
-            </div>
-            <Switch
-              checked={privacy.locationVisible}
-              onCheckedChange={handleLocationSharingToggle}
-              className="cursor-pointer"
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <GlobeAltIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground">Online Status</span>
-            </div>
-            <Switch
-              checked={privacy.onlineStatus}
-              onCheckedChange={(checked) => setPrivacy({ ...privacy, onlineStatus: checked })}
-              className="cursor-pointer"
-            />
-          </div>
-        </Card>
-      </div>
-
-      {/* Appearance */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-foreground">Appearance</h3>
-
-        <Card className="p-4 space-y-4 yrdly-shadow">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <MoonIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground">Dark Mode</span>
-            </div>
-            <Switch
-              checked={theme === "dark"}
-              onCheckedChange={(checked) => {
-                setTheme(checked ? "dark" : "light");
-                // Force immediate theme update
-                const root = document.documentElement;
-                root.classList.remove("light", "dark");
-                root.classList.add(checked ? "dark" : "light");
-              }}
-              className="cursor-pointer"
-            />
-          </div>
-        </Card>
-      </div>
-
-      {/* Notifications */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-foreground">Notifications</h3>
-
-        <Card className="yrdly-shadow">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-between p-4 h-auto" 
-            onClick={() => router.push('/settings/notifications')}
-          >
-            <div className="flex items-center gap-3">
-              <BellIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground">Notification Settings</span>
-            </div>
-            <ChevronRightIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          </Button>
-        </Card>
-      </div>
-
-      {/* Support */}
-      <div className="space-y-4">
-        <h3 className="font-semibold text-foreground">Support</h3>
-
-        <Card className="yrdly-shadow">
-          <Button variant="ghost" className="w-full justify-between p-4 h-auto" onClick={handleHelp}>
-            <div className="flex items-center gap-3">
-              <QuestionMarkCircleIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <span className="text-foreground">Help & Support</span>
-            </div>
-            <ChevronRightIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-          </Button>
-        </Card>
-      </div>
-
-      {/* Live Chat Support - removed */}
-
-      {/* Logout */}
-      <div className="pt-4">
-        <Card className="yrdly-shadow">
-          <Button
-            variant="ghost"
-            className="w-full justify-start p-4 h-auto text-red-600 hover:text-red-600 hover:bg-red-50"
+        {/* ── Logout ── */}
+        <div className="pt-8 pb-12 flex justify-center">
+          <button
             onClick={handleLogout}
+            className="rounded-full px-12 py-3 transition-colors"
+            style={{
+              border: "0.5px solid #E53935",
+              color: "#E53935",
+              fontFamily: FONT,
+              fontWeight: 700,
+              background: "transparent",
+            }}
+            onMouseEnter={(e) =>
+              ((e.currentTarget as HTMLElement).style.background =
+                "rgba(229,57,53,0.1)")
+            }
+            onMouseLeave={(e) =>
+              ((e.currentTarget as HTMLElement).style.background = "transparent")
+            }
           >
-            <ArrowRightOnRectangleIcon className="w-5 h-5 mr-3" />
             Logout
-          </Button>
-        </Card>
+          </button>
+        </div>
       </div>
     </div>
   );

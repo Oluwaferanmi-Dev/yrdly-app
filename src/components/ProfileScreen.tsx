@@ -1,28 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft,
-  MapPin,
-  Calendar,
-  Users,
-  Star,
-  Share,
-  MessageCircle,
-  Heart,
-  ShoppingBag,
-  Briefcase,
-  CalendarDays,
-  Clock,
+  ArrowLeft, MapPin, Calendar, Users, MessageCircle, ShoppingBag,
+  Briefcase, CalendarDays, Clock, Heart,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import type { User, Post } from "@/types";
 import { FriendsList } from "./FriendsList";
@@ -30,6 +16,15 @@ import { useToast } from "@/hooks/use-toast";
 import { shortenAddress } from "@/lib/utils";
 import { ActivityIndicator } from "@/components/ActivityIndicator";
 import Image from "next/image";
+
+const GREEN = "#388E3C";
+const GREEN_LIGHT = "#82DB7E";
+const CARD = "#1E2126";
+const SURFACE = "#1d2025";
+const BG = "#101418";
+const FONT = "Work Sans, sans-serif";
+const RALEWAY = "Raleway, sans-serif";
+const JAKARTA = "Plus Jakarta Sans, sans-serif";
 
 interface ProfileScreenProps {
   onBack?: () => void;
@@ -39,1075 +34,593 @@ interface ProfileScreenProps {
   targetUser?: any;
 }
 
+// ─── Tab pill bar ────────────────────────────────────────────────────────────
+const TABS = [
+  { key: "posts", label: "Posts" },
+  { key: "items", label: "Items" },
+  { key: "businesses", label: "Business" },
+  { key: "events", label: "Events" },
+];
+
+function TabBar({ active, onChange }: { active: string; onChange: (k: string) => void }) {
+  return (
+    <nav
+      className="flex p-1"
+      style={{
+        background: "#191c21",
+        borderRadius: 9999,
+        border: "0.5px solid rgba(130,219,126,0.2)",
+      }}
+    >
+      {TABS.map(({ key, label }) => {
+        const isActive = active === key;
+        return (
+          <button
+            key={key}
+            onClick={() => onChange(key)}
+            className="flex-1 py-3 text-xs font-bold uppercase tracking-wider rounded-full transition-colors"
+            style={{
+              background: isActive ? "#1B2B3A" : "transparent",
+              color: isActive ? GREEN_LIGHT : "#bfcab9",
+              fontFamily: JAKARTA,
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ─── Empty state ─────────────────────────────────────────────────────────────
+function EmptyState({ icon, label, action, onAction }: { icon: React.ReactNode; label: string; action: string; onAction: () => void }) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center py-16 text-center rounded-[11px]"
+      style={{ background: SURFACE }}
+    >
+      <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3" style={{ background: "rgba(56,142,60,0.1)" }}>
+        {icon}
+      </div>
+      <p className="text-white font-semibold mb-1 text-sm" style={{ fontFamily: RALEWAY }}>{label}</p>
+      <button
+        onClick={onAction}
+        className="mt-3 rounded-full px-5 py-2 text-xs font-bold"
+        style={{ background: GREEN, color: "#fff", fontFamily: FONT }}
+      >
+        {action}
+      </button>
+    </div>
+  );
+}
+
+// ─── Mini card ───────────────────────────────────────────────────────────────
+function MiniCard({ title, sub, img, badge, onClick }: { title: string; sub?: string; img?: string | null; badge?: string; onClick?: () => void }) {
+  return (
+    <div
+      className="flex items-center gap-3 p-4 cursor-pointer transition-colors rounded-[11px]"
+      style={{ background: SURFACE }}
+      onClick={onClick}
+    >
+      <div className="w-14 h-14 rounded-[10px] overflow-hidden flex-shrink-0 relative" style={{ background: CARD }}>
+        {img ? (
+          <Image src={img} alt={title} fill className="object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Briefcase className="w-6 h-6" style={{ color: GREEN, opacity: 0.4 }} />
+          </div>
+        )}
+        {badge && (
+          <span
+            className="absolute top-0.5 right-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white"
+            style={{ background: GREEN }}
+          >{badge}</span>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-white text-sm font-semibold truncate" style={{ fontFamily: RALEWAY }}>{title}</p>
+        {sub && <p className="text-xs truncate mt-0.5" style={{ color: "#899485", fontFamily: FONT }}>{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId, targetUser: externalTargetUser }: ProfileScreenProps) {
   const router = useRouter();
   const { user: currentUser, profile: currentProfile } = useAuth();
   const { toast } = useToast();
+
   const [profileData, setProfileData] = useState<User | null>(null);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [userItems, setUserItems] = useState<any[]>([]);
   const [userBusinesses, setUserBusinesses] = useState<any[]>([]);
   const [userEvents, setUserEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("posts");
   const [showFriendsList, setShowFriendsList] = useState(false);
   const [isFriend, setIsFriend] = useState(false);
   const [isFriendRequestSent, setIsFriendRequestSent] = useState(false);
-  const [stats, setStats] = useState({
-    friends: 0,
-    events: 0,
-  });
+  const [stats, setStats] = useState({ friends: 0, events: 0 });
 
-  // Use provided user, external target user, or current user
   const targetUser = externalTargetUser || user || currentUser;
   const targetProfile = externalTargetUser ? null : (user ? null : currentProfile);
   const isExternalProfile = !!targetUserId && targetUserId !== currentUser?.id;
-  
-  // Determine if this is the user's own profile
   const actualIsOwnProfile = isOwnProfile !== undefined ? isOwnProfile : !isExternalProfile;
 
-  // Function to refresh profile data
   const refreshProfileData = useCallback(async () => {
     if (!targetUser) return;
-    
-    try {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('*, friends')
-        .eq('id', targetUser.id)
-        .single();
-
-      if (userData) {
-        const friendsCount = userData?.friends?.length || 0;
-        setStats(prev => ({
-          ...prev,
-          friends: friendsCount
-        }));
-        setProfileData(userData);
-      }
-    } catch (error) {
-      console.error('Error refreshing profile data:', error);
-    }
+    const { data } = await supabase.from("users").select("*, friends").eq("id", targetUser.id).single();
+    if (data) { setStats((p) => ({ ...p, friends: data.friends?.length || 0 })); setProfileData(data); }
   }, [targetUser]);
 
-  // Refresh profile data when target user changes
-  useEffect(() => {
-    if (targetUser) {
-      refreshProfileData();
-    }
-  }, [targetUser?.id, refreshProfileData, targetUser]);
+  useEffect(() => { if (targetUser) refreshProfileData(); }, [targetUser?.id, refreshProfileData, targetUser]);
 
   useEffect(() => {
     if (!targetUser) return;
+    const fetch = async () => {
+      const { data: userData } = await supabase.from("users").select("*, friends").eq("id", targetUser.id).single();
+      if (userData) setProfileData(userData);
 
-    const fetchProfileData = async () => {
-      try {
-        // Fetch user profile data including friends
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('*, friends')
-          .eq('id', targetUser.id)
-          .single();
+      const [postsRes, itemsRes, bizRes, eventsRes, eventsCountRes] = await Promise.all([
+        supabase.from("posts").select("*").eq("user_id", targetUser.id).eq("category", "General").order("timestamp", { ascending: false }).limit(10),
+        supabase.from("posts").select("*").eq("user_id", targetUser.id).eq("category", "For Sale").order("timestamp", { ascending: false }).limit(10),
+        supabase.from("businesses").select("*").eq("owner_id", targetUser.id).order("created_at", { ascending: false }).limit(10),
+        supabase.from("posts").select("*").eq("user_id", targetUser.id).eq("category", "Event").order("timestamp", { ascending: false }).limit(10),
+        supabase.from("posts").select("id").eq("user_id", targetUser.id).eq("category", "Event"),
+      ]);
 
-        if (userError) {
-          console.error('Error fetching user data:', userError);
-          return;
-        }
-
-        setProfileData(userData);
-
-        // Fetch user posts (only General category posts, not items or events)
-        const { data: postsData, error: postsError } = await supabase
-          .from('posts')
-          .select('*')
-          .eq('user_id', targetUser.id)
-          .eq('category', 'General')
-          .order('timestamp', { ascending: false })
-          .limit(10);
-
-        if (postsError) {
-          console.error('Error fetching posts:', postsError);
-        } else {
-          setUserPosts(postsData || []);
-        }
-
-        // Fetch user items (marketplace items)
-        const { data: itemsData, error: itemsError } = await supabase
-          .from('posts')
-          .select('*')
-          .eq('user_id', targetUser.id)
-          .eq('category', 'For Sale')
-          .order('timestamp', { ascending: false })
-          .limit(10);
-
-        if (itemsError) {
-          console.error('Error fetching items:', itemsError);
-        } else {
-          setUserItems(itemsData || []);
-        }
-
-        // Fetch user businesses
-        const { data: businessesData, error: businessesError } = await supabase
-          .from('businesses')
-          .select('*')
-          .eq('owner_id', targetUser.id)
-          .order('created_at', { ascending: false })
-          .limit(10);
-
-        if (businessesError) {
-          console.error('Error fetching businesses:', businessesError);
-        } else {
-          setUserBusinesses(businessesData || []);
-        }
-
-        // Fetch user events
-        const { data: eventsData, error: eventsError } = await supabase
-          .from('posts')
-          .select('*')
-          .eq('user_id', targetUser.id)
-          .eq('category', 'Event')
-          .order('timestamp', { ascending: false })
-          .limit(10);
-
-        if (eventsError) {
-          console.error('Error fetching events:', eventsError);
-        } else {
-          setUserEvents(eventsData || []);
-        }
-
-        // Calculate stats with real data
-        const friendsCount = userData?.friends?.length || 0;
-        console.log('👥 Profile friends data:', {
-          userId: targetUser?.id,
-          friends: userData?.friends,
-          friendsCount: friendsCount
-        });
-        
-        // Count events created by this user
-        const { data: eventsCountData } = await supabase
-          .from('posts')
-          .select('id')
-          .eq('user_id', targetUser?.id)
-          .eq('category', 'Event');
-        
-        setStats({
-          friends: friendsCount,
-          events: eventsCountData?.length || 0,
-        });
-
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching profile data:', error);
-        setLoading(false);
-      }
+      setUserPosts(postsRes.data || []);
+      setUserItems(itemsRes.data || []);
+      setUserBusinesses(bizRes.data || []);
+      setUserEvents(eventsRes.data || []);
+      setStats({ friends: userData?.friends?.length || 0, events: eventsCountRes.data?.length || 0 });
+      setLoading(false);
     };
-
-    fetchProfileData();
+    fetch();
   }, [targetUser, targetProfile]);
 
-  // Real-time subscription for user data updates (including friends list)
+  // Real-time sub
   useEffect(() => {
     if (!targetUser) return;
-
-    console.log('🔄 Setting up real-time subscription for user:', targetUser.id);
-    
-    const channel = supabase
-      .channel(`user_${targetUser.id}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'users',
-        filter: `id=eq.${targetUser.id}`
-      }, (payload) => {
-        console.log('🔄 User data updated via real-time:', payload);
-        // Refresh the profile data when user data changes
-        const refreshData = async () => {
-          try {
-            const { data: userData } = await supabase
-              .from('users')
-              .select('*, friends')
-              .eq('id', targetUser.id)
-              .single();
-
-            if (userData) {
-              console.log('🔄 Refreshed user data:', userData);
-              const friendsCount = userData?.friends?.length || 0;
-              setStats(prev => ({
-                ...prev,
-                friends: friendsCount
-              }));
-            }
-          } catch (error) {
-            console.error('Error refreshing user data:', error);
-          }
-        };
-        refreshData();
-      })
+    const ch = supabase.channel(`user_${targetUser.id}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "users", filter: `id=eq.${targetUser.id}` },
+        async () => {
+          const { data } = await supabase.from("users").select("*, friends").eq("id", targetUser.id).single();
+          if (data) setStats((p) => ({ ...p, friends: data.friends?.length || 0 }));
+        })
       .subscribe();
-
-    return () => {
-      console.log('🔄 Cleaning up real-time subscription');
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(ch); };
   }, [targetUser]);
 
-  // Refresh data when user returns to the page (e.g., after editing profile)
+  // Window focus refresh
   useEffect(() => {
-    const handleFocus = () => {
-      if (targetUser && !loading) {
-        // Refresh profile data when user returns to the page
-        const refreshData = async () => {
-          try {
-            const { data: userData } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', targetUser.id)
-              .single();
-            
-            if (userData) {
-              setProfileData(userData);
-            }
-          } catch (error) {
-            console.error('Error refreshing profile data:', error);
-          }
-        };
-        
-        refreshData();
-      }
+    const h = async () => {
+      if (!targetUser || loading) return;
+      const { data } = await supabase.from("users").select("*").eq("id", targetUser.id).single();
+      if (data) setProfileData(data);
     };
-
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
+    window.addEventListener("focus", h);
+    return () => window.removeEventListener("focus", h);
   }, [targetUser, loading]);
 
-  // Check if users are friends
+  // Friendship check
   useEffect(() => {
     if (!currentUser || !targetUser || actualIsOwnProfile) return;
-
-    const checkFriendship = async () => {
-      try {
-        const { data: currentUserData } = await supabase
-          .from('users')
-          .select('friends')
-          .eq('id', currentUser.id)
-          .single();
-
-        const isAlreadyFriend = currentUserData?.friends?.includes(targetUser.id) || false;
-        setIsFriend(isAlreadyFriend);
-
-        // Check if friend request was already sent
-        const { data: friendRequest } = await supabase
-          .from('friend_requests')
-          .select('id, status')
-          .or(`and(from_user_id.eq.${currentUser.id},to_user_id.eq.${targetUser.id}),and(from_user_id.eq.${targetUser.id},to_user_id.eq.${currentUser.id})`)
-          .single();
-
-        setIsFriendRequestSent(!!friendRequest && friendRequest.status === 'pending');
-      } catch (error) {
-        console.error('Error checking friendship:', error);
-      }
+    const check = async () => {
+      const { data: cu } = await supabase.from("users").select("friends").eq("id", currentUser.id).single();
+      setIsFriend(cu?.friends?.includes(targetUser.id) || false);
+      const { data: req } = await supabase.from("friend_requests").select("id, status")
+        .or(`and(from_user_id.eq.${currentUser.id},to_user_id.eq.${targetUser.id}),and(from_user_id.eq.${targetUser.id},to_user_id.eq.${currentUser.id})`)
+        .single();
+      setIsFriendRequestSent(!!req && req.status === "pending");
     };
-
-    checkFriendship();
-    
-    // Listen for profile refresh events (e.g., after accepting friend request)
-    const handleRefresh = () => {
-      checkFriendship();
-    };
-    
-    window.addEventListener('refresh-profile', handleRefresh);
-    return () => window.removeEventListener('refresh-profile', handleRefresh);
+    check();
+    window.addEventListener("refresh-profile", check);
+    return () => window.removeEventListener("refresh-profile", check);
   }, [currentUser, targetUser, actualIsOwnProfile]);
 
   const handleAddFriend = async () => {
     if (!currentUser || !targetUser) return;
-
     try {
       if (isFriend) {
-        // Remove friend
-        const { data: currentUserData } = await supabase
-          .from('users')
-          .select('friends')
-          .eq('id', currentUser.id)
-          .single();
-
-        const updatedFriends = currentUserData?.friends?.filter((id: string) => id !== targetUser.id) || [];
-
-        await supabase
-          .from('users')
-          .update({ friends: updatedFriends })
-          .eq('id', currentUser.id);
-
-        // Also remove from target user's friends list
-        const { data: targetUserData } = await supabase
-          .from('users')
-          .select('friends')
-          .eq('id', targetUser.id)
-          .single();
-
-        const targetUpdatedFriends = targetUserData?.friends?.filter((id: string) => id !== currentUser.id) || [];
-
-        await supabase
-          .from('users')
-          .update({ friends: targetUpdatedFriends })
-          .eq('id', targetUser.id);
-
+        const { data: cu } = await supabase.from("users").select("friends").eq("id", currentUser.id).single();
+        await supabase.from("users").update({ friends: cu?.friends?.filter((id: string) => id !== targetUser.id) || [] }).eq("id", currentUser.id);
+        const { data: tu } = await supabase.from("users").select("friends").eq("id", targetUser.id).single();
+        await supabase.from("users").update({ friends: tu?.friends?.filter((id: string) => id !== currentUser.id) || [] }).eq("id", targetUser.id);
         setIsFriend(false);
-        
-        // Refresh profile data to get accurate friends count
         await refreshProfileData();
-        
-        toast({
-          title: "Friend Removed",
-          description: `You are no longer friends with ${targetUser.name || 'this user'}.`,
-        });
+        toast({ title: "Friend Removed" });
       } else if (isFriendRequestSent) {
-        // Cancel friend request
-        await supabase
-          .from('friend_requests')
-          .delete()
-          .eq('from_user_id', currentUser.id)
-          .eq('to_user_id', targetUser.id);
-
+        await supabase.from("friend_requests").delete().eq("from_user_id", currentUser.id).eq("to_user_id", targetUser.id);
         setIsFriendRequestSent(false);
-        toast({
-          title: "Friend Request Cancelled",
-          description: "Friend request has been cancelled.",
-        });
+        toast({ title: "Request Cancelled" });
       } else {
-        // Send friend request
-        await supabase
-          .from('friend_requests')
-          .insert({
-            from_user_id: currentUser.id,
-            to_user_id: targetUser.id,
-            participant_ids: [currentUser.id, targetUser.id].sort(),
-            status: 'pending',
-            created_at: new Date().toISOString(),
-          });
-
-        setIsFriendRequestSent(true);
-        toast({
-          title: "Friend Request Sent",
-          description: `Friend request sent to ${targetUser.name || 'this user'}.`,
+        await supabase.from("friend_requests").insert({
+          from_user_id: currentUser.id, to_user_id: targetUser.id,
+          participant_ids: [currentUser.id, targetUser.id].sort(),
+          status: "pending", created_at: new Date().toISOString(),
         });
-        
-        // Trigger notification for friend request
+        setIsFriendRequestSent(true);
+        toast({ title: "Friend Request Sent" });
         try {
-          const { NotificationTriggers } = await import('@/lib/notification-triggers');
+          const { NotificationTriggers } = await import("@/lib/notification-triggers");
           await NotificationTriggers.onFriendRequestSent(currentUser.id, targetUser.id);
-        } catch (error) {
-          console.error('Error creating friend request notification:', error);
-        }
+        } catch { }
       }
-    } catch (error) {
-      console.error('Error handling friend request:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to process friend request. Please try again.",
-      });
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Failed. Please try again." });
     }
   };
 
   const handleMessageUser = async () => {
     if (!currentUser || !targetUser) return;
-
     try {
-      // Check if conversation already exists
-      const sortedParticipantIds = [currentUser.id, targetUser.id].sort();
-      const { data: existingConversations, error: fetchError } = await supabase
-        .from('conversations')
-        .select('id')
-        .contains('participant_ids', sortedParticipantIds)
-        .eq('type', 'friend');
-
-      if (fetchError) throw fetchError;
-
-      let conversationId: string;
-
-      if (existingConversations && existingConversations.length > 0) {
-        conversationId = existingConversations[0].id;
+      const sorted = [currentUser.id, targetUser.id].sort();
+      const { data: existing } = await supabase.from("conversations").select("id").contains("participant_ids", sorted).eq("type", "friend");
+      let convId: string;
+      if (existing && existing.length > 0) {
+        convId = existing[0].id;
       } else {
-        // Create new conversation
-        const { data: newConv, error: createError } = await supabase
-          .from('conversations')
-          .insert({
-            participant_ids: sortedParticipantIds,
-            type: 'friend',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .select('id')
-          .single();
-
-        if (createError) throw createError;
-        conversationId = newConv.id;
+        const { data: newConv } = await supabase.from("conversations").insert({
+          participant_ids: sorted, type: "friend",
+          created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+        }).select("id").single();
+        convId = newConv!.id;
       }
-
-      router.push(`/messages/${conversationId}`);
-    } catch (error) {
-      console.error('Error creating conversation:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not open conversation. Please try again.",
-      });
+      router.push(`/messages/${convId}`);
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Could not open conversation." });
     }
   };
 
   if (loading) {
     return (
-      <div className="p-4 space-y-6">
-        <div className="flex items-center gap-3">
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-8 w-32" />
+      <div className="p-4 space-y-5" style={{ background: BG }}>
+        <Skeleton className="h-64 w-full rounded-[11px]" style={{ background: CARD }} />
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-24 rounded-[11px]" style={{ background: CARD }} />
+          <Skeleton className="h-24 rounded-[11px]" style={{ background: CARD }} />
         </div>
-        <Card className="p-6">
-          <div className="flex flex-col items-center text-center space-y-4">
-            <Skeleton className="w-24 h-24 rounded-full" />
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-48" />
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-24" />
-            </div>
-          </div>
-        </Card>
-        <div className="grid grid-cols-3 gap-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i} className="p-4 text-center">
-              <Skeleton className="h-6 w-6 mx-auto mb-2" />
-              <Skeleton className="h-8 w-12 mx-auto mb-1" />
-              <Skeleton className="h-4 w-16 mx-auto" />
-            </Card>
-          ))}
-        </div>
+        <Skeleton className="h-16 rounded-[11px]" style={{ background: CARD }} />
       </div>
     );
   }
 
   const displayUser = profileData || targetUser;
-  const displayProfile = isExternalProfile ? profileData : targetProfile;
+  const displayProfile = isExternalProfile ? profileData : (targetProfile ?? profileData);
+  const name = (displayProfile as any)?.name || (displayUser as any)?.name || "Unknown";
+  const bio = (displayProfile as any)?.bio;
+  const interests = (displayProfile as any)?.interests as string[] | undefined;
+  const avatarUrl = (displayProfile as any)?.avatar_url || (displayUser as any)?.avatar_url;
+  const locationStr = (displayProfile as any)?.location?.state && (displayProfile as any)?.location?.lga
+    ? `${(displayProfile as any).location.state}, ${(displayProfile as any).location.lga}`
+    : (displayProfile as any)?.location?.state || "";
+  const joinedDate = new Date((displayUser as any)?.created_at || Date.now()).toLocaleDateString("en-US", { month: "short", year: "numeric" });
 
   return (
-    <div className="p-4 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        {onBack && (
-          <Button variant="ghost" size="sm" onClick={onBack} className="p-0">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-        )}
-        <h2 className="text-2xl font-bold text-foreground">Profile</h2>
-      </div>
+    <div className="pb-28 space-y-4 max-w-5xl mx-auto px-4 pt-4" style={{ background: BG }}>
+      {/* Back arrow (if external) */}
+      {onBack && (
+        <button onClick={onBack} className="flex items-center gap-2 text-sm mb-1" style={{ color: GREEN_LIGHT, fontFamily: FONT }}>
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
+      )}
 
-      {/* Profile Header - Modern Card Design */}
-      <Card className="relative overflow-hidden yrdly-shadow">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"></div>
-        <div className="absolute inset-0 bg-slate-800/20"></div>
-        
-        <div className="relative p-8">
-          <div className="flex flex-col items-center text-center space-y-6">
-            {/* Avatar with enhanced styling */}
-            <div className="relative">
-              <Avatar className="w-32 h-32 ring-4 ring-white/20 ring-offset-4 ring-offset-slate-900">
-                <AvatarImage 
-                  src={(displayProfile as any)?.avatarUrl || (displayProfile as any)?.avatar_url || (displayUser as any)?.avatarUrl || (displayUser as any)?.avatar_url || "/placeholder.svg"} 
-                  className="object-cover"
-                />
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-3xl font-bold">
-                  {displayProfile?.name?.charAt(0) || (displayUser as any)?.name?.charAt(0) || "U"}
+      {/* ── Hero Card ── */}
+      <section
+        className="flex flex-col items-center text-center p-8 relative overflow-hidden"
+        style={{ background: CARD, borderRadius: 11 }}
+      >
+        {/* Subtle green wash at top */}
+        <div className="absolute top-0 left-0 w-full h-24 pointer-events-none"
+          style={{ background: "linear-gradient(to bottom, rgba(130,219,126,0.08), transparent)" }} />
+
+        <div className="relative z-10">
+          {/* Avatar with spinning dashed ring */}
+          <div className="relative inline-block">
+            <div
+              className="w-32 h-32 rounded-full overflow-hidden shadow-2xl border-4 relative z-10"
+              style={{ borderColor: BG }}
+            >
+              <Avatar className="w-full h-full">
+                <AvatarImage src={avatarUrl || "/placeholder.svg"} className="object-cover" />
+                <AvatarFallback style={{ background: GREEN, color: "#fff", fontSize: 40, fontFamily: RALEWAY, fontWeight: 800 }}>
+                  {name.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              {/* Online indicator for friends */}
-              {actualIsOwnProfile && (
-                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-slate-900 flex items-center justify-center">
-                  <div className="w-3 h-3 bg-white rounded-full"></div>
-                </div>
-              )}
             </div>
-
-            {/* User Info */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <h3 className="text-3xl font-bold text-white">
-                  {displayProfile?.name || (displayUser as any)?.name || "Unknown User"}
-                </h3>
-                {/* Activity Indicator */}
-                {!actualIsOwnProfile && targetUser && (
-                  <ActivityIndicator 
-                    userId={targetUser.id} 
-                    showText={true}
-                    size="md"
-                    className="text-slate-300"
-                  />
-                )}
-              </div>
-              
-              {/* Bio/Tagline */}
-              {displayProfile?.bio && (
-                <p className="text-slate-300 text-lg max-w-md">
-                  {displayProfile.bio}
-                </p>
-              )}
-              
-              {/* Location and Join Date */}
-              <div className="flex flex-col sm:flex-row items-center gap-4 text-slate-400">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  <span>
-                    {displayProfile?.location?.state && displayProfile?.location?.lga 
-                      ? `${displayProfile.location.state}, ${displayProfile.location.lga}`
-                      : displayProfile?.location?.state || "Location not set"
-                    }
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>Joined {new Date((displayUser as any)?.created_at || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons for Other Users */}
-            {!actualIsOwnProfile && (
-              <div className="flex items-center gap-2 px-4 py-2">
-                <Button 
-                  className={`flex-1 ${isFriend ? "bg-red-500 hover:bg-red-600 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"} px-6 py-2 rounded-lg`}
-                  onClick={handleAddFriend}
-                >
-                  <Users className="w-4 h-4 mr-2" />
-                  {isFriend ? "Remove Friend" : isFriendRequestSent ? "Request Sent" : "Add Friend"}
-                </Button>
-                {isFriend && (
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 border-white/30 bg-white/10 text-white hover:bg-white/20 px-6 py-2 rounded-lg"
-                    onClick={handleMessageUser}
-                  >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Message
-                  </Button>
-                )}
+            <div
+              className="absolute -inset-2 rounded-full border-2 border-dashed"
+              style={{ borderColor: "rgba(130,219,126,0.4)", animation: "spin 20s linear infinite" }}
+            />
+            {/* ActivityIndicator for other's profiles */}
+            {!actualIsOwnProfile && targetUser && (
+              <div className="absolute bottom-0 right-0 z-20">
+                <ActivityIndicator userId={targetUser.id} size="md" />
               </div>
             )}
           </div>
-        </div>
-      </Card>
 
-      {/* Stats - Modern Design */}
-      <div className="grid grid-cols-2 gap-6">
-        <Card 
-          className="p-6 text-center yrdly-shadow cursor-pointer hover:bg-muted/50 transition-all duration-200 hover:scale-105"
+          <h1 className="mt-6 text-2xl text-white font-extrabold tracking-tight" style={{ fontFamily: RALEWAY }}>
+            {name}
+          </h1>
+          {bio && (
+            <p className="mt-2 text-[13px] font-light italic max-w-sm" style={{ fontFamily: RALEWAY, color: "#BBBBBB" }}>
+              {bio}
+            </p>
+          )}
+
+          {/* Location + Join date */}
+          <div className="mt-5 flex items-center justify-center gap-5 flex-wrap text-[11px] font-bold uppercase tracking-widest" style={{ color: "#899485" }}>
+            {locationStr && (
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5" /> {locationStr}
+              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" /> Joined {joinedDate}
+            </div>
+          </div>
+
+          {/* Action buttons for external profile */}
+          {!actualIsOwnProfile && (
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={handleAddFriend}
+                className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white transition-all active:scale-95"
+                style={{ background: isFriend ? "#E53935" : GREEN, fontFamily: FONT }}
+              >
+                <Users className="w-4 h-4" />
+                {isFriend ? "Remove Friend" : isFriendRequestSent ? "Request Sent" : "Add Friend"}
+              </button>
+              {isFriend && (
+                <button
+                  onClick={handleMessageUser}
+                  className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white transition-all active:scale-95"
+                  style={{ background: "#1B2B3A", border: `1px solid rgba(130,219,126,0.3)`, fontFamily: FONT }}
+                >
+                  <MessageCircle className="w-4 h-4" style={{ color: GREEN_LIGHT }} />
+                  Message
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+      {/* Spin keyframe */}
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+
+      {/* ── Stats ── */}
+      <div className="grid grid-cols-2 gap-4">
+        <button
+          className="flex items-center gap-4 p-5 text-left rounded-[11px] transition-colors"
+          style={{ background: SURFACE }}
           onClick={() => setShowFriendsList(true)}
         >
-          <div className="space-y-3">
-            <div className="w-12 h-12 mx-auto bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-              <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <p className="text-3xl font-bold text-foreground">{stats.friends}</p>
-            <p className="text-sm font-medium text-muted-foreground">Friends</p>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ background: "rgba(56,142,60,0.2)" }}>
+            <Users className="w-6 h-6" style={{ color: GREEN_LIGHT }} />
           </div>
-        </Card>
-
-        <Card className="p-6 text-center yrdly-shadow">
-          <div className="space-y-3">
-            <div className="w-12 h-12 mx-auto bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-            </div>
-            <p className="text-3xl font-bold text-foreground">{stats.events}</p>
-            <p className="text-sm font-medium text-muted-foreground">Events</p>
+          <div>
+            <p className="text-2xl font-bold text-white">{stats.friends.toLocaleString()}</p>
+            <p className="text-[10px] font-bold uppercase tracking-tighter" style={{ color: "#899485" }}>Connections</p>
           </div>
-        </Card>
+        </button>
+        <div
+          className="flex items-center gap-4 p-5 rounded-[11px]"
+          style={{ background: SURFACE }}
+        >
+          <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ background: "rgba(56,142,60,0.2)" }}>
+            <CalendarDays className="w-6 h-6" style={{ color: GREEN_LIGHT }} />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-white">{stats.events}</p>
+            <p className="text-[10px] font-bold uppercase tracking-tighter" style={{ color: "#899485" }}>Events</p>
+          </div>
+        </div>
       </div>
 
-      {/* Interests Section */}
-      {displayProfile?.interests && displayProfile.interests.length > 0 && (
-        <Card className="p-6 yrdly-shadow">
-          <h4 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Star className="w-5 h-5 text-yellow-500" />
-            Interests
-          </h4>
+      {/* ── Interests ── */}
+      {interests && interests.length > 0 && (
+        <section className="p-6 rounded-[11px]" style={{ background: CARD }}>
+          <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-4" style={{ color: "#bfcab9", fontFamily: FONT }}>
+            Interests &amp; Expertise
+          </h3>
           <div className="flex flex-wrap gap-2">
-            {displayProfile.interests.map((interest: string, index: number) => (
-              <Badge 
-                key={index} 
-                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 transition-all duration-200 px-3 py-1"
+            {interests.map((interest, i) => (
+              <span
+                key={i}
+                className="px-4 py-1.5 rounded-full text-xs font-medium"
+                style={{ background: "#06171B", border: "1px solid rgba(130,219,126,0.3)", color: GREEN_LIGHT, fontFamily: FONT }}
               >
                 {interest}
-              </Badge>
+              </span>
             ))}
           </div>
-        </Card>
+        </section>
       )}
 
+      {/* ── Tabs ── */}
+      {actualIsOwnProfile ? (
+        <>
+          <TabBar active={activeTab} onChange={setActiveTab} />
 
-      {/* Public Posts for External Profiles */}
-      {!actualIsOwnProfile && userPosts.length > 0 && (
-        <Card className="p-6 yrdly-shadow">
-          <h4 className="font-semibold text-foreground mb-4">Recent Posts</h4>
-          <div className="space-y-4">
+          {/* Posts tab */}
+          {activeTab === "posts" && (
+            userPosts.length > 0 ? (
+              <div className="bento-section space-y-4">
+                {/* Large feature card for first post */}
+                {userPosts[0] && (
+                  <div
+                    className="relative overflow-hidden cursor-pointer group rounded-[11px]"
+                    style={{ background: SURFACE }}
+                    onClick={() => router.push(`/posts/${userPosts[0].id}`)}
+                  >
+                    {userPosts[0].image_url && (
+                      <div className="relative h-48 overflow-hidden">
+                        <Image src={userPosts[0].image_url} alt={userPosts[0].text || "Post"} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+                        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #1d2025 0%, transparent 60%)" }} />
+                        <div className="absolute bottom-4 left-4 right-4">
+                          <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded"
+                            style={{ background: "rgba(110,223,81,0.1)", color: "#6edf51" }}>Article</span>
+                          <h4 className="text-white font-bold mt-1 text-lg leading-tight">{userPosts[0].text}</h4>
+                        </div>
+                      </div>
+                    )}
+                    {!userPosts[0].image_url && (
+                      <div className="p-5">
+                        <p className="text-white text-sm" style={{ fontFamily: FONT }}>{userPosts[0].text}</p>
+                        <div className="flex items-center gap-3 mt-3 text-xs" style={{ color: "#899485" }}>
+                          <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{userPosts[0].liked_by?.length || 0}</span>
+                          <span>{new Date(userPosts[0].timestamp).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Grid for rest */}
+                <div className="grid grid-cols-2 gap-4">
+                  {userPosts.slice(1).map((post) => (
+                    <div
+                      key={post.id}
+                      className="p-4 rounded-[11px] cursor-pointer"
+                      style={{ background: SURFACE }}
+                      onClick={() => router.push(`/posts/${post.id}`)}
+                    >
+                      <p className="text-white text-xs line-clamp-3" style={{ fontFamily: FONT }}>{post.text || post.title}</p>
+                      <div className="flex items-center gap-2 mt-2 text-[10px]" style={{ color: "#899485" }}>
+                        <Heart className="w-3 h-3" />{post.liked_by?.length || 0}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <EmptyState icon={<Heart className="w-7 h-7" style={{ color: GREEN_LIGHT, opacity: 0.6 }} />}
+                label="No posts yet" action="Create your first post" onAction={() => router.push("/home")} />
+            )
+          )}
+
+          {/* Items tab */}
+          {activeTab === "items" && (
+            userItems.length > 0 ? (
+              <div className="space-y-3">
+                {userItems.map((item) => (
+                  <MiniCard
+                    key={item.id}
+                    title={item.text || item.title || "Untitled"}
+                    sub={item.price ? `₦${item.price.toLocaleString()}` : item.condition}
+                    img={item.image_urls?.[0] || null}
+                    badge="Sale"
+                    onClick={() => router.push(`/posts/${item.id}`)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState icon={<ShoppingBag className="w-7 h-7" style={{ color: GREEN_LIGHT, opacity: 0.6 }} />}
+                label="No items for sale" action="List your first item" onAction={() => router.push("/marketplace")} />
+            )
+          )}
+
+          {/* Businesses tab */}
+          {activeTab === "businesses" && (
+            userBusinesses.length > 0 ? (
+              <div className="space-y-3">
+                {userBusinesses.map((biz) => (
+                  <MiniCard
+                    key={biz.id}
+                    title={biz.name}
+                    sub={biz.category}
+                    img={biz.image_urls?.[0] || null}
+                    badge="Biz"
+                    onClick={() => router.push(`/businesses/${biz.id}`)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptyState icon={<Briefcase className="w-7 h-7" style={{ color: GREEN_LIGHT, opacity: 0.6 }} />}
+                label="No businesses yet" action="Create your business" onAction={() => router.push("/businesses")} />
+            )
+          )}
+
+          {/* Events tab */}
+          {activeTab === "events" && (
+            userEvents.length > 0 ? (
+              <div className="space-y-3">
+                {userEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    className="p-4 rounded-[11px] cursor-pointer"
+                    style={{ background: SURFACE }}
+                    onClick={() => router.push(`/posts/${event.id}`)}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#6edf51" }} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#bfcab9", fontFamily: FONT }}>Event</span>
+                    </div>
+                    <h4 className="text-white font-bold text-sm" style={{ fontFamily: RALEWAY }}>
+                      {event.text || event.title || "Untitled Event"}
+                    </h4>
+                    {event.event_date && (
+                      <div className="flex items-center gap-1.5 mt-2 text-xs" style={{ color: "#899485", fontFamily: FONT }}>
+                        <Calendar className="w-3 h-3" />
+                        {new Date(event.event_date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                        {event.event_time && <><Clock className="w-3 h-3 ml-2" /> {event.event_time}</>}
+                      </div>
+                    )}
+                    {event.attendees?.length > 0 && (
+                      <p className="text-xs mt-1 italic" style={{ color: "#899485", fontFamily: FONT }}>
+                        {event.attendees.length} participants joined
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState icon={<CalendarDays className="w-7 h-7" style={{ color: GREEN_LIGHT, opacity: 0.6 }} />}
+                label="No events posted" action="Create your first event" onAction={() => router.push("/events")} />
+            )
+          )}
+        </>
+      ) : (
+        /* External profile – show recent posts inline */
+        userPosts.length > 0 && (
+          <section className="space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: "#bfcab9", fontFamily: FONT }}>
+              Recent Posts
+            </h3>
             {userPosts.slice(0, 3).map((post) => (
-              <div key={post.id} className="border-b border-border pb-4 last:border-b-0 last:pb-0">
-                <p className="text-foreground mb-2">{post.text || post.title || "No content"}</p>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Heart className="w-4 h-4" />
-                    {post.liked_by?.length || 0}
-                  </span>
+              <div key={post.id} className="p-5 rounded-[11px]" style={{ background: SURFACE }}>
+                <p className="text-white text-sm leading-relaxed" style={{ fontFamily: FONT }}>{post.text || post.title}</p>
+                <div className="flex items-center gap-3 mt-3 text-xs" style={{ color: "#899485" }}>
+                  <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{post.liked_by?.length || 0}</span>
                   <span>{new Date(post.timestamp).toLocaleDateString()}</span>
                 </div>
               </div>
             ))}
-          </div>
-        </Card>
+          </section>
+        )
       )}
 
-
-      {actualIsOwnProfile && (
-        <Tabs defaultValue="posts" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-background border border-border rounded-xl p-1 gap-1 h-auto">
-            <TabsTrigger
-              value="posts"
-              className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm w-full min-h-[44px] overflow-hidden relative"
-            >
-              <Heart className="w-4 h-4 flex-shrink-0" />
-              <span className="font-medium">Posts</span>
-              <span className="text-xs opacity-70">({userPosts.length})</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="items"
-              className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm w-full min-h-[44px] overflow-hidden relative"
-            >
-              <ShoppingBag className="w-4 h-4 flex-shrink-0" />
-              <span className="font-medium">Items</span>
-              <span className="text-xs opacity-70">({userItems.length})</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="businesses"
-              className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm w-full min-h-[44px] overflow-hidden relative"
-            >
-              <Briefcase className="w-4 h-4 flex-shrink-0" />
-              <span className="font-medium">Business</span>
-              <span className="text-xs opacity-70">({userBusinesses.length})</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="events"
-              className="flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg transition-all duration-200 hover:bg-muted/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-sm w-full min-h-[44px] overflow-hidden relative"
-            >
-              <CalendarDays className="w-4 h-4 flex-shrink-0" />
-              <span className="font-medium">Events</span>
-              <span className="text-xs opacity-70">({userEvents.length})</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="posts" className="mt-6">
-            {userPosts.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {userPosts.map((post) => (
-                  <Card 
-                    key={post.id} 
-                    className="p-5 yrdly-shadow hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105"
-                    onClick={() => router.push(`/posts/${post.id}`)}
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-foreground text-base mb-2 line-clamp-2">
-                            {post.text || post.title || "No content"}
-                          </h4>
-                          {post.image_url && (
-                            <div className="mt-3 rounded-lg overflow-hidden">
-                              <Image
-                                src={post.image_url} 
-                                alt={post.text || post.title || "Post image"}
-                                width={400}
-                                height={200}
-                                className="w-full h-auto object-contain max-h-96"
-                                style={{ height: "auto" }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between pt-3 border-t border-border">
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50">
-                            <Heart className="w-4 h-4 text-red-500" />
-                            <span className="font-medium">{post.liked_by?.length || 0}</span>
-                          </span>
-                          <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50">
-                            <MessageCircle className="w-4 h-4 text-blue-500" />
-                            <span className="font-medium">{post.comment_count || 0}</span>
-                          </span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(post.timestamp).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card className="p-8 yrdly-shadow">
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto bg-muted/30 rounded-full flex items-center justify-center">
-                    <Heart className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">No posts yet</h3>
-                    <p className="text-sm text-muted-foreground">Share your thoughts and experiences with the community</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    className="mt-4"
-                    onClick={() => router.push('/home')}
-                  >
-                    <Heart className="w-4 h-4 mr-2" />
-                    Create your first post
-                  </Button>
-                </div>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="items" className="mt-6">
-            {userItems.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {userItems.map((item) => (
-                  <Card 
-                    key={item.id} 
-                    className="p-5 yrdly-shadow hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105"
-                    onClick={() => router.push(`/posts/${item.id}`)}
-                  >
-                    <div className="flex items-start gap-4">
-                      {item.image_urls && item.image_urls.length > 0 ? (
-                        <div className="relative">
-                          <Image 
-                            src={item.image_urls[0]} 
-                            alt={item.text || item.title}
-                            width={80}
-                            height={80}
-                            className="w-20 h-20 object-cover rounded-xl flex-shrink-0"
-                          />
-                          <Badge className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-xs px-2 py-1">
-                            For Sale
-                          </Badge>
-                        </div>
-                      ) : (
-                        <div className="w-20 h-20 bg-muted/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                          <ShoppingBag className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                      )}
-                      
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <h4 className="font-semibold text-foreground text-base line-clamp-1">
-                            {item.text || item.title || "Untitled Item"}
-                          </h4>
-                          {item.price && (
-                            <div className="text-right">
-                              <p className="text-lg font-bold text-green-600">₦{item.price.toLocaleString()}</p>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {item.description || "No description available"}
-                        </p>
-                        
-                        <div className="flex items-center justify-between pt-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {item.category || 'General'}
-                            </Badge>
-                            {item.condition && (
-                              <Badge variant="secondary" className="text-xs">
-                                {item.condition}
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(item.timestamp).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric'
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card className="p-8 yrdly-shadow">
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto bg-muted/30 rounded-full flex items-center justify-center">
-                    <ShoppingBag className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">No items for sale yet</h3>
-                    <p className="text-sm text-muted-foreground">Start selling items in your neighborhood</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    className="mt-4"
-                    onClick={() => router.push('/marketplace')}
-                  >
-                    <ShoppingBag className="w-4 h-4 mr-2" />
-                    List your first item
-                  </Button>
-                </div>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="businesses" className="mt-6">
-            {userBusinesses.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {userBusinesses.map((business) => (
-                  <Card 
-                    key={business.id} 
-                    className="p-5 yrdly-shadow hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105"
-                    onClick={() => router.push(`/businesses/${business.id}`)}
-                  >
-                    <div className="flex items-start gap-4">
-                      {business.image_urls && business.image_urls.length > 0 ? (
-                        <div className="relative">
-                          <Image 
-                            src={business.image_urls[0]} 
-                            alt={business.name}
-                            width={80}
-                            height={80}
-                            className="w-20 h-20 object-cover rounded-xl flex-shrink-0"
-                          />
-                          <Badge className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs px-2 py-1">
-                            Business
-                          </Badge>
-                        </div>
-                      ) : (
-                        <div className="w-20 h-20 bg-muted/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                          <Briefcase className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                      )}
-                      
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <h4 className="font-semibold text-foreground text-base line-clamp-1">
-                            {business.name}
-                          </h4>
-                          {business.rating && (
-                            <div className="flex items-center gap-1 text-sm">
-                              <span className="text-yellow-500">★</span>
-                              <span className="font-medium">{business.rating}</span>
-                              <span className="text-muted-foreground">({business.review_count || 0})</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {business.description || "No description available"}
-                        </p>
-                        
-                        <div className="flex items-center justify-between pt-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {business.category || 'General'}
-                            </Badge>
-                            {business.location && (
-                              <Badge variant="secondary" className="text-xs" title={typeof business.location === 'string' ? business.location : business.location?.address || 'Location not specified'}>
-                                📍 {typeof business.location === 'string' 
-                                  ? shortenAddress(business.location, 30)
-                                  : shortenAddress(business.location?.address || 'Location not specified', 30)
-                                }
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(business.created_at).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric'
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card className="p-8 yrdly-shadow">
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto bg-muted/30 rounded-full flex items-center justify-center">
-                    <Briefcase className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">No businesses yet</h3>
-                    <p className="text-sm text-muted-foreground">Create a business profile to reach more customers</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    className="mt-4"
-                    onClick={() => router.push('/businesses')}
-                  >
-                    <Briefcase className="w-4 h-4 mr-2" />
-                    Create your business
-                  </Button>
-                </div>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="events" className="mt-6">
-            {userEvents.length > 0 ? (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {userEvents.map((event) => (
-                  <Card 
-                    key={event.id} 
-                    className="p-5 yrdly-shadow hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105"
-                    onClick={() => router.push(`/posts/${event.id}`)}
-                  >
-                    <div className="flex items-start gap-4">
-                      {event.image_urls && event.image_urls.length > 0 ? (
-                        <div className="relative">
-                          <Image 
-                            src={event.image_urls[0]} 
-                            alt={event.text || event.title}
-                            width={80}
-                            height={80}
-                            className="w-20 h-20 object-cover rounded-xl flex-shrink-0"
-                          />
-                          <Badge className="absolute -top-2 -right-2 bg-purple-500 text-white text-xs px-2 py-1">
-                            Event
-                          </Badge>
-                        </div>
-                      ) : (
-                        <div className="w-20 h-20 bg-muted/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                          <CalendarDays className="w-8 h-8 text-muted-foreground" />
-                        </div>
-                      )}
-                      
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <h4 className="font-semibold text-foreground text-base line-clamp-1">
-                            {event.text || event.title || "Untitled Event"}
-                          </h4>
-                          {event.event_date && (
-                            <div className="text-right">
-                              <p className="text-sm font-medium text-primary">
-                                {new Date(event.event_date).toLocaleDateString('en-US', { 
-                                  month: 'short', 
-                                  day: 'numeric'
-                                })}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {event.description || "No description available"}
-                        </p>
-                        
-                        <div className="space-y-1">
-                          {event.event_date && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Calendar className="w-3 h-3" />
-                              <span>{new Date(event.event_date).toLocaleDateString('en-US', { 
-                                weekday: 'long',
-                                month: 'long', 
-                                day: 'numeric',
-                                year: 'numeric'
-                              })}</span>
-                            </div>
-                          )}
-                          {event.event_time && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Clock className="w-3 h-3" />
-                              <span>{event.event_time}</span>
-                            </div>
-                          )}
-                          {event.location && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <MapPin className="w-3 h-3" />
-                              <span className="line-clamp-1">
-                                {typeof event.location === 'string' 
-                                  ? event.location 
-                                  : event.location?.address || 'Location not specified'
-                                }
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center justify-between pt-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {event.category || 'General'}
-                            </Badge>
-                            {event.attendees && event.attendees.length > 0 && (
-                              <Badge variant="secondary" className="text-xs">
-                                👥 {event.attendees.length} attending
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            Posted {new Date(event.timestamp).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric'
-                            })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card className="p-8 yrdly-shadow">
-                <div className="text-center space-y-4">
-                  <div className="w-16 h-16 mx-auto bg-muted/30 rounded-full flex items-center justify-center">
-                    <CalendarDays className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground mb-2">No events posted yet</h3>
-                    <p className="text-sm text-muted-foreground">Create events to bring your community together</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    className="mt-4"
-                    onClick={() => router.push('/events')}
-                  >
-                    <CalendarDays className="w-4 h-4 mr-2" />
-                    Create your first event
-                  </Button>
-                </div>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
-      )}
-
-
-      {/* Friends List Modal */}
+      {/* ── Friends List Modal ── */}
       {showFriendsList && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md max-h-[80vh] overflow-hidden">
-            <CardContent className="p-0">
-              <FriendsList 
-                userId={targetUser?.id || ''} 
-                onBack={() => setShowFriendsList(false)} 
-              />
-            </CardContent>
-          </Card>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 p-4"
+          style={{ background: "rgba(0,0,0,0.7)" }}
+          onClick={() => setShowFriendsList(false)}
+        >
+          <div
+            className="w-full max-w-md max-h-[80vh] overflow-hidden rounded-[20px]"
+            style={{ background: CARD }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FriendsList userId={targetUser?.id || ""} onBack={() => setShowFriendsList(false)} />
+          </div>
         </div>
       )}
     </div>
   );
 }
-
