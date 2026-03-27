@@ -22,6 +22,8 @@ export default function PaymentVerificationPage() {
 
   const txRef = searchParams.get('tx_ref');
   const transactionRef = searchParams.get('transaction_id');
+  const flwStatus = searchParams.get('status');       // 'successful' | 'cancelled' | 'failed'
+  const itemId = searchParams.get('itemId');          // passed from initialize route
 
   const verifyPayment = useCallback(async () => {
     try {
@@ -71,7 +73,19 @@ export default function PaymentVerificationPage() {
 
   useEffect(() => {
     if (!user) {
-      router.push('/signin');
+      router.push('/login');
+      return;
+    }
+
+    // ── Cancelled / failed from Flutterwave ──────────────
+    if (flwStatus === 'cancelled' || flwStatus === 'failed') {
+      toast({
+        title: flwStatus === 'cancelled' ? 'Payment cancelled' : 'Payment failed',
+        description: 'You have been returned to the item page.',
+        variant: 'destructive',
+      });
+      // Go back to the specific item if we have the id, otherwise marketplace
+      router.replace(itemId ? `/marketplace/${itemId}` : '/marketplace');
       return;
     }
 
@@ -82,7 +96,7 @@ export default function PaymentVerificationPage() {
     }
 
     verifyPayment();
-  }, [user, txRef, transactionRef, router, verifyPayment]);
+  }, [user, flwStatus, txRef, transactionRef, itemId, router, verifyPayment, toast]);
 
   const handleRetry = async () => {
     setIsRetrying(true);

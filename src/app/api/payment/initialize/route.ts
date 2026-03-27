@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       tx_ref: transactionId,
       amount: totalAmount,
       currency: "NGN",
-      redirect_url: `${appUrl}/payment/verify?tx_ref=${transactionId}`,
+      redirect_url: `${appUrl}/payment/verify?tx_ref=${transactionId}&itemId=${itemId}`,
       payment_options: "card,banktransfer,ussd",
       customer: {
         email: buyerEmail,
