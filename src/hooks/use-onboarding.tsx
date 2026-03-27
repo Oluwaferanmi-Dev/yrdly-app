@@ -21,10 +21,7 @@ export function useOnboarding() {
     // Check if profile is completed
     if (!profile.profile_completed) return 'profile_setup';
     
-    // Check if welcome message has been sent
-    if (!profile.welcome_message_sent) return 'welcome';
-    
-    // Check if tour is completed
+    // Skip welcome — go straight to tour
     if (!profile.tour_completed) return 'tour';
     
     return 'completed';
@@ -52,7 +49,8 @@ export function useOnboarding() {
     try {
       await updateProfile({ 
         profile_completed: true,
-        onboarding_status: 'welcome'
+        welcome_message_sent: true,   // mark as sent so we never route to /welcome
+        onboarding_status: 'tour'
       });
       onboardingAnalytics.trackStepComplete('profile_setup', { userId: user.id });
     } catch (error: any) {

@@ -31,7 +31,7 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
       switch (currentStep) {
         case 'email_verification': return '/onboarding/verify-email';
         case 'profile_setup':     return '/onboarding/profile';
-        case 'welcome':           return '/onboarding/welcome';
+        case 'welcome':           return '/onboarding/tour';
         case 'tour':              return '/onboarding/tour';
         case 'signup':            return '/signup';
         default:                  return '/home';

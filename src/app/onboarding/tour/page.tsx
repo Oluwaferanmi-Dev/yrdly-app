@@ -391,12 +391,6 @@ export default function OnboardingTourPage() {
             >
               Get Started 🎉
             </button>
-            <p className="text-xs text-center" style={{ color: "#BBBBBB", fontFamily: "Raleway, sans-serif" }}>
-              Already have an account?{" "}
-              <button onClick={() => router.push("/login")} className="font-semibold" style={{ color: "#4DA24E" }}>
-                Log in
-              </button>
-            </p>
           </div>
         ) : (
           /* Other slides: Next button right-aligned */
