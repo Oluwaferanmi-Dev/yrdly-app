@@ -404,10 +404,6 @@ export function EventsScreen({ className }: EventsScreenProps) {
           Date
           <ChevronDown className="w-3 h-3" />
         </button>
-        <button className="flex items-center gap-1.5 px-3 py-2 rounded-md font-raleway text-[10px] sm:text-xs flex-shrink-0 bg-white text-black">
-          State
-          <ChevronDown className="w-3 h-3" />
-        </button>
       </div>
 
       {/* Mainstream Events */}
