@@ -29,7 +29,7 @@ function UserActionButton({
   onFriendAction,
 }: {
   userId: string;
-  onFriendAction: (userId: string, action: "add" | "remove" | "accept" | "decline") => Promise<void>;
+  onFriendAction: (userId: string, action: "add" | "remove" | "accept" | "decline", actionFn: () => Promise<void>) => Promise<void>;
 }) {
   const friendshipHook = useFriendshipGlobal(userId);
   const status = friendshipHook.status;
@@ -39,7 +39,7 @@ function UserActionButton({
     case "none":
       return (
         <button
-          onClick={() => onFriendAction(userId, "add")}
+          onClick={() => onFriendAction(userId, "add", () => friendshipHook.addFriend())}
           className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase disabled:opacity-50"
           style={{ background: GREEN, fontFamily: FONT }}
           disabled={isLoading}
@@ -60,7 +60,7 @@ function UserActionButton({
     case "friends":
       return (
         <button
-          onClick={() => onFriendAction(userId, "remove")}
+          onClick={() => onFriendAction(userId, "remove", () => friendshipHook.removeFriend())}
           className="rounded-full px-3 py-1 text-[11px] font-bold uppercase disabled:opacity-50"
           style={{ border: "0.5px solid rgba(229,57,53,0.4)", color: "#E53935", fontFamily: FONT }}
           disabled={isLoading}
@@ -72,7 +72,7 @@ function UserActionButton({
       return (
         <>
           <button
-            onClick={() => onFriendAction(userId, "accept")}
+            onClick={() => onFriendAction(userId, "accept", () => friendshipHook.acceptRequest())}
             className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase disabled:opacity-50"
             style={{ background: GREEN, fontFamily: FONT }}
             disabled={isLoading}
@@ -80,7 +80,7 @@ function UserActionButton({
             {isLoading ? "..." : "Accept"}
           </button>
           <button
-            onClick={() => onFriendAction(userId, "decline")}
+            onClick={() => onFriendAction(userId, "decline", () => friendshipHook.declineRequest())}
             className="rounded-full px-3 py-1 text-[11px] font-bold uppercase disabled:opacity-50"
             style={{ border: "0.5px solid rgba(229,57,53,0.4)", color: "#E53935", fontFamily: FONT }}
             disabled={isLoading}
@@ -243,22 +243,12 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
 
   const handleFriendAction = async (
     userId: string,
-    action: "add" | "remove" | "accept" | "decline"
+    action: "add" | "remove" | "accept" | "decline",
+    actionFn: () => Promise<void>
   ) => {
     if (!currentUser) return;
     try {
-      // Use global friendship hook for all actions
-      const hookInstance = useFriendshipGlobal(userId);
-      
-      if (action === "add") {
-        await hookInstance.addFriend();
-      } else if (action === "accept") {
-        await hookInstance.acceptRequest();
-      } else if (action === "decline") {
-        await hookInstance.declineRequest();
-      } else if (action === "remove") {
-        await hookInstance.removeFriend();
-      }
+      await actionFn();
       
       // Update pending requests list if needed
       if (action === "accept" || action === "decline") {
