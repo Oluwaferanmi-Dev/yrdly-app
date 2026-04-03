@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PostCard } from "@/components/PostCard";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { usePosts } from "@/hooks/use-posts";
+import { useFriendshipGlobal } from "@/hooks/use-friendship-global";
 
 const GREEN = "#388E3C";
 const CARD = "#1E2126";
@@ -20,6 +21,75 @@ const PACIFICO = "Pacifico, cursive";
 
 interface CommunityScreenProps {
   className?: string;
+}
+
+// Sub-component for rendering user action buttons with global friendship state
+function UserActionButton({
+  userId,
+  onFriendAction,
+}: {
+  userId: string;
+  onFriendAction: (userId: string, action: "add" | "remove" | "accept" | "decline") => Promise<void>;
+}) {
+  const friendshipHook = useFriendshipGlobal(userId);
+  const status = friendshipHook.status;
+  const isLoading = friendshipHook.isLoading;
+
+  switch (status) {
+    case "none":
+      return (
+        <button
+          onClick={() => onFriendAction(userId, "add")}
+          className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase disabled:opacity-50"
+          style={{ background: GREEN, fontFamily: FONT }}
+          disabled={isLoading}
+        >
+          {isLoading ? "..." : "Add"}
+        </button>
+      );
+    case "request_sent":
+      return (
+        <button
+          className="rounded-full px-3 py-1 text-[11px] text-[#BBBBBB] font-bold uppercase"
+          style={{ border: "0.5px solid #388E3C", fontFamily: FONT }}
+          disabled
+        >
+          Sent
+        </button>
+      );
+    case "friends":
+      return (
+        <button
+          onClick={() => onFriendAction(userId, "remove")}
+          className="rounded-full px-3 py-1 text-[11px] font-bold uppercase disabled:opacity-50"
+          style={{ border: "0.5px solid rgba(229,57,53,0.4)", color: "#E53935", fontFamily: FONT }}
+          disabled={isLoading}
+        >
+          {isLoading ? "..." : "Remove"}
+        </button>
+      );
+    case "request_received":
+      return (
+        <>
+          <button
+            onClick={() => onFriendAction(userId, "accept")}
+            className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase disabled:opacity-50"
+            style={{ background: GREEN, fontFamily: FONT }}
+            disabled={isLoading}
+          >
+            {isLoading ? "..." : "Accept"}
+          </button>
+          <button
+            onClick={() => onFriendAction(userId, "decline")}
+            className="rounded-full px-3 py-1 text-[11px] font-bold uppercase disabled:opacity-50"
+            style={{ border: "0.5px solid rgba(229,57,53,0.4)", color: "#E53935", fontFamily: FONT }}
+            disabled={isLoading}
+          >
+            {isLoading ? "..." : "Decline"}
+          </button>
+        </>
+      );
+  }
 }
 
 function fmt(n: number): string {
@@ -76,9 +146,6 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
-  const [friendshipStatus, setFriendshipStatus] = useState<
-    Record<string, "friends" | "request_sent" | "request_received" | "none">
-  >({});
   const [pendingFriendRequests, setPendingFriendRequests] = useState<any[]>([]);
   const [friendRequestsLoading, setFriendRequestsLoading] = useState(true);
   const [stats, setStats] = useState({ totalUsers: 0, activeToday: 0, newPosts24h: 0 });
@@ -150,24 +217,6 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, [showUserSearch]);
 
-  const checkFriendshipStatus = async (userId: string) => {
-    if (!currentUser || !profile) return "none" as const;
-    if (profile.friends?.includes(userId)) return "friends" as const;
-    const { data: requests } = await supabase
-      .from("friend_requests")
-      .select("*")
-      .or(
-        `and(from_user_id.eq.${currentUser.id},to_user_id.eq.${userId}),and(from_user_id.eq.${userId},to_user_id.eq.${currentUser.id})`
-      )
-      .eq("status", "pending");
-    if (requests && requests.length > 0) {
-      return requests[0].from_user_id === currentUser.id
-        ? ("request_sent" as const)
-        : ("request_received" as const);
-    }
-    return "none" as const;
-  };
-
   const searchUsers = async (query: string) => {
     if (!query.trim()) { setUsers([]); setShowUserSearch(false); return; }
     setUserSearchLoading(true);
@@ -181,12 +230,6 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
       const usersData = data || [];
       setUsers(usersData);
       setShowUserSearch(true);
-      const statuses = await Promise.all(
-        usersData.map(async (u) => ({ userId: u.id, status: await checkFriendshipStatus(u.id) }))
-      );
-      setFriendshipStatus(
-        statuses.reduce((acc, { userId, status }) => ({ ...acc, [userId]: status }), {})
-      );
     } catch { /* ignore */ } finally {
       setUserSearchLoading(false);
     }
@@ -204,61 +247,22 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
   ) => {
     if (!currentUser) return;
     try {
+      // Use global friendship hook for all actions
+      const hookInstance = useFriendshipGlobal(userId);
+      
       if (action === "add") {
-        await supabase.from("friend_requests").insert({
-          from_user_id: currentUser.id,
-          to_user_id: userId,
-          participant_ids: [currentUser.id, userId].sort(),
-          status: "pending",
-          created_at: new Date().toISOString(),
-        });
-        setFriendshipStatus((p) => ({ ...p, [userId]: "request_sent" }));
-        try {
-          const { NotificationTriggers } = await import("@/lib/notification-triggers");
-          await NotificationTriggers.onFriendRequestSent(currentUser.id, userId);
-        } catch {}
-        toast({ title: "Friend Request Sent" });
+        await hookInstance.addFriend();
       } else if (action === "accept") {
-        const { data: req } = await supabase
-          .from("friend_requests")
-          .select("*")
-          .eq("from_user_id", userId)
-          .eq("to_user_id", currentUser.id)
-          .eq("status", "pending")
-          .single();
-        if (!req) return;
-        await supabase
-          .from("friend_requests")
-          .update({ status: "accepted", updated_at: new Date().toISOString() })
-          .eq("id", req.id);
-        const { data: cu } = await supabase.from("users").select("friends").eq("id", currentUser.id).single();
-        const { data: su } = await supabase.from("users").select("friends").eq("id", userId).single();
-        await supabase.from("users").update({ friends: [...(cu?.friends || []), userId] }).eq("id", currentUser.id);
-        await supabase.from("users").update({ friends: [...(su?.friends || []), currentUser.id] }).eq("id", userId);
-        setPendingFriendRequests((p) => p.filter((r) => r.from_user_id !== userId));
-        setFriendshipStatus((p) => ({ ...p, [userId]: "friends" }));
-        try {
-          const { NotificationTriggers } = await import("@/lib/notification-triggers");
-          await NotificationTriggers.onFriendRequestAccepted(userId, currentUser.id);
-        } catch {}
-        toast({ title: "Friend Request Accepted" });
+        await hookInstance.acceptRequest();
       } else if (action === "decline") {
-        await supabase
-          .from("friend_requests")
-          .delete()
-          .eq("from_user_id", userId)
-          .eq("to_user_id", currentUser.id)
-          .eq("status", "pending");
-        setPendingFriendRequests((p) => p.filter((r) => r.from_user_id !== userId));
-        setFriendshipStatus((p) => ({ ...p, [userId]: "none" }));
-        toast({ title: "Friend Request Declined" });
+        await hookInstance.declineRequest();
       } else if (action === "remove") {
-        const { data: cu } = await supabase.from("users").select("friends").eq("id", currentUser.id).single();
-        const { data: tu } = await supabase.from("users").select("friends").eq("id", userId).single();
-        await supabase.from("users").update({ friends: (cu?.friends || []).filter((id: string) => id !== userId) }).eq("id", currentUser.id);
-        await supabase.from("users").update({ friends: (tu?.friends || []).filter((id: string) => id !== currentUser.id) }).eq("id", userId);
-        setFriendshipStatus((p) => ({ ...p, [userId]: "none" }));
-        toast({ title: "Friend Removed" });
+        await hookInstance.removeFriend();
+      }
+      
+      // Update pending requests list if needed
+      if (action === "accept" || action === "decline") {
+        setPendingFriendRequests((p) => p.filter((r) => r.from_user_id !== userId));
       }
     } catch (error) {
       console.error("Error handling friend action:", error);
@@ -350,51 +354,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      {friendshipStatus[u.id] === "none" && (
-                        <button
-                          onClick={() => handleFriendAction(u.id, "add")}
-                          className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase"
-                          style={{ background: GREEN, fontFamily: FONT }}
-                        >
-                          Add
-                        </button>
-                      )}
-                      {friendshipStatus[u.id] === "request_sent" && (
-                        <button
-                          className="rounded-full px-3 py-1 text-[11px] text-[#BBBBBB] font-bold uppercase"
-                          style={{ border: "0.5px solid #388E3C", fontFamily: FONT }}
-                          disabled
-                        >
-                          Sent
-                        </button>
-                      )}
-                      {friendshipStatus[u.id] === "friends" && (
-                        <button
-                          onClick={() => handleFriendAction(u.id, "remove")}
-                          className="rounded-full px-3 py-1 text-[11px] font-bold uppercase"
-                          style={{ border: "0.5px solid rgba(229,57,53,0.4)", color: "#E53935", fontFamily: FONT }}
-                        >
-                          Remove
-                        </button>
-                      )}
-                      {friendshipStatus[u.id] === "request_received" && (
-                        <>
-                          <button
-                            onClick={() => handleFriendAction(u.id, "accept")}
-                            className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase"
-                            style={{ background: GREEN, fontFamily: FONT }}
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => handleFriendAction(u.id, "decline")}
-                            className="rounded-full px-3 py-1 text-[11px] font-bold uppercase"
-                            style={{ border: "0.5px solid rgba(229,57,53,0.4)", color: "#E53935", fontFamily: FONT }}
-                          >
-                            Decline
-                          </button>
-                        </>
-                      )}
+                      <UserActionButton userId={u.id} onFriendAction={handleFriendAction} />
                     </div>
                   </div>
                 ))
