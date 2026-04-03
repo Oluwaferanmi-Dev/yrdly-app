@@ -161,28 +161,6 @@ export function NeighboursListScreen() {
     }
   };
 
-  const handleAcceptRequest = async (neighborId: string) => {
-    if (!currentUser) return;
-    setSelectedNeighborId(neighborId);
-    
-    try {
-      await friendshipHook.acceptRequest();
-    } catch {
-      // Error is already handled by the hook
-    }
-  };
-
-  const handleRejectRequest = async (neighborId: string) => {
-    if (!currentUser) return;
-    setSelectedNeighborId(neighborId);
-    
-    try {
-      await friendshipHook.declineRequest();
-    } catch {
-      // Error is already handled by the hook
-    }
-  };
-
   const handleMessageNeighbor = async (neighborId: string) => {
     if (!currentUser) return;
 
