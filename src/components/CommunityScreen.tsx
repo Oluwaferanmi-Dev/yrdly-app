@@ -421,24 +421,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
                           )}
                         </div>
                         <div className="flex gap-2 w-full">
-                          <button
-                            onClick={() => handleFriendAction(sender.id, "accept")}
-                            className="flex-1 py-2 rounded-full text-[10px] font-bold uppercase text-white"
-                            style={{ background: GREEN, fontFamily: FONT }}
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => handleFriendAction(sender.id, "decline")}
-                            className="flex-1 py-2 rounded-full text-[10px] font-bold uppercase"
-                            style={{
-                              border: "1px solid rgba(229,57,53,0.3)",
-                              color: "#E53935",
-                              fontFamily: FONT,
-                            }}
-                          >
-                            Decline
-                          </button>
+                          <UserActionButton userId={sender.id} onFriendAction={handleFriendAction} />
                         </div>
                       </div>
                     );

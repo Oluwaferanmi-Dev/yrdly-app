@@ -91,7 +91,7 @@ export function FriendshipProvider({ children }: { children: React.ReactNode }) 
           console.log("[v0] Friendship event received:", payload);
 
           // Determine which user ID we need to refresh
-          const record = payload.new || payload.old;
+          const record = (payload.new || payload.old) as { from_user_id: string; to_user_id: string };
           const otherUserId =
             record.from_user_id === user.id
               ? record.to_user_id

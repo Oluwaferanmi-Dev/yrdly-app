@@ -101,7 +101,7 @@ export function NeighboursListScreen() {
   useEffect(() => {
     if (!currentUser) return;
     fetchNeighbors();
-  }, [currentUser]);
+  }, [currentUser, toast]);
 
   const fetchNeighbors = async () => {
     try {
@@ -158,28 +158,6 @@ export function NeighboursListScreen() {
         description: "Failed to perform action",
         variant: "destructive",
       });
-    }
-  };
-
-  const handleAcceptRequest = async (neighborId: string) => {
-    if (!currentUser) return;
-    setSelectedNeighborId(neighborId);
-    
-    try {
-      await friendshipHook.acceptRequest();
-    } catch {
-      // Error is already handled by the hook
-    }
-  };
-
-  const handleRejectRequest = async (neighborId: string) => {
-    if (!currentUser) return;
-    setSelectedNeighborId(neighborId);
-    
-    try {
-      await friendshipHook.declineRequest();
-    } catch {
-      // Error is already handled by the hook
     }
   };
 
