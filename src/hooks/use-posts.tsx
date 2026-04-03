@@ -170,7 +170,7 @@ export const usePosts = () => {
     };
 
     refreshUserPosts();
-  }, [user?.id, profile?.name, profile?.avatar_url, profile, user]);
+  }, [user?.id, profile?.name, profile?.avatar_url]);
 
   const uploadImages = useCallback(async (
     files: FileList,

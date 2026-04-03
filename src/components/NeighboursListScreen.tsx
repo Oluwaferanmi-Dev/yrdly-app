@@ -101,7 +101,7 @@ export function NeighboursListScreen() {
   useEffect(() => {
     if (!currentUser) return;
     fetchNeighbors();
-  }, [currentUser]);
+  }, [currentUser, toast]);
 
   const fetchNeighbors = async () => {
     try {
