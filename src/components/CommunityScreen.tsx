@@ -31,14 +31,19 @@ function StatCard({
   icon: Icon,
   value,
   label,
+  onClick,
 }: {
   icon: React.ElementType;
   value: string | number;
   label: string;
+  onClick?: () => void;
 }) {
   return (
     <div
-      className="flex flex-col items-center text-center p-4 space-y-2"
+      onClick={onClick}
+      className={`flex flex-col items-center text-center p-4 space-y-2 ${
+        onClick ? "cursor-pointer transition-all hover:opacity-80" : ""
+      }`}
       style={{ background: CARD, borderRadius: 11 }}
     >
       <div
@@ -398,12 +403,17 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
           )}
         </div>
 
-        {/* ── Stats Row ── */}
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard icon={Users} value={fmt(stats.totalUsers)} label="Neighbors" />
-          <StatCard icon={Zap} value={fmt(stats.activeToday)} label="Active Today" />
-          <StatCard icon={FileText} value={fmt(stats.newPosts24h)} label="New Posts" />
-        </div>
+  {/* ── Stats Row ── */}
+  <div className="grid grid-cols-3 gap-3">
+    <StatCard 
+      icon={Users} 
+      value={fmt(stats.totalUsers)} 
+      label="Neighbors"
+      onClick={() => router.push('/neighbours')}
+    />
+    <StatCard icon={Zap} value={fmt(stats.activeToday)} label="Active Today" />
+    <StatCard icon={FileText} value={fmt(stats.newPosts24h)} label="New Posts" />
+  </div>
 
         {/* ── Friend Requests ── */}
         {(pendingFriendRequests.length > 0 || friendRequestsLoading) && (
