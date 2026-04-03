@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageCircle, User as UserIcon, ArrowLeft, Plus, Check, X } from "lucide-react";
+import { MessageCircle, User as UserIcon, ArrowLeft, Plus, Check, X, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import type { User } from "@/types";
 import { useToast } from "@/hooks/use-toast";
+import { useFriendshipGlobal } from "@/hooks/use-friendship-global";
 
 const GREEN = "#388E3C";
 const DARK_BG = "#15181D";
@@ -28,10 +29,10 @@ export function NeighboursListScreen() {
   const { toast } = useToast();
   const [neighbors, setNeighbors] = useState<Neighbor[]>([]);
   const [loading, setLoading] = useState(true);
-  const [friendshipStatus, setFriendshipStatus] = useState<
-    Record<string, "friends" | "request_sent" | "request_received" | "none">
-  >({});
-  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+  const [selectedNeighborId, setSelectedNeighborId] = useState<string | undefined>();
+  
+  // Use global friendship hook for the selected neighbor
+  const friendshipHook = useFriendshipGlobal(selectedNeighborId);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -59,51 +60,6 @@ export function NeighboursListScreen() {
       })) as Neighbor[];
 
       setNeighbors(mappedUsers);
-
-      // Get current user's friendship data
-      const { data: currentUserData } = await supabase
-        .from("users")
-        .select("friends, friend_requests_sent, friend_requests_received")
-        .eq("id", currentUser?.id)
-        .single();
-
-      // Get pending friend requests
-      const { data: pendingRequests } = await supabase
-        .from("friend_requests")
-        .select("*")
-        .or(
-          `and(from_id.eq.${currentUser?.id},status.eq.pending),and(to_id.eq.${currentUser?.id},status.eq.pending)`
-        );
-
-      // Build friendship status map
-      const statusMap: Record<
-        string,
-        "friends" | "request_sent" | "request_received" | "none"
-      > = {};
-
-      mappedUsers.forEach((neighbor) => {
-        if (currentUserData?.friends?.includes(neighbor.id)) {
-          statusMap[neighbor.id] = "friends";
-        } else {
-          const request = pendingRequests?.find(
-            (req) =>
-              (req.from_id === currentUser?.id && req.to_id === neighbor.id) ||
-              (req.from_id === neighbor.id && req.to_id === currentUser?.id)
-          );
-
-          if (request) {
-            if (request.from_id === currentUser?.id) {
-              statusMap[neighbor.id] = "request_sent";
-            } else {
-              statusMap[neighbor.id] = "request_received";
-            }
-          } else {
-            statusMap[neighbor.id] = "none";
-          }
-        }
-      });
-
-      setFriendshipStatus(statusMap);
     } catch (error) {
       console.error("Error fetching neighbors:", error);
       toast({
@@ -118,127 +74,34 @@ export function NeighboursListScreen() {
 
   const handleAddFriend = async (neighborId: string) => {
     if (!currentUser) return;
-
+    setSelectedNeighborId(neighborId);
+    
     try {
-      setActionLoading((prev) => ({ ...prev, [neighborId]: true }));
-
-      // Create friend request
-      const { error } = await supabase.from("friend_requests").insert({
-        from_id: currentUser.id,
-        to_id: neighborId,
-        status: "pending",
-        created_at: new Date().toISOString(),
-      });
-
-      if (error) throw error;
-
-      setFriendshipStatus((prev) => ({
-        ...prev,
-        [neighborId]: "request_sent",
-      }));
-
-      toast({
-        title: "Success",
-        description: "Friend request sent",
-      });
-    } catch (error) {
-      console.error("Error sending friend request:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send friend request",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading((prev) => ({ ...prev, [neighborId]: false }));
+      await friendshipHook.addFriend();
+    } catch {
+      // Error is already handled by the hook
     }
   };
 
   const handleAcceptRequest = async (neighborId: string) => {
     if (!currentUser) return;
-
+    setSelectedNeighborId(neighborId);
+    
     try {
-      setActionLoading((prev) => ({ ...prev, [neighborId]: true }));
-
-      // Update friend request status
-      const { error: updateError } = await supabase
-        .from("friend_requests")
-        .update({ status: "accepted" })
-        .match({ from_id: neighborId, to_id: currentUser.id });
-
-      if (updateError) throw updateError;
-
-      // Add to both users' friends arrays
-      const { data: neighborData } = await supabase
-        .from("users")
-        .select("friends")
-        .eq("id", neighborId)
-        .single();
-
-      const neighborFriends = neighborData?.friends || [];
-
-      await Promise.all([
-        supabase
-          .from("users")
-          .update({ friends: [...(profile?.friends || []), neighborId] })
-          .eq("id", currentUser.id),
-        supabase
-          .from("users")
-          .update({ friends: [...neighborFriends, currentUser.id] })
-          .eq("id", neighborId),
-      ]);
-
-      setFriendshipStatus((prev) => ({
-        ...prev,
-        [neighborId]: "friends",
-      }));
-
-      toast({
-        title: "Success",
-        description: "Friend request accepted",
-      });
-    } catch (error) {
-      console.error("Error accepting friend request:", error);
-      toast({
-        title: "Error",
-        description: "Failed to accept friend request",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading((prev) => ({ ...prev, [neighborId]: false }));
+      await friendshipHook.acceptRequest();
+    } catch {
+      // Error is already handled by the hook
     }
   };
 
   const handleRejectRequest = async (neighborId: string) => {
     if (!currentUser) return;
-
+    setSelectedNeighborId(neighborId);
+    
     try {
-      setActionLoading((prev) => ({ ...prev, [neighborId]: true }));
-
-      const { error } = await supabase
-        .from("friend_requests")
-        .delete()
-        .match({ from_id: neighborId, to_id: currentUser.id });
-
-      if (error) throw error;
-
-      setFriendshipStatus((prev) => ({
-        ...prev,
-        [neighborId]: "none",
-      }));
-
-      toast({
-        title: "Success",
-        description: "Friend request rejected",
-      });
-    } catch (error) {
-      console.error("Error rejecting friend request:", error);
-      toast({
-        title: "Error",
-        description: "Failed to reject friend request",
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading((prev) => ({ ...prev, [neighborId]: false }));
+      await friendshipHook.declineRequest();
+    } catch {
+      // Error is already handled by the hook
     }
   };
 
@@ -294,8 +157,10 @@ export function NeighboursListScreen() {
   };
 
   const renderActionButton = (neighbor: Neighbor) => {
-    const status = friendshipStatus[neighbor.id] || "none";
-    const isLoading = actionLoading[neighbor.id];
+    // Set neighbor context before rendering
+    const neighborHook = useFriendshipGlobal(neighbor.id);
+    const status = neighborHook.status;
+    const isLoading = neighborHook.isLoading;
 
     switch (status) {
       case "friends":

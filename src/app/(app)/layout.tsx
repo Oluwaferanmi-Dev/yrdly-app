@@ -15,6 +15,7 @@ import { OnboardingGuard } from '@/components/OnboardingGuard';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useActivityTracking } from '@/hooks/use-activity-tracking';
 import { setUserContext, clearUserContext, trackUserAction } from '@/lib/sentry';
+import { FriendshipProvider } from '@/contexts/FriendshipContext';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth(); // Using Supabase auth
@@ -92,11 +93,13 @@ export default function AppLayout({
 }) {
   return (
     <AuthProvider>
-      <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} libraries={['places']}>
-        <ProtectedLayout>
-          {children}
-        </ProtectedLayout>
-      </APIProvider>
+      <FriendshipProvider>
+        <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} libraries={['places']}>
+          <ProtectedLayout>
+            {children}
+          </ProtectedLayout>
+        </APIProvider>
+      </FriendshipProvider>
     </AuthProvider>
   );
 }
