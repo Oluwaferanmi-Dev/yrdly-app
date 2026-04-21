@@ -68,6 +68,14 @@ export const ERROR_MESSAGES = {
   NOT_FOUND: 'The requested resource was not found.',
 };
 
+// Marketplace & Escrow
+export const MARKETPLACE_CONSTANTS = {
+  COMMISSION_RATE: 0.03, // 3% platform commission
+  AUTO_RELEASE_HOURS: 48, // Hours before auto-releasing funds to seller
+  CURRENCY: 'NGN',
+  MIN_PRICE: 100, // Minimum item price in NGN
+};
+
 // Success Messages
 export const SUCCESS_MESSAGES = {
   LOGIN: 'Welcome back!',

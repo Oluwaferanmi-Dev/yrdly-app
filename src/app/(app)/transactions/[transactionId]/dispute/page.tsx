@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Camera, X, AlertTriangle } from "lucide-react";
+import { EscrowService } from "@/lib/escrow-service";
 
 /* ── Design tokens ─────────────────────────────────── */
 const BG    = "#101418";
@@ -47,8 +48,8 @@ export default function DisputePage() {
     if (!user) return;
     setLoading(true);
     try {
-      // Placeholder — wire up DisputeService when ready
-      await new Promise((r) => setTimeout(r, 1200));
+      const reason = `${REASONS[selected]}${detail ? `: ${detail}` : ""}`;
+      await EscrowService.disputeTransaction(transactionId, reason);
       toast({ title: "Dispute submitted", description: "Our team will review it within 24–48 hours." });
       router.push(`/transactions/${transactionId}`);
     } catch {
@@ -56,7 +57,7 @@ export default function DisputePage() {
     } finally {
       setLoading(false);
     }
-  }, [user, transactionId, toast, router]);
+  }, [user, transactionId, toast, router, selected, detail]);
 
   return (
     <div

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ItemTrackingService } from "@/lib/item-tracking-service";
 import { DeliveryOption, PaymentMethod, EscrowStatus } from "@/types/escrow";
+import { MARKETPLACE_CONSTANTS } from "@/lib/constants";
+import { createClient } from "@supabase/supabase-js";
 
 
 /**
@@ -15,6 +17,32 @@ import { DeliveryOption, PaymentMethod, EscrowStatus } from "@/types/escrow";
  */
 export async function POST(request: NextRequest) {
   try {
+    // ── Authenticate the caller ────────────────────────
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const supabaseAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+        auth: { autoRefreshToken: false, persistSession: false },
+      }
+    );
+    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !authUser) {
+      return NextResponse.json(
+        { error: "Invalid or expired session" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
       itemId,
@@ -44,6 +72,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure the authenticated user matches the buyerId
+    if (authUser.id !== buyerId) {
+      return NextResponse.json(
+        { error: "Buyer ID does not match authenticated user" },
+        { status: 403 }
+      );
+    }
+
     if (buyerId === sellerId) {
       return NextResponse.json(
         { error: "You cannot buy your own item" },
@@ -61,8 +97,16 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Create escrow transaction (admin client bypasses RLS) ──
-    const commission = Math.round(price * 0.03);
+    const commission = Math.round(price * MARKETPLACE_CONSTANTS.COMMISSION_RATE);
     const totalAmount = price + commission;
+
+    // ── Look up seller's Flutterwave subaccount ──────────
+    const { data: sellerAccount } = await supabaseAdmin
+      .from("seller_accounts")
+      .select("flutterwave_subaccount_id")
+      .eq("user_id", sellerId)
+      .eq("is_active", true)
+      .single();
 
     const { data: txData, error: txError } = await supabaseAdmin
       .from("escrow_transactions")
@@ -93,17 +137,14 @@ export async function POST(request: NextRequest) {
 
     const transactionId = txData.id;
 
-    // ── Commission already calculated above ───────────────
-
-
     // ── Build Flutterwave Standard payment payload ────────
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL || "http://localhost:9002";
 
-    const flwPayload = {
+    const flwPayload: Record<string, any> = {
       tx_ref: transactionId,
       amount: totalAmount,
-      currency: "NGN",
+      currency: MARKETPLACE_CONSTANTS.CURRENCY,
       redirect_url: `${appUrl}/payment/verify?tx_ref=${transactionId}&itemId=${itemId}`,
       payment_options: "card,banktransfer,ussd",
       customer: {
@@ -123,6 +164,17 @@ export async function POST(request: NextRequest) {
         item_price: price,
       },
     };
+
+    // ── Add split payment if seller has a subaccount ──────
+    if (sellerAccount?.flutterwave_subaccount_id) {
+      flwPayload.subaccounts = [
+        {
+          id: sellerAccount.flutterwave_subaccount_id,
+          transaction_charge_type: "percentage",
+          transaction_charge: MARKETPLACE_CONSTANTS.COMMISSION_RATE * 100, // 3
+        },
+      ];
+    }
 
     // ── Call Flutterwave Standard API ─────────────────────
     const flwRes = await fetch(

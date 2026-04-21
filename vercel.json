@@ -1,5 +1,11 @@
 {
   "buildCommand": "npm install --legacy-peer-deps && npm run build",
   "installCommand": "npm install --legacy-peer-deps",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/auto-release",
+      "schedule": "0 */4 * * *"
+    }
+  ]
 }

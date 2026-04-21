@@ -5,6 +5,8 @@ import { X, Lock, Info, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
+import { MARKETPLACE_CONSTANTS } from "@/lib/constants";
+import { supabase } from "@/lib/supabase";
 
 
 /* ── Design tokens ─────────────────────────────────── */
@@ -42,7 +44,7 @@ export function BuyButton({
   const [open, setOpen]         = useState(false);
   const [loading, setLoading]   = useState(false);
 
-  const commission = Math.round(price * 0.03); // 3%
+  const commission = Math.round(price * MARKETPLACE_CONSTANTS.COMMISSION_RATE);
   const totalPay   = price + commission;
 
   const handleBuy = async () => {
@@ -57,9 +59,19 @@ export function BuyButton({
 
     setLoading(true);
     try {
+      // Get current session token for auth
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast({ title: "Session expired", description: "Please log in again.", variant: "destructive" });
+        return;
+      }
+
       const res = await fetch("/api/payment/initialize", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           itemId,
           buyerId: user.id,

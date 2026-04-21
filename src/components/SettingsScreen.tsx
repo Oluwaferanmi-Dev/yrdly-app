@@ -15,6 +15,7 @@ import {
   FileText,
   ChevronRight,
   Pencil,
+  Wallet,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useTheme } from "@/components/ThemeProvider";
@@ -256,6 +257,16 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
             icon={MapPin}
             label="Location"
             onClick={() => router.push("/settings/location")}
+          />
+        </div>
+
+        {/* ── Marketplace ── */}
+        <div className="space-y-3">
+          <SectionLabel>Marketplace</SectionLabel>
+          <NavRow
+            icon={Wallet}
+            label="Payout Settings"
+            onClick={() => router.push("/profile/payout-settings")}
           />
         </div>
 

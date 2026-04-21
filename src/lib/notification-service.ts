@@ -796,6 +796,15 @@ function getNotificationUrl(type: NotificationType, relatedId?: string | null): 
     case 'marketplace_item_interest':
     case 'marketplace_message':
       return '/marketplace';
+    case 'payment_successful':
+    case 'item_shipped':
+    case 'delivery_confirmed':
+    case 'funds_released':
+    case 'dispute_opened':
+    case 'dispute_resolved':
+    case 'payout_processed':
+    case 'payout_failed':
+      return relatedId ? `/transactions/${relatedId}` : '/transactions';
     case 'community_update':
     case 'system_announcement':
     case 'profile_view':

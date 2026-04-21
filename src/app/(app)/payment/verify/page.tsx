@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/lib/supabase';
 
 export default function PaymentVerificationPage() {
   const router = useRouter();
@@ -35,11 +36,15 @@ export default function PaymentVerificationPage() {
         throw new Error('No transaction reference found');
       }
 
+      // Get current session token for auth
+      const { data: { session } } = await supabase.auth.getSession();
+
       // Call API route to verify payment
       const response = await fetch('/api/payment/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
         },
         body: JSON.stringify({ transactionReference: reference }),
       });

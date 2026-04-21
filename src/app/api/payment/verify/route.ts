@@ -1,9 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { EscrowStatus } from '@/types/escrow';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
+    // ── Authenticate the caller ────────────────────────
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+        auth: { autoRefreshToken: false, persistSession: false },
+      }
+    );
+    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !authUser) {
+      return NextResponse.json(
+        { error: 'Invalid or expired session' },
+        { status: 401 }
+      );
+    }
+
     const { transactionReference } = await request.json();
 
     if (!transactionReference) {
@@ -34,6 +61,37 @@ export async function POST(request: NextRequest) {
     const txRef: string = flwData.data.tx_ref;
     const amount: number = parseFloat(flwData.data.amount);
 
+    // ── Verify the authenticated user is the buyer ────────
+    const { data: txRow } = await supabaseAdmin
+      .from('escrow_transactions')
+      .select('buyer_id, item_id, seller_id, status')
+      .eq('id', txRef)
+      .single();
+
+    if (!txRow) {
+      return NextResponse.json(
+        { error: 'Transaction not found' },
+        { status: 404 }
+      );
+    }
+
+    if (txRow.buyer_id !== authUser.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized: you cannot verify this transaction' },
+        { status: 403 }
+      );
+    }
+
+    // ── Skip if already paid (idempotent) ──────────────
+    if (txRow.status === EscrowStatus.PAID) {
+      return NextResponse.json({
+        success: true,
+        message: 'Payment already verified',
+        transactionId: txRef,
+        amount,
+      });
+    }
+
     // ── Update escrow transaction status (admin bypasses RLS) ──
     const { error: updateError } = await supabaseAdmin
       .from('escrow_transactions')
@@ -51,17 +109,44 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Mark item as sold ──────────────────────────────────
-    const { data: txRow } = await supabaseAdmin
-      .from('escrow_transactions')
-      .select('item_id, buyer_id')
-      .eq('id', txRef)
-      .single();
-
-    if (txRow) {
+    if (txRow.item_id) {
       await supabaseAdmin
         .from('posts')
         .update({ is_sold: true, updated_at: new Date().toISOString() })
         .eq('id', txRow.item_id);
+    }
+
+    // ── Send notification to seller ────────────────────────
+    try {
+      const { data: buyer } = await supabaseAdmin
+        .from('users')
+        .select('name')
+        .eq('id', txRow.buyer_id)
+        .single();
+
+      const { data: item } = await supabaseAdmin
+        .from('posts')
+        .select('title, text')
+        .eq('id', txRow.item_id)
+        .single();
+
+      const buyerName = buyer?.name || 'A buyer';
+      const itemTitle = item?.title || item?.text || 'an item';
+
+      await supabaseAdmin
+        .from('notifications')
+        .insert({
+          user_id: txRow.seller_id,
+          type: 'payment_successful',
+          title: 'Payment Received! 💰',
+          message: `${buyerName} has paid for "${itemTitle}". Arrange handover with the buyer.`,
+          related_id: txRef,
+          related_type: 'escrow_transaction',
+          data: { buyerName, itemTitle, transactionId: txRef, amount },
+        });
+    } catch (notificationError) {
+      console.error('Failed to send payment notification:', notificationError);
+      // Don't fail the response — payment is confirmed
     }
 
     return NextResponse.json({

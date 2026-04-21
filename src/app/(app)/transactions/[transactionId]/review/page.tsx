@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ReviewService } from "@/lib/review-service";
+import { useAuth } from "@/hooks/use-supabase-auth";
+import { supabase } from "@/lib/supabase";
 
 /* ── Design tokens ─────────────────────────────────── */
 const BG     = "#101418";
@@ -30,24 +33,43 @@ export default function ReviewPage() {
   const params    = useSearchParams();
   const router    = useRouter();
   const { toast } = useToast();
+  const { user }  = useAuth();
 
   const sellerName = params.get("seller") ?? "Seller";
 
-  const [rating, setRating]   = useState(4);
-  const [hover, setHover]     = useState(0);
-  const [text, setText]       = useState("");
-  const [tags, setTags]       = useState<string[]>(["Fast response"]);
-  const [loading, setLoading] = useState(false);
+  const [rating, setRating]     = useState(4);
+  const [hover, setHover]       = useState(0);
+  const [text, setText]         = useState("");
+  const [tags, setTags]         = useState<string[]>(["Fast response"]);
+  const [loading, setLoading]   = useState(false);
+  const [businessId, setBusinessId] = useState<string | null>(null);
+
+  // Resolve businessId from the transaction's item
+  useEffect(() => {
+    async function fetchBusinessId() {
+      const { data } = await supabase
+        .from('escrow_transactions')
+        .select('item:posts(business_id)')
+        .eq('id', transactionId)
+        .single();
+      if (data?.item?.[0]?.business_id) {
+        setBusinessId(data.item[0].business_id);
+      }
+    }
+    fetchBusinessId();
+  }, [transactionId]);
 
   const toggleTag = (t: string) =>
     setTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
   const handleSubmit = useCallback(async () => {
-    if (!rating) return;
+    if (!rating || !user) return;
     setLoading(true);
     try {
-      // Placeholder — wire ReviewService.createReview when ready
-      await new Promise((r) => setTimeout(r, 1000));
+      const comment = [text, ...tags].filter(Boolean).join(' | ');
+      if (businessId) {
+        await ReviewService.submitReview(businessId, user.id, transactionId, rating, comment);
+      }
       toast({ title: "Review submitted!", description: "Thank you for your feedback." });
       router.push(`/transactions/${transactionId}`);
     } catch {
@@ -55,7 +77,7 @@ export default function ReviewPage() {
     } finally {
       setLoading(false);
     }
-  }, [rating, transactionId, toast, router]);
+  }, [rating, transactionId, toast, router, user, businessId, text, tags]);
 
   const display = hover || rating;
 
