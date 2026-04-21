@@ -41,8 +41,8 @@ const NIGERIAN_BANKS = [
   { code: "215", name: "Unity Bank" },
   { code: "035", name: "Wema Bank" },
   { code: "057", name: "Zenith Bank" },
-  { code: "999992", name: "OPay" },
-  { code: "999991", name: "PalmPay" },
+  { code: "100004", name: "OPay" },
+  { code: "100033", name: "PalmPay" },
   { code: "090267", name: "Kuda Microfinance Bank" },
 ];
 
