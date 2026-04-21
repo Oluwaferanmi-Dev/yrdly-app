@@ -26,11 +26,7 @@ export function PushNotificationManager() {
             try {
                 // Check if VAPID key is available
                 if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-                    toast({
-                        variant: "destructive",
-                        title: "Push Notifications",
-                        description: "Push notifications are not configured. Please contact support.",
-                    });
+                    // Fail silently if VAPID keys aren't configured yet
                     return;
                 }
 
