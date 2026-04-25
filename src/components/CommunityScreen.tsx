@@ -13,6 +13,8 @@ import { PostCard } from "@/components/PostCard";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { usePosts } from "@/hooks/use-posts";
 import { useFriendshipGlobal } from "@/hooks/use-friendship-global";
+import { useLocation } from "@/contexts/LocationContext";
+import { LocationChip } from "@/components/LocationChip";
 
 const GREEN = "#388E3C";
 const CARD = "#1E2126";
@@ -141,7 +143,8 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
   const { user: currentUser, profile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const { posts, loading: postsLoading, createPost, deletePost } = usePosts();
+  const { filterState, filterLga } = useLocation();
+  const { posts, loading: postsLoading, createPost, deletePost } = usePosts({ filterState, filterLga });
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
@@ -155,9 +158,18 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
   useEffect(() => {
     if (!currentUser) return;
     const fetchStats = async () => {
-      const { count: totalUsers } = await supabase
+      // Count users in the same location
+      let usersQuery = supabase
         .from("users")
         .select("*", { count: "exact", head: true });
+      // Filter neighbors by location
+      if (filterState) {
+        usersQuery = usersQuery.contains('location', { state: filterState });
+      }
+      if (filterLga) {
+        usersQuery = usersQuery.contains('location', { lga: filterLga });
+      }
+      const { count: totalUsers } = await usersQuery;
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const { data: activePosters } = await supabase
@@ -172,10 +184,17 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
         ...(activePosters?.map((p) => p.user_id) || []),
         ...(activeCommenters?.map((c) => c.user_id) || []),
       ]);
-      const { count: newPosts24h } = await supabase
+      let postsQuery = supabase
         .from("posts")
         .select("*", { count: "exact", head: true })
         .gte("timestamp", yesterday.toISOString());
+      if (filterState) {
+        postsQuery = postsQuery.eq('state', filterState);
+      }
+      if (filterLga) {
+        postsQuery = postsQuery.eq('lga', filterLga);
+      }
+      const { count: newPosts24h } = await postsQuery;
       setStats({
         totalUsers: totalUsers || 0,
         activeToday: activeUserIds.size,
@@ -183,7 +202,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
       });
     };
     fetchStats();
-  }, [currentUser]);
+  }, [currentUser, filterState, filterLga]);
 
   /* ── Pending Friend Requests ── */
   useEffect(() => {
@@ -286,9 +305,12 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
 
         {/* ── Header ── */}
         <header className="space-y-1">
-          <h1 className="text-[20px] text-white" style={{ fontFamily: PACIFICO }}>
-            Community
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-[20px] text-white" style={{ fontFamily: PACIFICO }}>
+              Community
+            </h1>
+            <LocationChip />
+          </div>
           <p className="text-[12px]" style={{ fontFamily: FONT, fontStyle: "italic", fontWeight: 300, color: "#BBBBBB" }}>
             Connecting neighbors, one story at a time.
           </p>

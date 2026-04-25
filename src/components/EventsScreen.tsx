@@ -23,6 +23,8 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/com
 import { formatPrice, timeAgo } from "@/lib/utils";
 import { sendEventConfirmationEmail } from "@/lib/email-actions";
 import { cn } from "@/lib/utils";
+import { useLocation } from "@/contexts/LocationContext";
+import { LocationChip } from "@/components/LocationChip";
 
 interface EventsScreenProps {
   className?: string;
@@ -65,6 +67,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  const { filterState, filterLga } = useLocation();
   const [events, setEvents] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [rsvpLoading, setRsvpLoading] = useState<Set<string>>(new Set());
@@ -136,14 +139,23 @@ export function EventsScreen({ className }: EventsScreenProps) {
 
   useEffect(() => {
     const fetchEvents = async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("posts")
         .select(`
           *,
           user:users!posts_user_id_fkey(id, name, avatar_url)
         `)
-        .eq("category", "Event")
-        .order("timestamp", { ascending: false });
+        .eq("category", "Event");
+
+      // Apply location filters
+      if (filterState) {
+        query = query.eq('state', filterState);
+      }
+      if (filterLga) {
+        query = query.eq('lga', filterLga);
+      }
+
+      const { data, error } = await query.order("timestamp", { ascending: false });
       if (!error)
         setEvents(
           (data || []).map((e: any) => ({
@@ -162,7 +174,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
     return () => {
       supabase.removeChannel(ch);
     };
-  }, []);
+  }, [filterState, filterLga]);
 
   const filteredAndSorted = useMemo(() => {
     let list = [...events];
@@ -203,6 +215,10 @@ export function EventsScreen({ className }: EventsScreenProps) {
 
   return (
     <div className={cn("p-3 sm:p-4 md:p-6 space-y-6 md:space-y-8 pb-20 lg:pb-8", className)}>
+      {/* Location filter */}
+      <div className="flex items-center gap-2">
+        <LocationChip />
+      </div>
       {/* Picked for You */}
       <section className="space-y-3 sm:space-y-4">
         <h2

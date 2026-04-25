@@ -10,6 +10,8 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Post as PostType } from "@/types";
 import Image from "next/image";
+import { useLocation } from "@/contexts/LocationContext";
+import { LocationChip } from "@/components/LocationChip";
 
 interface MarketplaceScreenProps {
   onItemClick?: (item: PostType) => void;
@@ -18,6 +20,7 @@ interface MarketplaceScreenProps {
 
 export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceScreenProps) {
   const { user } = useAuth();
+  const { filterState, filterLga } = useLocation();
   const router = useRouter();
   const [items, setItems] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,12 +57,21 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("posts")
           .select(`*, user:users!posts_user_id_fkey(id, name, avatar_url)`)
           .eq("category", "For Sale")
-          .eq("is_sold", false)
-          .order("timestamp", { ascending: false });
+          .eq("is_sold", false);
+
+        // Apply location filters
+        if (filterState) {
+          query = query.eq('state', filterState);
+        }
+        if (filterLga) {
+          query = query.eq('lga', filterLga);
+        }
+
+        const { data, error } = await query.order("timestamp", { ascending: false });
 
         if (!error) setItems(data as PostType[]);
       } finally {
@@ -86,7 +98,7 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [filterState, filterLga]);
 
   const filteredItems = useMemo(() => {
     if (!searchTerm) return items;
@@ -104,8 +116,12 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
 
   return (
     <div className="min-h-screen" style={{ background: "#15181D" }}>
+      {/* Location filter */}
+      <div className="px-4 pt-4 pb-1">
+        <LocationChip />
+      </div>
       {/* Search bar row */}
-      <div className="px-4 pt-4 pb-2">
+      <div className="px-4 pt-2 pb-2">
         <div className="relative">
           <Search
             className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5"
