@@ -33,7 +33,7 @@ export function OnboardingGuard({ children }: OnboardingGuardProps) {
         case 'profile_setup':     return '/onboarding/profile';
         case 'welcome':           return '/onboarding/welcome';
         case 'tour':              return '/onboarding/tour';
-        case 'signup':            return '/signup';
+        case 'signup':            return '/login';
         default:                  return '/home';
       }
     })();

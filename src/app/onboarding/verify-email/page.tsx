@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-supabase-auth';
 import { useOnboarding } from '@/hooks/use-onboarding';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, RefreshCw, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
 import { YrdlyLogo } from '@/components/ui/yrdly-logo';
@@ -58,7 +57,7 @@ function VerifyEmailContent() {
           if (event === 'SIGNED_IN' && session?.user) {
             // User is now authenticated, component will re-render
           } else if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
-            router.push('/signup');
+            router.push('/login');
           }
         }
       );
@@ -66,7 +65,7 @@ function VerifyEmailContent() {
       // If still no user after a reasonable time, redirect
       const fallbackTimer = setTimeout(() => {
         if (!user) {
-          router.push('/signup');
+          router.push('/login');
         }
       }, 5000);
 
@@ -333,7 +332,7 @@ function VerifyEmailContent() {
 
 
   const handleBackToSignup = () => {
-    router.push('/signup');
+    router.push('/login');
   };
 
   // Show loading while checking authentication
@@ -367,7 +366,7 @@ function VerifyEmailContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen pb-20 overflow-x-hidden" style={{ background: "#15181D", color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}>
       <OnboardingProgress />
       <div className="flex items-center justify-center p-4 pt-8">
         <div className="max-w-md w-full space-y-6">
@@ -378,33 +377,43 @@ function VerifyEmailContent() {
           </div>
         </div>
 
-        <Card className={`transition-all duration-500 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <CardHeader className="text-center">
+        <div 
+          className={`transition-all duration-500 rounded-2xl p-6 md:p-8 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+          style={{
+            background: "#1E2126",
+            border: "1px solid rgba(255,255,255,0.05)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
+          }}
+        >
+          <div className="text-center mb-6">
             <div 
-              className={`mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center transition-all duration-1000 ${isVisible ? 'scale-100' : 'scale-0'}`}
+              className={`mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center transition-all duration-1000 ${isVisible ? 'scale-100' : 'scale-0'}`}
+              style={{ background: "rgba(56,142,60,0.1)" }}
               role="img"
               aria-label="Email verification icon"
             >
-              <Mail className={`w-8 h-8 text-primary transition-all duration-1000 ${isVisible ? 'animate-pulse' : ''}`} />
+              <Mail className={`w-8 h-8 transition-all duration-1000 ${isVisible ? 'animate-pulse' : ''}`} style={{ color: "#388E3C" }} />
             </div>
-            <CardTitle className="text-2xl" id="email-verification-title">Check Your Email</CardTitle>
-            <CardDescription>
-              We&apos;ve sent a verification link to <strong>{email}</strong>
+            <h2 className="text-2xl font-extrabold mb-2" id="email-verification-title" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#fff" }}>
+              Check Your Email
+            </h2>
+            <div style={{ color: "#899485", fontSize: "15px" }}>
+              We&apos;ve sent a verification link to <strong style={{ color: "#e1e2e9" }}>{email}</strong>
               {lastSentTime && timeSinceSent > 0 && (
-                <span className="block text-sm text-muted-foreground mt-1" aria-live="polite">
+                <span className="block text-sm mt-1" aria-live="polite">
                   Sent {formatTimeSinceSent(timeSinceSent)}
                 </span>
               )}
-            </CardDescription>
+            </div>
             
             {/* Screen reader instructions */}
             <div id="verification-instructions" className="sr-only">
               To verify your email, check your inbox for a message from Yrdly and click the verification link. 
               If you don&apos;t see the email, check your spam folder. You can also use the buttons below to open your email app or resend the verification email.
             </div>
-          </CardHeader>
+          </div>
           
-          <CardContent className="space-y-6">
+          <div className="space-y-6">
             {error ? (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
@@ -422,10 +431,11 @@ function VerifyEmailContent() {
             )}
 
             {/* Tips Carousel */}
-            <div className="bg-muted/30 rounded-lg p-4 text-center" role="region" aria-label="Helpful tips">
-              <div className="text-sm text-muted-foreground mb-2">💡 Tip:</div>
+            <div className="rounded-xl p-4 text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }} role="region" aria-label="Helpful tips">
+              <div className="text-sm mb-2" style={{ color: "#a1a1aa" }}>💡 Tip:</div>
               <div 
                 className="text-sm font-medium transition-all duration-500"
+                style={{ color: "#e1e2e9" }}
                 aria-live="polite"
                 aria-label={`Tip ${currentTip + 1} of ${tips.length}: ${tips[currentTip]}`}
               >
@@ -434,11 +444,15 @@ function VerifyEmailContent() {
             </div>
 
             <div className="space-y-4" role="group" aria-labelledby="email-verification-title">
-              <Button 
+              <button 
                 onClick={handleCheckVerification}
                 disabled={isChecking}
-                className="w-full h-12 text-base touch-manipulation"
-                size="lg"
+                className="w-full py-3.5 rounded-full flex items-center justify-center text-white font-bold transition-all active:scale-95 disabled:opacity-50"
+                style={{
+                  background: "#388E3C",
+                  fontFamily: "Plus Jakarta Sans, sans-serif",
+                  boxShadow: "0 8px 20px rgba(56,142,60,0.25)"
+                }}
                 aria-describedby="verification-instructions"
                 aria-label={isChecking ? "Checking email verification status" : "Confirm that you have verified your email"}
               >
@@ -453,25 +467,33 @@ function VerifyEmailContent() {
                     I&apos;ve Verified My Email
                   </>
                 )}
-              </Button>
+              </button>
 
-              <Button 
+              <button 
                 onClick={handleOpenEmailApp}
-                variant="outline"
-                className="w-full h-12 text-base touch-manipulation"
-                size="lg"
+                className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95"
+                style={{
+                  background: "transparent",
+                  color: "#899485",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  fontFamily: "Plus Jakarta Sans, sans-serif",
+                }}
                 aria-label="Open your email app to check for verification email"
               >
                 <Mail className="w-5 h-5 mr-2" aria-hidden="true" />
                 Open Email App
-              </Button>
+              </button>
 
-              <Button 
+              <button 
                 onClick={handleResendVerification}
                 disabled={isResending || cooldownTime > 0}
-                variant="outline"
-                className="w-full h-12 text-base touch-manipulation"
-                size="lg"
+                className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95 disabled:opacity-50"
+                style={{
+                  background: "transparent",
+                  color: "#899485",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  fontFamily: "Plus Jakarta Sans, sans-serif",
+                }}
               >
                 {isResending ? (
                   <>
@@ -489,17 +511,21 @@ function VerifyEmailContent() {
                     Resend Verification Email
                   </>
                 )}
-              </Button>
+              </button>
 
-              <Button 
+              <button 
                 onClick={handleBackToSignup}
-                variant="ghost"
-                className="w-full h-12 text-base touch-manipulation"
-                size="lg"
+                className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95"
+                style={{
+                  background: "transparent",
+                  color: "#899485",
+                  border: "none",
+                  fontFamily: "Plus Jakarta Sans, sans-serif",
+                }}
               >
                 <ArrowLeft className="w-5 h-5 mr-2" />
-                Back to Sign Up
-              </Button>
+                Back to Login
+              </button>
             </div>
 
             {error && (
@@ -519,12 +545,16 @@ function VerifyEmailContent() {
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <Button 
+                <div className="space-y-3 mt-6">
+                  <button 
                     onClick={handleRetry}
-                    variant="outline"
-                    className="w-full h-12 text-base touch-manipulation"
-                    size="lg"
+                    className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95 disabled:opacity-50"
+                    style={{
+                      background: "transparent",
+                      color: "#899485",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      fontFamily: "Plus Jakarta Sans, sans-serif",
+                    }}
                     disabled={isResending}
                   >
                     {isResending ? (
@@ -538,26 +568,30 @@ function VerifyEmailContent() {
                         Try Again
                       </>
                     )}
-                  </Button>
+                  </button>
                   
-                  <Button 
+                  <button 
                     onClick={handleContactSupport}
-                    variant="outline"
-                    className="w-full h-12 text-base touch-manipulation"
-                    size="lg"
+                    className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95"
+                    style={{
+                      background: "transparent",
+                      color: "#899485",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      fontFamily: "Plus Jakarta Sans, sans-serif",
+                    }}
                   >
                     Contact Support
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
 
-            <div className="text-center text-sm text-muted-foreground">
+            <div className="text-center text-sm" style={{ color: "#666" }}>
               <p>Didn&apos;t receive the email? Check your spam folder.</p>
               <p>Still having trouble? Contact support.</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
         </div>
       </div>
     </div>
