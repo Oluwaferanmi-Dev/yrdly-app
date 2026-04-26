@@ -150,7 +150,7 @@ export default function LocationSettingsPage() {
           style={{ fontFamily: FONT, color: "#999", lineHeight: 1.6 }}
         >
           Your location determines which posts, events, marketplace items, and
-          neighbors you see. Change it if you've moved to a new area.
+          neighbors you see. Change it if you&apos;ve moved to a new area.
         </p>
 
         {/* State selector */}
