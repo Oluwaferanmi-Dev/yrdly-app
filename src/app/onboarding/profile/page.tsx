@@ -61,7 +61,7 @@ export default function OnboardingProfilePage() {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      username: '',
+      username: profile?.username || '',
       fullName: profile?.name || '',
       location: {
         state: profile?.location?.state || '',
@@ -138,18 +138,25 @@ export default function OnboardingProfilePage() {
     
     try {
       // Check if username is available by querying the database
-      const { data, error } = await supabase
+      // Exclude the current user's own record so re-visiting doesn't flag their own username as taken
+      let query = supabase
         .from('users')
         .select('username')
         .eq('username', username)
         .limit(1);
+      
+      if (user?.id) {
+        query = query.neq('id', user.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error checking username:', error);
         setUsernameAvailable(null);
         setUsernameError('Failed to check username availability');
       } else if (data && data.length > 0) {
-        // Username found, not available
+        // Username found on another user, not available
         setUsernameAvailable(false);
         setUsernameError(null);
       } else {

@@ -188,10 +188,6 @@ export class AuthService {
       }
 
       const finalName = name || user.user_metadata?.name || user.email?.split('@')[0];
-      
-      // For OAuth users, mark profile as completed since they already have basic info
-      const isOAuthUser = user.app_metadata?.provider && user.app_metadata?.providers?.includes(user.app_metadata.provider);
-      const profileCompleted = isOAuthUser;
 
       const { error } = await supabase
         .from('users')
@@ -200,8 +196,9 @@ export class AuthService {
           name: finalName,
           email: user.email,
           avatar_url: user.user_metadata?.avatar_url,
-          profile_completed: profileCompleted,
-          onboarding_status: profileCompleted ? 'welcome' : 'profile_setup',
+          // All users must complete profile setup to set their location
+          profile_completed: false,
+          onboarding_status: 'profile_setup',
           notification_settings: {
             friendRequests: true,
             messages: true,
