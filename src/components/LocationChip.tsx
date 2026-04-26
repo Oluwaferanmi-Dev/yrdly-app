@@ -1,20 +1,58 @@
 "use client";
 
-import { MapPin, ChevronDown } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { MapPin, ChevronDown, Globe, Navigation, Map, X } from "lucide-react";
 import { useLocation } from "@/contexts/LocationContext";
 import { useRouter } from "next/navigation";
+import states from "@/data/states.json";
 
 const GREEN = "#388E3C";
 const FONT = "Raleway, sans-serif";
+const CARD = "#1E2126";
+const BG = "#15181D";
 
 /**
- * A compact location chip that shows the user's active location filter.
- * Tapping it toggles between LGA (tight) and State (broad) scope.
- * Long-pressing or clicking the arrow navigates to settings to change location.
+ * Location filter chip with dropdown menu.
+ * Supports: My LGA, My State, Other State (picker), All Nigeria.
  */
 export function LocationChip() {
-  const { displayLabel, scope, toggleScope, hasLocation } = useLocation();
+  const {
+    displayLabel,
+    scope,
+    setScope,
+    hasLocation,
+    userState,
+    userLga,
+    setBrowseState,
+    browseState,
+  } = useLocation();
   const router = useRouter();
+
+  const [open, setOpen] = useState(false);
+  const [showStatePicker, setShowStatePicker] = useState(false);
+  const [stateSearch, setStateSearch] = useState("");
+  const menuRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setShowStatePicker(false);
+        setStateSearch("");
+      }
+    };
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Focus search input when state picker opens
+  useEffect(() => {
+    if (showStatePicker && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [showStatePicker]);
 
   if (!hasLocation) {
     return (
@@ -34,23 +72,342 @@ export function LocationChip() {
     );
   }
 
+  const allStates: string[] = states
+    .filter((s): s is string => !!s)
+    .sort();
+
+  const filteredStates = stateSearch
+    ? allStates.filter((s) =>
+        s.toLowerCase().includes(stateSearch.toLowerCase())
+      )
+    : allStates;
+
+  const handleSelectScope = (newScope: "lga" | "state" | "all") => {
+    setScope(newScope);
+    setOpen(false);
+    setShowStatePicker(false);
+    setStateSearch("");
+  };
+
+  const handleSelectOtherState = (state: string) => {
+    setBrowseState(state);
+    setOpen(false);
+    setShowStatePicker(false);
+    setStateSearch("");
+  };
+
+  const chipColor =
+    scope === "lga"
+      ? GREEN
+      : scope === "state"
+      ? "#82DB7E"
+      : scope === "other_state"
+      ? "#FFB74D"
+      : "#90CAF9";
+
   return (
-    <button
-      onClick={toggleScope}
-      className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all active:scale-95"
-      style={{
-        background: scope === "lga" ? "rgba(56,142,60,0.15)" : "rgba(56,142,60,0.08)",
-        color: scope === "lga" ? GREEN : "#82DB7E",
-        border: `0.5px solid ${scope === "lga" ? GREEN : "rgba(56,142,60,0.4)"}`,
-        fontFamily: FONT,
-      }}
-    >
-      <MapPin className="w-3.5 h-3.5" />
-      <span className="max-w-[160px] truncate">{displayLabel}</span>
-      <ChevronDown
-        className="w-3 h-3 transition-transform"
-        style={{ transform: scope === "state" ? "rotate(180deg)" : "none" }}
-      />
-    </button>
+    <div className="relative" ref={menuRef}>
+      {/* Chip button */}
+      <button
+        onClick={() => {
+          setOpen(!open);
+          setShowStatePicker(false);
+          setStateSearch("");
+        }}
+        className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all active:scale-95"
+        style={{
+          background: `${chipColor}18`,
+          color: chipColor,
+          border: `0.5px solid ${chipColor}66`,
+          fontFamily: FONT,
+        }}
+      >
+        {scope === "all" ? (
+          <Globe className="w-3.5 h-3.5" />
+        ) : scope === "other_state" ? (
+          <Map className="w-3.5 h-3.5" />
+        ) : (
+          <MapPin className="w-3.5 h-3.5" />
+        )}
+        <span className="max-w-[160px] truncate">{displayLabel}</span>
+        <ChevronDown
+          className="w-3 h-3 transition-transform"
+          style={{ transform: open ? "rotate(180deg)" : "none" }}
+        />
+      </button>
+
+      {/* Dropdown menu */}
+      {open && (
+        <div
+          className="absolute left-0 top-full mt-2 rounded-xl shadow-2xl overflow-hidden z-50"
+          style={{
+            background: CARD,
+            border: "1px solid rgba(255,255,255,0.08)",
+            minWidth: 220,
+            animation: "fadeInScale 0.15s ease-out",
+          }}
+        >
+          {!showStatePicker ? (
+            /* ── Main menu ── */
+            <div className="py-1.5">
+              {/* My LGA */}
+              <button
+                onClick={() => handleSelectScope("lga")}
+                className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
+                style={{
+                  background: scope === "lga" ? "rgba(56,142,60,0.12)" : "transparent",
+                }}
+                onMouseEnter={(e) =>
+                  scope !== "lga" &&
+                  ((e.currentTarget.style.background) = "rgba(255,255,255,0.04)")
+                }
+                onMouseLeave={(e) =>
+                  scope !== "lga" &&
+                  ((e.currentTarget.style.background) = "transparent")
+                }
+              >
+                <Navigation
+                  className="w-4 h-4 flex-shrink-0"
+                  style={{ color: scope === "lga" ? GREEN : "#888" }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-[12px] font-semibold truncate"
+                    style={{ color: scope === "lga" ? GREEN : "#fff", fontFamily: FONT }}
+                  >
+                    {userLga || "My LGA"}
+                  </p>
+                  <p className="text-[10px]" style={{ color: "#777" }}>
+                    Neighborhood
+                  </p>
+                </div>
+                {scope === "lga" && (
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: GREEN }}
+                  />
+                )}
+              </button>
+
+              {/* My State */}
+              <button
+                onClick={() => handleSelectScope("state")}
+                className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
+                style={{
+                  background: scope === "state" ? "rgba(130,219,126,0.1)" : "transparent",
+                }}
+                onMouseEnter={(e) =>
+                  scope !== "state" &&
+                  ((e.currentTarget.style.background) = "rgba(255,255,255,0.04)")
+                }
+                onMouseLeave={(e) =>
+                  scope !== "state" &&
+                  ((e.currentTarget.style.background) = "transparent")
+                }
+              >
+                <MapPin
+                  className="w-4 h-4 flex-shrink-0"
+                  style={{ color: scope === "state" ? "#82DB7E" : "#888" }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-[12px] font-semibold truncate"
+                    style={{ color: scope === "state" ? "#82DB7E" : "#fff", fontFamily: FONT }}
+                  >
+                    {userState} State
+                  </p>
+                  <p className="text-[10px]" style={{ color: "#777" }}>
+                    Entire state
+                  </p>
+                </div>
+                {scope === "state" && (
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: "#82DB7E" }}
+                  />
+                )}
+              </button>
+
+              {/* Divider */}
+              <div className="mx-4 my-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
+
+              {/* Other State */}
+              <button
+                onClick={() => setShowStatePicker(true)}
+                className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
+                style={{
+                  background: scope === "other_state" ? "rgba(255,183,77,0.1)" : "transparent",
+                }}
+                onMouseEnter={(e) =>
+                  scope !== "other_state" &&
+                  ((e.currentTarget.style.background) = "rgba(255,255,255,0.04)")
+                }
+                onMouseLeave={(e) =>
+                  scope !== "other_state" &&
+                  ((e.currentTarget.style.background) = "transparent")
+                }
+              >
+                <Map
+                  className="w-4 h-4 flex-shrink-0"
+                  style={{ color: scope === "other_state" ? "#FFB74D" : "#888" }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-[12px] font-semibold truncate"
+                    style={{ color: scope === "other_state" ? "#FFB74D" : "#fff", fontFamily: FONT }}
+                  >
+                    {scope === "other_state" && browseState
+                      ? `${browseState} State`
+                      : "Browse Other State"}
+                  </p>
+                  <p className="text-[10px]" style={{ color: "#777" }}>
+                    Explore another area
+                  </p>
+                </div>
+                <ChevronDown
+                  className="w-3 h-3 flex-shrink-0"
+                  style={{ color: "#666", transform: "rotate(-90deg)" }}
+                />
+              </button>
+
+              {/* All Nigeria */}
+              <button
+                onClick={() => handleSelectScope("all")}
+                className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
+                style={{
+                  background: scope === "all" ? "rgba(144,202,249,0.1)" : "transparent",
+                }}
+                onMouseEnter={(e) =>
+                  scope !== "all" &&
+                  ((e.currentTarget.style.background) = "rgba(255,255,255,0.04)")
+                }
+                onMouseLeave={(e) =>
+                  scope !== "all" &&
+                  ((e.currentTarget.style.background) = "transparent")
+                }
+              >
+                <Globe
+                  className="w-4 h-4 flex-shrink-0"
+                  style={{ color: scope === "all" ? "#90CAF9" : "#888" }}
+                />
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-[12px] font-semibold"
+                    style={{ color: scope === "all" ? "#90CAF9" : "#fff", fontFamily: FONT }}
+                  >
+                    All Nigeria
+                  </p>
+                  <p className="text-[10px]" style={{ color: "#777" }}>
+                    Everything, everywhere
+                  </p>
+                </div>
+                {scope === "all" && (
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: "#90CAF9" }}
+                  />
+                )}
+              </button>
+            </div>
+          ) : (
+            /* ── State picker ── */
+            <div>
+              {/* Search header */}
+              <div
+                className="flex items-center gap-2 px-3 py-2"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+              >
+                <button
+                  onClick={() => {
+                    setShowStatePicker(false);
+                    setStateSearch("");
+                  }}
+                  className="p-1"
+                >
+                  <X className="w-4 h-4" style={{ color: "#888" }} />
+                </button>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={stateSearch}
+                  onChange={(e) => setStateSearch(e.target.value)}
+                  placeholder="Search states..."
+                  className="flex-1 bg-transparent text-white text-[12px] outline-none placeholder-gray-500"
+                  style={{ fontFamily: FONT }}
+                />
+              </div>
+
+              {/* State list */}
+              <div className="max-h-[240px] overflow-y-auto py-1">
+                {filteredStates.map((state) => (
+                  <button
+                    key={state}
+                    onClick={() => handleSelectOtherState(state)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 transition-colors text-left"
+                    style={{
+                      background:
+                        browseState === state && scope === "other_state"
+                          ? "rgba(255,183,77,0.1)"
+                          : "transparent",
+                    }}
+                    onMouseEnter={(e) =>
+                      ((e.currentTarget.style.background) = "rgba(255,255,255,0.04)")
+                    }
+                    onMouseLeave={(e) =>
+                      ((e.currentTarget.style.background) =
+                        browseState === state && scope === "other_state"
+                          ? "rgba(255,183,77,0.1)"
+                          : "transparent")
+                    }
+                  >
+                    <span
+                      className="text-[12px]"
+                      style={{
+                        fontFamily: FONT,
+                        color:
+                          state === userState
+                            ? GREEN
+                            : browseState === state
+                            ? "#FFB74D"
+                            : "#ddd",
+                      }}
+                    >
+                      {state}
+                    </span>
+                    {state === userState && (
+                      <span className="text-[9px] ml-auto" style={{ color: "#666" }}>
+                        Home
+                      </span>
+                    )}
+                  </button>
+                ))}
+                {filteredStates.length === 0 && (
+                  <p
+                    className="text-center py-4 text-[12px]"
+                    style={{ color: "#666", fontFamily: FONT }}
+                  >
+                    No states found
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Animation keyframes */}
+      <style jsx>{`
+        @keyframes fadeInScale {
+          from {
+            opacity: 0;
+            transform: scale(0.95) translateY(-4px);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+      `}</style>
+    </div>
   );
 }

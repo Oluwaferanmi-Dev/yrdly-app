@@ -10,15 +10,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const NIGERIAN_STATES = ["Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno","Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT - Abuja","Gombe","Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nassarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara"];
 
-const ALL_INTERESTS = ["Technology","Photography","Governance","Urban Planning","Community","Fashion","Music","Sports","Arts","Food & Dining","Agriculture","Business","Education","Health","Real Estate","Trading","Transport","Entertainment","Finance"];
-
 type Profile = {
   name: string;
   bio: string;
   avatar_url: string;
   location?: { state?: string; lga?: string; ward?: string };
-  interests?: string[];
-  social_links?: { instagram?: string; twitter?: string; whatsapp?: string };
 };
 
 export default function EditProfilePage() {
@@ -35,9 +31,6 @@ export default function EditProfilePage() {
   const [state, setState]           = useState("");
   const [lga, setLga]               = useState("");
   const [ward, setWard]             = useState("");
-  const [interests, setInterests]   = useState<string[]>([]);
-  const [twitter, setTwitter]       = useState("");
-  const [instagram, setInstagram]   = useState("");
   const [saving, setSaving]         = useState(false);
 
   useEffect(() => {
@@ -49,9 +42,6 @@ export default function EditProfilePage() {
     setState(p.location?.state || "");
     setLga(p.location?.lga || "");
     setWard(p.location?.ward || "");
-    setInterests(p.interests || []);
-    setTwitter(p.social_links?.twitter || "");
-    setInstagram(p.social_links?.instagram || "");
   }, [authProfile]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,12 +49,6 @@ export default function EditProfilePage() {
     if (!file) return;
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
-  };
-
-  const toggleInterest = (interest: string) => {
-    setInterests(prev =>
-      prev.includes(interest) ? prev.filter(i => i !== interest) : [...prev, interest]
-    );
   };
 
   const handleSave = async () => {
@@ -88,8 +72,6 @@ export default function EditProfilePage() {
         bio,
         avatar_url: finalAvatarUrl,
         location: { state, lga, ward },
-        interests,
-        social_links: { twitter, instagram },
         updated_at: new Date().toISOString(),
       }).eq("id", user.id);
 
@@ -207,42 +189,6 @@ export default function EditProfilePage() {
           </div>
         </section>
 
-        {/* ── Block 3: Interests ── */}
-        <section className="space-y-6">
-          <div className="flex items-center justify-between">
-            <SectionHeader color="#6edf51" label="Interests" />
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {ALL_INTERESTS.map(interest => {
-              const active = interests.includes(interest);
-              return (
-                <button
-                  key={interest}
-                  onClick={() => toggleInterest(interest)}
-                  className="flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium transition-all"
-                  style={
-                    active
-                      ? { background: "rgba(77,162,78,0.2)", color: "#82DB7E", border: "1px solid #82DB7E" }
-                      : { background: "#1d2025", color: "#e1e2e9", border: "1px solid rgba(64,73,61,0.4)" }
-                  }
-                >
-                  {interest}
-                  {active && <X className="w-3 h-3" style={{ color: "#ff7070" }} />}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* ── Block 4: Social Links ── */}
-        <section className="space-y-6">
-          <SectionHeader color="#899485" label="Social Links" />
-          <div className="space-y-3">
-            <SocialField icon="🌐" placeholder="Portfolio URL" value={instagram} onChange={setInstagram} />
-            <SocialField icon="𝕏" placeholder="twitter.com/your_handle" value={twitter} onChange={setTwitter} />
-          </div>
-        </section>
-
       </main>
 
       {/* ── Save bar ── */}
@@ -283,21 +229,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="space-y-2">
       <label className="text-xs font-bold uppercase tracking-tighter ml-4" style={{ color: "#899485" }}>{label}</label>
       {children}
-    </div>
-  );
-}
-
-function SocialField({ icon, placeholder, value, onChange }: { icon: string; placeholder: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="flex items-center gap-4 rounded-full p-2" style={{ background: "#1d2025", border: "1px solid rgba(255,255,255,0.05)" }}>
-      <div className="w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0" style={{ background: "#272a2f" }}>
-        {icon}
-      </div>
-      <input
-        type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        className="flex-1 bg-transparent border-none outline-none text-sm"
-        style={{ color: "#e1e2e9" }}
-      />
     </div>
   );
 }

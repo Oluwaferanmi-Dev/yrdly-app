@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 
-type LocationScope = "lga" | "state";
+type LocationScope = "lga" | "state" | "other_state" | "all";
 
 interface LocationContextType {
   /** The user's home state from their profile */
@@ -12,25 +12,28 @@ interface LocationContextType {
   userLga: string | null;
   /** The user's home ward from their profile */
   userWard: string | null;
-  /** Current filter scope: 'lga' (default, tight) or 'state' (expanded) */
+  /** Current filter scope */
   scope: LocationScope;
-  /** Set the scope to 'lga' or 'state' */
+  /** Set the scope */
   setScope: (scope: LocationScope) => void;
-  /** Toggle between lga and state scope */
-  toggleScope: () => void;
   /** Whether the user has a location set at all */
   hasLocation: boolean;
-  /** Display label for the current filter, e.g. "Ikeja, Lagos" or "Lagos State" */
+  /** Display label for the current filter */
   displayLabel: string;
-  /** The state value to filter by (always the user's state) */
+  /** The state value to filter by */
   filterState: string | null;
   /** The LGA value to filter by (only when scope is 'lga') */
   filterLga: string | null;
+  /** When scope is 'other_state', the selected state name */
+  browseState: string | null;
+  /** Set a different state to browse */
+  setBrowseState: (state: string) => void;
 }
 
 const LocationContext = createContext<LocationContextType | undefined>(undefined);
 
 const SCOPE_STORAGE_KEY = "yrdly_location_scope";
+const BROWSE_STATE_KEY = "yrdly_browse_state";
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const { profile } = useAuth();
@@ -40,14 +43,19 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const userWard = (profile?.location as any)?.ward || null;
   const hasLocation = !!userState;
 
-  const [scope, setScopeState] = useState<LocationScope>("lga");
+  const [scope, setScopeRaw] = useState<LocationScope>("lga");
+  const [browseState, setBrowseStateRaw] = useState<string | null>(null);
 
-  // Restore persisted scope preference on mount
+  // Restore persisted preferences on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(SCOPE_STORAGE_KEY);
-      if (saved === "lga" || saved === "state") {
-        setScopeState(saved);
+      const savedScope = localStorage.getItem(SCOPE_STORAGE_KEY);
+      if (savedScope === "lga" || savedScope === "state" || savedScope === "other_state" || savedScope === "all") {
+        setScopeRaw(savedScope);
+      }
+      const savedBrowse = localStorage.getItem(BROWSE_STATE_KEY);
+      if (savedBrowse) {
+        setBrowseStateRaw(savedBrowse);
       }
     } catch {
       // localStorage not available
@@ -55,7 +63,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setScope = useCallback((newScope: LocationScope) => {
-    setScopeState(newScope);
+    setScopeRaw(newScope);
     try {
       localStorage.setItem(SCOPE_STORAGE_KEY, newScope);
     } catch {
@@ -63,23 +71,58 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const toggleScope = useCallback(() => {
-    setScope(scope === "lga" ? "state" : "lga");
-  }, [scope, setScope]);
+  const setBrowseState = useCallback((state: string) => {
+    setBrowseStateRaw(state);
+    setScopeRaw("other_state");
+    try {
+      localStorage.setItem(BROWSE_STATE_KEY, state);
+      localStorage.setItem(SCOPE_STORAGE_KEY, "other_state");
+    } catch {
+      // localStorage not available
+    }
+  }, []);
 
   // Build the display label
   let displayLabel = "Set Location";
-  if (hasLocation) {
-    if (scope === "lga" && userLga) {
-      displayLabel = `${userLga}, ${userState}`;
-    } else if (userState) {
-      displayLabel = `${userState} State`;
+  if (hasLocation || scope === "all") {
+    switch (scope) {
+      case "lga":
+        displayLabel = userLga ? `${userLga}, ${userState}` : `${userState} State`;
+        break;
+      case "state":
+        displayLabel = `${userState} State`;
+        break;
+      case "other_state":
+        displayLabel = browseState ? `${browseState} State` : "Select State";
+        break;
+      case "all":
+        displayLabel = "All Nigeria";
+        break;
     }
   }
 
   // Build the active filters
-  const filterState = hasLocation ? userState : null;
-  const filterLga = hasLocation && scope === "lga" ? userLga : null;
+  let filterState: string | null = null;
+  let filterLga: string | null = null;
+
+  switch (scope) {
+    case "lga":
+      filterState = hasLocation ? userState : null;
+      filterLga = hasLocation ? userLga : null;
+      break;
+    case "state":
+      filterState = hasLocation ? userState : null;
+      filterLga = null;
+      break;
+    case "other_state":
+      filterState = browseState;
+      filterLga = null;
+      break;
+    case "all":
+      filterState = null;
+      filterLga = null;
+      break;
+  }
 
   return (
     <LocationContext.Provider
@@ -89,11 +132,12 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         userWard,
         scope,
         setScope,
-        toggleScope,
         hasLocation,
         displayLabel,
         filterState,
         filterLga,
+        browseState,
+        setBrowseState,
       }}
     >
       {children}

@@ -240,7 +240,7 @@ export default function OnboardingWelcomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen pb-20 overflow-x-hidden" style={{ background: "#15181D", color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}>
       <OnboardingProgress />
       
       {/* Confetti Effect */}
@@ -274,57 +274,64 @@ export default function OnboardingWelcomePage() {
             </div>
           </div>
 
-          <Card className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <CardHeader className="text-center">
-              <div className={`mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center transition-all duration-1000 ${isVisible ? 'scale-100' : 'scale-0'}`}>
-                <Sparkles className={`w-8 h-8 text-primary transition-all duration-1000 ${isVisible ? 'animate-pulse' : ''}`} />
+          <div 
+            className={`transition-all duration-1000 rounded-2xl p-6 md:p-8 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            style={{
+              background: "#1E2126",
+              border: "1px solid rgba(255,255,255,0.05)",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
+            }}
+          >
+            <div className="text-center mb-6">
+              <div className={`mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center transition-all duration-1000 ${isVisible ? 'scale-100' : 'scale-0'}`} style={{ background: "rgba(56,142,60,0.1)" }}>
+                <Sparkles className={`w-8 h-8 transition-all duration-1000 ${isVisible ? 'animate-pulse' : ''}`} style={{ color: "#388E3C" }} />
               </div>
-              <CardTitle className="text-2xl">
+              <h2 className="text-2xl font-extrabold mb-2" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#fff" }}>
                 🎉 Welcome, {profile?.name}!
-              </CardTitle>
-              <CardDescription>
+              </h2>
+              <p style={{ color: "#899485", fontSize: "15px" }}>
                 Your profile is complete. Let&apos;s get you started.
-              </CardDescription>
-            </CardHeader>
+              </p>
+            </div>
           
-            <CardContent className="space-y-6">
+            <div className="space-y-6">
             {/* Personalized greeting */}
             <div className="text-center space-y-2">
-              <h3 className="font-semibold text-lg">
+              <h3 className="font-bold text-xl" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#e1e2e9" }}>
                 Welcome to {profile?.location?.state || 'your neighborhood'}!
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p style={{ color: "#899485" }}>
                 You&apos;re joining a vibrant community of neighbors.
               </p>
             </div>
 
             {/* Community Stats */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-3 bg-muted/30 rounded-lg">
-                <Users className="w-6 h-6 text-primary mx-auto mb-1" />
+              <div className="text-center p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                <Users className="w-6 h-6 mx-auto mb-2" style={{ color: "#388E3C" }} />
                 {statsLoading ? (
                   <div className="animate-pulse">
-                    <div className="h-6 bg-muted rounded mb-1"></div>
-                    <div className="h-3 bg-muted rounded w-3/4 mx-auto"></div>
+                    <div className="h-6 rounded mb-1" style={{ background: "rgba(255,255,255,0.1)" }}></div>
+                    <div className="h-3 rounded w-3/4 mx-auto" style={{ background: "rgba(255,255,255,0.1)" }}></div>
                   </div>
                 ) : (
                   <>
-                    <div className="text-lg font-bold">{communityStats.localUsers.toLocaleString()}</div>
-                    <div className="text-xs text-muted-foreground">Neighbors in {profile?.location?.state || 'your area'}</div>
+                    <div className="text-xl font-bold" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#fff" }}>{communityStats.localUsers.toLocaleString()}</div>
+                    <div className="text-xs" style={{ color: "#899485" }}>Neighbors in {profile?.location?.state || 'your area'}</div>
                   </>
                 )}
               </div>
-              <div className="text-center p-3 bg-muted/30 rounded-lg">
-                <Calendar className="w-6 h-6 text-primary mx-auto mb-1" />
+              <div className="text-center p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                <Calendar className="w-6 h-6 mx-auto mb-2" style={{ color: "#388E3C" }} />
                 {statsLoading ? (
                   <div className="animate-pulse">
-                    <div className="h-6 bg-muted rounded mb-1"></div>
-                    <div className="h-3 bg-muted rounded w-3/4 mx-auto"></div>
+                    <div className="h-6 rounded mb-1" style={{ background: "rgba(255,255,255,0.1)" }}></div>
+                    <div className="h-3 rounded w-3/4 mx-auto" style={{ background: "rgba(255,255,255,0.1)" }}></div>
                   </div>
                 ) : (
                   <>
-                    <div className="text-lg font-bold">{communityStats.activeToday.toLocaleString()}</div>
-                    <div className="text-xs text-muted-foreground">Active today</div>
+                    <div className="text-xl font-bold" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#fff" }}>{communityStats.activeToday.toLocaleString()}</div>
+                    <div className="text-xs" style={{ color: "#899485" }}>Active today</div>
                   </>
                 )}
               </div>
@@ -337,38 +344,48 @@ export default function OnboardingWelcomePage() {
               </AlertDescription>
             </Alert>
 
-            <div className="space-y-4">
-              <div className="text-center space-y-2">
-                <h3 className="font-semibold">What&apos;s Next?</h3>
-                <p className="text-sm text-muted-foreground">
+            <div className="space-y-4 pt-4">
+              <div className="text-center space-y-2 mb-6">
+                <h3 className="font-bold text-lg" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#fff" }}>What&apos;s Next?</h3>
+                <p style={{ color: "#899485", fontSize: "14px" }}>
                   Take a quick tour to learn about Yrdly&apos;s features, or jump right in and start exploring your neighborhood.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <Button 
+                <button 
                   onClick={handleTakeTour}
-                  className="w-full"
+                  className="w-full py-3.5 rounded-full flex items-center justify-center text-white font-bold transition-all active:scale-95"
+                  style={{
+                    background: "#388E3C",
+                    fontFamily: "Plus Jakarta Sans, sans-serif",
+                    boxShadow: "0 8px 20px rgba(56,142,60,0.25)"
+                  }}
                 >
                   Take a Quick Tour
                   <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+                </button>
                 
-                <Button 
+                <button 
                   onClick={handleSkipTourClick}
-                  variant="outline"
-                  className="w-full"
+                  className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95"
+                  style={{
+                    background: "transparent",
+                    color: "#899485",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    fontFamily: "Plus Jakarta Sans, sans-serif",
+                  }}
                 >
                   Skip Tour & Start Exploring
-                </Button>
+                </button>
               </div>
             </div>
 
-            <div className="text-center text-sm text-muted-foreground">
+            <div className="text-center text-sm" style={{ color: "#666" }}>
               <p>You can always take the tour later from your profile settings.</p>
             </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>

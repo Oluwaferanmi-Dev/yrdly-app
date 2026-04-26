@@ -282,7 +282,7 @@ export default function OnboardingProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen pb-20" style={{ background: "#15181D", color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}>
       <OnboardingProgress />
       <div className="flex items-center justify-center p-4 pt-8">
         <div className="max-w-md w-full space-y-6">
@@ -293,18 +293,27 @@ export default function OnboardingProfilePage() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-              <User className="w-8 h-8 text-primary" />
+        <div 
+          className="rounded-2xl p-6 md:p-8"
+          style={{
+            background: "#1E2126",
+            border: "1px solid rgba(255,255,255,0.05)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
+          }}
+        >
+          <div className="text-center mb-8">
+            <div className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "rgba(56,142,60,0.1)" }}>
+              <User className="w-8 h-8" style={{ color: "#388E3C" }} />
             </div>
-            <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
-            <CardDescription>
+            <h2 className="text-2xl font-extrabold mb-2" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#fff" }}>
+              Complete Your Profile
+            </h2>
+            <p style={{ color: "#899485", fontSize: "15px" }}>
               Help us connect you with your neighbors
-            </CardDescription>
-          </CardHeader>
+            </p>
+          </div>
           
-          <CardContent>
+          <div>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Username */}
               <div className="space-y-2">
@@ -520,11 +529,11 @@ export default function OnboardingProfilePage() {
 
 
               {/* Profile Preview */}
-              <div className="bg-muted/30 rounded-lg p-4 space-y-3">
-                <div className="text-sm font-medium text-muted-foreground">Profile Preview:</div>
+              <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                <div className="text-sm font-medium" style={{ color: "#a1a1aa" }}>Profile Preview:</div>
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                    <User className="w-6 h-6 text-primary" />
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: "rgba(56,142,60,0.1)" }}>
+                    <User className="w-6 h-6" style={{ color: "#388E3C" }} />
                   </div>
                   <div className="flex-1">
                     <div className="font-medium">
@@ -550,28 +559,38 @@ export default function OnboardingProfilePage() {
                 </AlertDescription>
               </Alert>
 
-              <div className="space-y-4">
-                <Button 
+              <div className="space-y-4 pt-4">
+                <button 
                   type="submit" 
                   disabled={isSubmitting || usernameAvailable === false || checkingUsername}
-                  className="w-full"
+                  className="w-full py-3.5 rounded-full flex items-center justify-center text-white font-bold transition-all active:scale-95 disabled:opacity-50"
+                  style={{
+                    background: "#388E3C",
+                    fontFamily: "Plus Jakarta Sans, sans-serif",
+                    boxShadow: "0 8px 20px rgba(56,142,60,0.25)"
+                  }}
                 >
                   {isSubmitting ? 'Setting up...' : checkingUsername ? 'Checking username...' : 'Complete Profile'}
-                </Button>
+                </button>
 
-                <Button 
+                <button 
                   type="button"
                   onClick={handleBackToVerification}
-                  variant="ghost"
-                  className="w-full"
+                  className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95"
+                  style={{
+                    background: "transparent",
+                    color: "#899485",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    fontFamily: "Plus Jakarta Sans, sans-serif",
+                  }}
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back to Email Verification
-                </Button>
+                </button>
               </div>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
         </div>
       </div>
     </div>
