@@ -88,8 +88,13 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Check availability ────────────────────────────────
-    const isAvailable = await ItemTrackingService.isItemAvailable(itemId);
-    if (!isAvailable) {
+    const { data: itemData, error: itemError } = await supabaseAdmin
+      .from("posts")
+      .select("is_sold")
+      .eq("id", itemId)
+      .single();
+
+    if (itemError || itemData?.is_sold) {
       return NextResponse.json(
         { error: "This item is no longer available" },
         { status: 409 }
