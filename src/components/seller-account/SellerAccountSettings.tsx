@@ -23,6 +23,7 @@ import {
   Clock, 
   AlertCircle,
   Smartphone,
+  Building2,
   Banknote
 } from 'lucide-react';
 import { AddAccountDialog } from './AddAccountDialog';

@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ArrowLeft, MapPin, User, HelpCircle, Lightbulb, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, MapPin, User, HelpCircle, Lightbulb, CheckCircle2, Sparkles } from 'lucide-react';
 import { YrdlyLogo } from '@/components/ui/yrdly-logo';
 import { useToast } from '@/hooks/use-toast';
 import { onboardingAnalytics } from '@/lib/onboarding-analytics';

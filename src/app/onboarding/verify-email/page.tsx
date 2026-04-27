@@ -388,7 +388,7 @@ function VerifyEmailContent() {
                 Secure Your <span style={{ color: "#388E3C" }}>Account</span>
               </h2>
               <p className="text-[#899485] text-lg font-medium">
-                We've sent a portal link to your inbox
+                We&apos;ve sent a portal link to your inbox
               </p>
             </div>
           </div>
@@ -473,7 +473,7 @@ function VerifyEmailContent() {
                         </>
                       ) : (
                         <>
-                          I've Verified My Email
+                          I&apos;ve Verified My Email
                           <CheckCircle className="w-6 h-6" />
                         </>
                       )}
