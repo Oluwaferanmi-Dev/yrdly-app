@@ -323,7 +323,7 @@ export default function OnboardingProfilePage() {
               <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "32px 32px" }} />
               
               <div className="absolute top-8 right-8">
-                <YrdlyLogo size={40} />
+                <YrdlyLogo />
               </div>
 
               <div className="h-full flex flex-col justify-between relative z-10">

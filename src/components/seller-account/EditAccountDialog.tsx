@@ -34,8 +34,6 @@ const editAccountFormSchema = z.object({
   // Mobile money fields
   provider: z.enum(['mtn', 'airtel', 'glo', '9mobile', 'opay', 'palmpay']).optional(),
   phoneNumber: z.string().optional(),
-  
-  phoneNumber: z.string().optional(),
 });
 
 type EditAccountFormValues = z.infer<typeof editAccountFormSchema>;
@@ -70,7 +68,6 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
         bankCode: details.bankCode || '',
         accountTypeBank: details.accountType || '',
         provider: details.provider || '',
-        phoneNumber: details.phoneNumber || '',
         phoneNumber: details.phoneNumber || '',
       });
     }
