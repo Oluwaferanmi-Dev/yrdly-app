@@ -22,9 +22,7 @@ import {
   XCircle, 
   Clock, 
   AlertCircle,
-  CreditCard,
   Smartphone,
-  Wallet,
   Banknote
 } from 'lucide-react';
 import { AddAccountDialog } from './AddAccountDialog';
@@ -108,11 +106,9 @@ export function SellerAccountSettings() {
   const getAccountIcon = (accountType: AccountType) => {
     switch (accountType) {
       case AccountType.BANK_ACCOUNT:
-        return <CreditCard className="h-5 w-5" />;
+        return <Building2 className="h-5 w-5" />;
       case AccountType.MOBILE_MONEY:
         return <Smartphone className="h-5 w-5" />;
-      case AccountType.DIGITAL_WALLET:
-        return <Wallet className="h-5 w-5" />;
       default:
         return <Banknote className="h-5 w-5" />;
     }
@@ -141,9 +137,6 @@ export function SellerAccountSettings() {
       case AccountType.MOBILE_MONEY:
         const mobileDetails = account.accountDetails as any;
         return `${mobileDetails.provider.toUpperCase()} - ${mobileDetails.phoneNumber}`;
-      case AccountType.DIGITAL_WALLET:
-        const walletDetails = account.accountDetails as any;
-        return `${walletDetails.provider} - ${walletDetails.email}`;
       default:
         return 'Unknown Account';
     }
@@ -159,18 +152,24 @@ export function SellerAccountSettings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Seller Account Settings</h2>
-          <p className="text-muted-foreground">
-            Manage your payout accounts and verification status
+    <div className="space-y-10 animate-in fade-in duration-700" style={{ fontFamily: "Raleway, sans-serif" }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-8 rounded-[40px] bg-[#1d2025]/60 border border-white/10 backdrop-blur-3xl shadow-2xl relative overflow-hidden">
+        {/* Decorative background glow */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#388E3C]/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+        
+        <div className="relative z-10">
+          <h2 className="text-3xl font-black text-white tracking-tight">Payout Settings</h2>
+          <p className="text-[#899485] font-medium mt-1">
+            Configure how you receive your neighborhood earnings.
           </p>
         </div>
-        <Button onClick={handleAddAccount}>
-          <Plus className="h-4 w-4 mr-2" />
+        <button 
+          onClick={handleAddAccount}
+          className="relative z-10 h-14 px-8 rounded-2xl bg-[#388E3C] text-white font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-[0_10px_20px_-5px_rgba(56,142,60,0.4)] group"
+        >
+          <Plus className="h-5 w-5 group-hover:rotate-90 transition-transform duration-300" />
           Add Account
-        </Button>
+        </button>
       </div>
 
       <Tabs defaultValue="accounts" className="space-y-4">
@@ -195,79 +194,82 @@ export function SellerAccountSettings() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {accounts.map((account) => (
-                <Card key={account.id}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        {getAccountIcon(account.accountType)}
+                <div 
+                  key={account.id}
+                  className="rounded-[32px] bg-[#1d2025]/40 border border-white/5 overflow-hidden transition-all hover:border-[#388E3C]/30 hover:bg-[#1d2025]/60 group"
+                >
+                  <div className="p-8 space-y-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#388E3C]/20 transition-colors">
+                          <div className="text-[#388E3C]">
+                            {getAccountIcon(account.accountType)}
+                          </div>
+                        </div>
                         <div>
-                          <CardTitle className="text-lg">
-                            {getAccountDisplayName(account)}
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-black text-white text-lg tracking-tight">
+                              {getAccountDisplayName(account)}
+                            </h4>
                             {account.isPrimary && (
-                              <Badge variant="outline" className="ml-2">Primary</Badge>
+                              <div className="px-2 py-0.5 rounded-full bg-[#388E3C]/20 border border-[#388E3C]/30 text-[10px] font-black text-[#388E3C] uppercase tracking-widest">
+                                Primary
+                              </div>
                             )}
-                          </CardTitle>
-                          <CardDescription>
-                            {account.accountType.replace('_', ' ').toUpperCase()}
-                          </CardDescription>
+                          </div>
+                          <p className="text-[10px] font-black text-[#899485] uppercase tracking-[0.2em] mt-0.5">
+                            {account.accountType.replace('_', ' ')}
+                          </p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        {getVerificationBadge(account.verificationStatus)}
-                        <div className="flex space-x-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditAccount(account)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {account.verificationStatus === VerificationStatus.PENDING && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleVerifyAccount(account)}
-                            >
-                              Verify
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteAccount(account.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditAccount(account)}
+                          className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[#899485] hover:bg-white/10 hover:text-white transition-all border border-white/10"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteAccount(account.id)}
+                          className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Verification Level:</span>
-                        <span className="capitalize">{account.verificationLevel.replace('_', ' ')}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Added:</span>
-                        <span>{account.createdAt.toLocaleDateString()}</span>
-                      </div>
-                      {account.verifiedAt && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Verified:</span>
-                          <span>{account.verifiedAt.toLocaleDateString()}</span>
+
+                    <div className="space-y-4 pt-6 border-t border-white/5">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-[#899485] uppercase tracking-widest opacity-60">Status</p>
+                          {getVerificationBadge(account.verificationStatus)}
                         </div>
+                        <div className="text-right space-y-1">
+                          <p className="text-[10px] font-black text-[#899485] uppercase tracking-widest opacity-60">Added</p>
+                          <p className="text-sm font-bold text-white">{account.createdAt.toLocaleDateString()}</p>
+                        </div>
+                      </div>
+
+                      {account.verificationStatus === VerificationStatus.PENDING && (
+                        <button
+                          onClick={() => handleVerifyAccount(account)}
+                          className="w-full h-12 rounded-xl bg-[#388E3C]/10 border border-[#388E3C]/30 text-[#388E3C] font-black text-xs uppercase tracking-widest hover:bg-[#388E3C] hover:text-white transition-all mt-2"
+                        >
+                          Verify Account
+                        </button>
                       )}
+
                       {account.rejectedReason && (
-                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-                          <strong>Rejection Reason:</strong> {account.rejectedReason}
+                        <div className="p-4 rounded-2xl bg-red-500/5 border border-red-500/20 text-xs text-red-400 font-medium">
+                          <span className="font-black text-red-500 uppercase tracking-widest block mb-1">Rejection Reason</span>
+                          {account.rejectedReason}
                         </div>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           )}

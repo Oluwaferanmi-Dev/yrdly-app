@@ -17,9 +17,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SellerAccountService } from '@/lib/seller-account-service';
-import { SellerAccount, AccountType, BankAccountDetails, MobileMoneyDetails, DigitalWalletDetails } from '@/types/seller-account';
+import { SellerAccount, AccountType, BankAccountDetails, MobileMoneyDetails } from '@/types/seller-account';
 import { useToast } from '@/hooks/use-toast';
-import { CreditCard, Smartphone, Wallet } from 'lucide-react';
+import { Building2, Smartphone } from 'lucide-react';
 import nigerianBanks from '@/data/nigerian-banks.json';
 
 const editAccountFormSchema = z.object({
@@ -35,9 +35,7 @@ const editAccountFormSchema = z.object({
   provider: z.enum(['mtn', 'airtel', 'glo', '9mobile', 'opay', 'palmpay']).optional(),
   phoneNumber: z.string().optional(),
   
-  // Digital wallet fields
-  walletProvider: z.enum(['paystack', 'flutterwave', 'interswitch']).optional(),
-  email: z.string().email().optional(),
+  phoneNumber: z.string().optional(),
 });
 
 type EditAccountFormValues = z.infer<typeof editAccountFormSchema>;
@@ -73,8 +71,7 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
         accountTypeBank: details.accountType || '',
         provider: details.provider || '',
         phoneNumber: details.phoneNumber || '',
-        walletProvider: details.provider || '',
-        email: details.email || '',
+        phoneNumber: details.phoneNumber || '',
       });
     }
   }, [account, open, form]);
@@ -86,7 +83,7 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
       setLoading(true);
       
       // Update account details based on account type
-      let updatedDetails: BankAccountDetails | MobileMoneyDetails | DigitalWalletDetails;
+      let updatedDetails: BankAccountDetails | MobileMoneyDetails;
       
       switch (account.accountType) {
         case AccountType.BANK_ACCOUNT:
@@ -106,14 +103,6 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
             phoneNumber: data.phoneNumber!,
             accountName: data.accountName || ''
           } as MobileMoneyDetails;
-          break;
-          
-        case AccountType.DIGITAL_WALLET:
-          updatedDetails = {
-            provider: data.walletProvider!,
-            email: data.email!,
-            accountName: data.accountName || ''
-          } as DigitalWalletDetails;
           break;
           
         default:
@@ -145,13 +134,11 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
   const getAccountTypeIcon = (type: AccountType) => {
     switch (type) {
       case AccountType.BANK_ACCOUNT:
-        return <CreditCard className="h-5 w-5" />;
+        return <Building2 className="h-5 w-5" />;
       case AccountType.MOBILE_MONEY:
         return <Smartphone className="h-5 w-5" />;
-      case AccountType.DIGITAL_WALLET:
-        return <Wallet className="h-5 w-5" />;
       default:
-        return <CreditCard className="h-5 w-5" />;
+        return <Building2 className="h-5 w-5" />;
     }
   };
 
@@ -159,217 +146,149 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            {getAccountTypeIcon(account.accountType)}
-            <span>Edit Account</span>
-          </DialogTitle>
-          <DialogDescription>
-            Update your account information
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent 
+        className="max-w-lg w-[95vw] p-0 border-none bg-transparent shadow-2xl overflow-hidden"
+        style={{ fontFamily: "Raleway, sans-serif" }}
+      >
+        <div 
+          className="relative w-full max-h-[90vh] overflow-y-auto rounded-[32px] p-8 space-y-8 animate-in zoom-in-95 duration-300"
+          style={{ 
+            background: "var(--card)",
+            border: "1px solid rgba(255,255,255,0.05)"
+          }}
+        >
+          {/* Decorative Header Gradient */}
+          <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[#388E3C]/10 to-transparent pointer-events-none" />
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Bank Account Fields */}
-          {account.accountType === AccountType.BANK_ACCOUNT && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <CreditCard className="h-5 w-5" />
-                  <span>Bank Account Details</span>
-                </CardTitle>
-                <CardDescription>
-                  Update your Nigerian bank account information
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bankCode">Bank</Label>
-                    <Select 
-                      value={form.watch('bankCode')} 
-                      onValueChange={(value) => form.setValue('bankCode', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your bank" />
-                      </SelectTrigger>
-                      <SelectContent>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-2xl bg-[#388E3C]/20 flex items-center justify-center">
+                  {getAccountTypeIcon(account.accountType)}
+                </div>
+                <h2 className="text-2xl font-black text-white tracking-tight">Edit Account</h2>
+              </div>
+            </div>
+            <p className="text-sm text-[#899485] font-medium leading-relaxed">
+              Update your payout details to ensure smooth transactions.
+            </p>
+          </div>
+
+          <form onSubmit={form.handleSubmit(onSubmit)} className="relative z-10 space-y-8">
+            <div className="space-y-6 pt-4 border-t border-white/5">
+              {account.accountType === AccountType.BANK_ACCOUNT && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Bank</label>
+                      <select 
+                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        value={form.watch('bankCode')}
+                        onChange={(e) => form.setValue('bankCode', e.target.value)}
+                      >
+                        <option value="" className="bg-[#1e2025]">Select...</option>
                         {nigerianBanks.map((bank) => (
-                          <SelectItem key={bank.code} value={bank.code}>
-                            {bank.name}
-                          </SelectItem>
+                          <option key={bank.code} value={bank.code} className="bg-[#1e2025]">{bank.name}</option>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Type</label>
+                      <select 
+                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        value={form.watch('accountTypeBank')}
+                        onChange={(e) => form.setValue('accountTypeBank', e.target.value as any)}
+                      >
+                        <option value="savings" className="bg-[#1e2025]">Savings</option>
+                        <option value="current" className="bg-[#1e2025]">Current</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="accountTypeBank">Account Type</Label>
-                    <Select 
-                      value={form.watch('accountTypeBank')} 
-                      onValueChange={(value) => form.setValue('accountTypeBank', value as any)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select account type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="savings">Savings</SelectItem>
-                        <SelectItem value="current">Current</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accountNumber">Account Number</Label>
-                  <Input
-                    id="accountNumber"
-                    placeholder="Enter your account number"
-                    {...form.register('accountNumber')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accountName">Account Name</Label>
-                  <Input
-                    id="accountName"
-                    placeholder="Enter account holder name"
-                    {...form.register('accountName')}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Mobile Money Fields */}
-          {account.accountType === AccountType.MOBILE_MONEY && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Smartphone className="h-5 w-5" />
-                  <span>Mobile Money Details</span>
-                </CardTitle>
-                <CardDescription>
-                  Update your mobile money account information
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="provider">Provider</Label>
-                    <Select 
-                      value={form.watch('provider')} 
-                      onValueChange={(value) => form.setValue('provider', value as any)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mtn">MTN</SelectItem>
-                        <SelectItem value="airtel">Airtel</SelectItem>
-                        <SelectItem value="glo">Glo</SelectItem>
-                        <SelectItem value="9mobile">9mobile</SelectItem>
-                        <SelectItem value="opay">Opay</SelectItem>
-                        <SelectItem value="palmpay">PalmPay</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phoneNumber">Phone Number</Label>
-                    <Input
-                      id="phoneNumber"
-                      placeholder="08012345678"
-                      {...form.register('phoneNumber')}
+                    <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Account Number</label>
+                    <input
+                      className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                      placeholder="0123456789"
+                      {...form.register('accountNumber')}
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accountName">Account Name</Label>
-                  <Input
-                    id="accountName"
-                    placeholder="Enter account holder name"
-                    {...form.register('accountName')}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              )}
 
-          {/* Digital Wallet Fields */}
-          {account.accountType === AccountType.DIGITAL_WALLET && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Wallet className="h-5 w-5" />
-                  <span>Digital Wallet Details</span>
-                </CardTitle>
-                <CardDescription>
-                  Update your digital wallet information
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="walletProvider">Provider</Label>
-                    <Select 
-                      value={form.watch('walletProvider')} 
-                      onValueChange={(value) => form.setValue('walletProvider', value as any)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="paystack">Paystack</SelectItem>
-                        <SelectItem value="flutterwave">Flutterwave</SelectItem>
-                        <SelectItem value="interswitch">Interswitch</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter wallet email"
-                      {...form.register('email')}
-                    />
+              {account.accountType === AccountType.MOBILE_MONEY && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Provider</label>
+                      <select 
+                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        value={form.watch('provider')}
+                        onChange={(e) => form.setValue('provider', e.target.value as any)}
+                      >
+                        <option value="mtn" className="bg-[#1e2025]">MTN</option>
+                        <option value="airtel" className="bg-[#1e2025]">Airtel</option>
+                        <option value="opay" className="bg-[#1e2025]">Opay</option>
+                        <option value="palmpay" className="bg-[#1e2025]">PalmPay</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Phone</label>
+                      <input
+                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                        placeholder="08012345678"
+                        {...form.register('phoneNumber')}
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accountName">Account Name</Label>
-                  <Input
-                    id="accountName"
-                    placeholder="Enter account holder name"
-                    {...form.register('accountName')}
+              )}
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Account Holder Name</label>
+                <input
+                  className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                  placeholder="e.g. John Doe"
+                  {...form.register('accountName')}
+                />
+              </div>
+
+              {/* Primary Checkbox */}
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    {...form.register('isPrimary')}
                   />
+                  <div className="w-5 h-5 rounded border border-white/20 bg-white/5 peer-checked:bg-[#388E3C] peer-checked:border-[#388E3C] transition-all" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity">
+                    <div className="w-2 h-2 rounded-full bg-white" />
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <span className="text-xs font-bold text-[#899485] group-hover:text-white transition-colors">Set as primary payout method</span>
+              </label>
+            </div>
 
-          {/* Primary Account Option */}
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="isPrimary"
-              {...form.register('isPrimary')}
-              className="rounded border-gray-300"
-            />
-            <Label htmlFor="isPrimary">Set as primary payout account</Label>
-          </div>
-
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Updating...' : 'Update Account'}
-            </Button>
-          </div>
-        </form>
+            {/* Actions */}
+            <div className="flex flex-col gap-3 pt-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-14 rounded-2xl bg-[#388E3C] text-white font-black text-sm transition-all active:scale-95 disabled:opacity-50 disabled:grayscale"
+                style={{ boxShadow: "0 10px 20px -5px rgba(56,142,60,0.3)" }}
+              >
+                {loading ? 'Updating Account...' : 'Save Changes'}
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="w-full h-12 rounded-2xl bg-white/5 text-[#899485] font-black text-xs uppercase tracking-widest hover:text-white transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

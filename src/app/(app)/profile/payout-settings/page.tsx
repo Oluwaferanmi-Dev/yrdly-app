@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabase";
-import { ArrowLeft, Building2, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Building2, CheckCircle, AlertCircle, Loader2, Sparkles } from "lucide-react";
 
 /* ── Design tokens ─────────────────────────────────── */
 const BG     = "#101418";
@@ -138,74 +138,102 @@ export default function PayoutSettingsPage() {
   }
 
   return (
-    <div className="min-h-dvh" style={{ background: BG, color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}>
+    <div className="min-h-dvh pb-20" style={{ background: "var(--background)", color: "var(--foreground)", fontFamily: "Raleway, sans-serif" }}>
       {/* Header */}
       <header
-        className="fixed top-0 w-full z-50 flex items-center gap-4 px-6 h-16"
-        style={{ background: "rgba(21,24,29,0.85)", backdropFilter: "blur(20px)" }}
+        className="fixed top-0 w-full z-50 flex items-center border-b border-white/5"
+        style={{ 
+          background: "rgba(13,15,17,0.85)", 
+          backdropFilter: "blur(20px)",
+          height: "calc(64px + env(safe-area-inset-top))",
+          paddingTop: "env(safe-area-inset-top)"
+        }}
       >
-        <button onClick={() => router.back()} className="hover:opacity-70 transition-opacity">
-          <ArrowLeft className="w-5 h-5" style={{ color: GREEN_L }} />
-        </button>
-        <h1 style={{ fontFamily: "Pacifico, cursive", fontSize: 22, color: "#fff" }}>
-          Payout Settings
-        </h1>
+        <div className="w-full max-w-2xl mx-auto px-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => router.back()} 
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-90"
+            >
+              <ArrowLeft className="w-5 h-5" style={{ color: "#388E3C" }} />
+            </button>
+            <h1 className="text-xl font-black text-white tracking-tight">
+              Payout Settings
+            </h1>
+          </div>
+          <div className="w-10 h-10 rounded-full bg-[#388E3C]/10 border border-[#388E3C]/20 flex items-center justify-center">
+            <Building2 className="w-5 h-5 text-[#388E3C]" />
+          </div>
+        </div>
       </header>
 
-      <main className="pt-24 pb-12 px-6 max-w-lg mx-auto space-y-8">
+      <main className="pt-[calc(84px+env(safe-area-inset-top))] px-6 max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Info banner */}
         <section
-          className="rounded-[11px] p-4 flex gap-3 items-start"
-          style={{ background: "rgba(56,142,60,0.1)", border: `1px solid ${GREEN}` }}
+          className="rounded-[24px] p-5 flex gap-4 items-start relative overflow-hidden"
+          style={{ background: "rgba(56,142,60,0.05)", border: "1px solid rgba(56,142,60,0.2)" }}
         >
-          <Building2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: GREEN_L }} />
-          <div>
-            <p className="text-sm font-medium" style={{ fontFamily: "Raleway, sans-serif" }}>
-              When you sell an item, the buyer&apos;s payment is split automatically:
+          <div className="absolute top-0 right-0 p-4 opacity-5">
+            <Building2 size={80} className="text-[#388E3C]" />
+          </div>
+          <div className="w-10 h-10 rounded-2xl bg-[#388E3C]/20 flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-5 h-5 text-[#388E3C]" />
+          </div>
+          <div className="relative z-10 space-y-1">
+            <p className="text-sm font-black text-white">
+              Smart Payout Splitting
             </p>
-            <p className="text-xs mt-1" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
-              97% goes directly to your bank account, 3% platform fee.
+            <p className="text-xs leading-relaxed text-[#899485] font-medium">
+              When you sell, <span className="text-white font-bold">97%</span> goes directly to you. A tiny <span className="text-white font-bold">3%</span> platform fee keeps the neighborhood running.
             </p>
           </div>
         </section>
 
         {/* Existing account display */}
         {existing && !showForm && (
-          <section className="rounded-[11px] p-6 space-y-5" style={{ background: CARD }}>
-            <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(110,223,81,0.15)" }}
-              >
-                <CheckCircle className="w-5 h-5" style={{ color: GREEN_L }} />
+          <section 
+            className="rounded-[32px] p-8 space-y-6 relative overflow-hidden group" 
+            style={{ 
+              background: "var(--card)",
+              border: "1px solid rgba(255,255,255,0.05)",
+              boxShadow: "0 20px 40px -12px rgba(0,0,0,0.5)"
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#388E3C]/10 flex items-center justify-center border border-[#388E3C]/20">
+                  <CheckCircle className="w-6 h-6 text-[#388E3C]" />
+                </div>
+                <div>
+                  <h3 className="font-black text-white">Bank Linked</h3>
+                  <p className="text-xs font-bold text-[#388E3C] uppercase tracking-widest">Verified Account</p>
+                </div>
               </div>
-              <div>
-                <p className="font-bold text-white">Bank Account Linked</p>
-                <p className="text-xs" style={{ color: DIM }}>
-                  Ready to receive payments
-                </p>
+              <div className="text-[10px] font-black text-[#899485] uppercase tracking-tighter opacity-40">
+                Primary
               </div>
             </div>
-            <div className="space-y-3 mt-4">
+
+            <div className="space-y-4 pt-4 border-t border-white/5">
               <div className="flex justify-between items-center">
-                <span className="text-sm" style={{ color: MUTED }}>Account Name</span>
-                <span className="text-sm font-medium text-white">{existing.accountName}</span>
+                <span className="text-xs font-black uppercase tracking-widest text-[#899485]">Account Holder</span>
+                <span className="text-sm font-bold text-white">{existing.accountName}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm" style={{ color: MUTED }}>Account Number</span>
-                <span className="text-sm font-medium text-white">
-                  ****{existing.accountNumber.slice(-4)}
+                <span className="text-xs font-black uppercase tracking-widest text-[#899485]">Account Number</span>
+                <span className="text-sm font-bold text-white tracking-widest">
+                  •••• •••• {existing.accountNumber.slice(-4)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm" style={{ color: MUTED }}>Bank</span>
-                <span className="text-sm font-medium text-white">{getBankName(existing.bankCode)}</span>
+                <span className="text-xs font-black uppercase tracking-widest text-[#899485]">Financial Institution</span>
+                <span className="text-sm font-bold text-white">{getBankName(existing.bankCode)}</span>
               </div>
             </div>
+
             <button
               onClick={() => setShowForm(true)}
-              className="w-full mt-4 py-3 rounded-full text-sm font-bold transition-all"
-              style={{ background: CARDH, color: MUTED, fontFamily: "Raleway, sans-serif" }}
+              className="w-full h-14 rounded-2xl text-xs font-black uppercase tracking-widest text-white transition-all border border-white/5 bg-white/[0.03] hover:bg-white/[0.08] active:scale-95"
             >
               Update Bank Details
             </button>
@@ -214,97 +242,117 @@ export default function PayoutSettingsPage() {
 
         {/* Bank details form */}
         {showForm && (
-          <section className="rounded-[11px] p-6 space-y-5" style={{ background: CARD }}>
-            <h2 className="font-bold text-white" style={{ fontFamily: "Raleway, sans-serif" }}>
-              {existing ? "Update" : "Add"} Bank Account
-            </h2>
-
-            {/* Bank selection */}
-            <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-widest font-bold" style={{ color: DIM }}>
-                Bank
-              </label>
-              <select
-                value={bankCode}
-                onChange={(e) => setBankCode(e.target.value)}
-                className="w-full rounded-[11px] p-3 text-sm focus:outline-none"
-                style={{ background: CARDH, color: "#e1e2e9", border: "1px solid rgba(64,73,61,0.2)" }}
-              >
-                <option value="">Select your bank</option>
-                {NIGERIAN_BANKS.map((bank) => (
-                  <option key={bank.code} value={bank.code}>
-                    {bank.name}
-                  </option>
-                ))}
-              </select>
+          <section 
+            className="rounded-[32px] p-8 space-y-8 animate-in zoom-in-95 duration-300" 
+            style={{ 
+              background: "var(--card)",
+              border: "1px solid rgba(255,255,255,0.05)",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)"
+            }}
+          >
+            <div className="space-y-1">
+              <h2 className="text-xl font-black text-white">
+                {existing ? "Update" : "Add"} Bank Account
+              </h2>
+              <p className="text-xs text-[#899485] font-medium">
+                Enter your local bank details to receive payments.
+              </p>
             </div>
 
-            {/* Account number */}
-            <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-widest font-bold" style={{ color: DIM }}>
-                Account Number
-              </label>
-              <input
-                type="text"
-                value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                placeholder="0123456789"
-                maxLength={10}
-                className="w-full rounded-[11px] p-3 text-sm focus:outline-none"
-                style={{ background: CARDH, color: "#e1e2e9", border: "1px solid rgba(64,73,61,0.2)" }}
-              />
-            </div>
+            <div className="space-y-6">
+              {/* Bank selection */}
+              <div className="space-y-3">
+                <label className="text-[10px] uppercase tracking-[0.2em] font-black text-[#899485] ml-1">
+                  Select Bank
+                </label>
+                <div className="relative">
+                  <select
+                    value={bankCode}
+                    onChange={(e) => setBankCode(e.target.value)}
+                    className="w-full h-14 rounded-2xl p-4 text-base bg-white/5 border border-white/10 focus:border-[#388E3C]/50 focus:outline-none transition-all appearance-none cursor-pointer text-white font-medium"
+                  >
+                    <option value="" className="bg-[#1E2126]">Choose institution...</option>
+                    {NIGERIAN_BANKS.map((bank) => (
+                      <option key={bank.code} value={bank.code} className="bg-[#1E2126]">
+                        {bank.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                    <ArrowLeft className="w-4 h-4 rotate-[270deg]" />
+                  </div>
+                </div>
+              </div>
 
-            {/* Account name */}
-            <div className="space-y-2">
-              <label className="text-[11px] uppercase tracking-widest font-bold" style={{ color: DIM }}>
-                Account Name
-              </label>
-              <input
-                type="text"
-                value={accountName}
-                onChange={(e) => setAccountName(e.target.value)}
-                placeholder="John Doe"
-                className="w-full rounded-[11px] p-3 text-sm focus:outline-none"
-                style={{ background: CARDH, color: "#e1e2e9", border: "1px solid rgba(64,73,61,0.2)" }}
-              />
+              {/* Account number */}
+              <div className="space-y-3">
+                <label className="text-[10px] uppercase tracking-[0.2em] font-black text-[#899485] ml-1">
+                  Account Number
+                </label>
+                <input
+                  type="text"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                  placeholder="0123456789"
+                  maxLength={10}
+                  className="w-full h-14 rounded-2xl p-4 text-base bg-white/5 border border-white/10 focus:border-[#388E3C]/50 focus:outline-none transition-all text-white font-medium placeholder:text-white/10"
+                />
+              </div>
+
+              {/* Account name */}
+              <div className="space-y-3">
+                <label className="text-[10px] uppercase tracking-[0.2em] font-black text-[#899485] ml-1">
+                  Account Holder Name
+                </label>
+                <input
+                  type="text"
+                  value={accountName}
+                  onChange={(e) => setAccountName(e.target.value)}
+                  placeholder="e.g. John Doe"
+                  className="w-full h-14 rounded-2xl p-4 text-base bg-white/5 border border-white/10 focus:border-[#388E3C]/50 focus:outline-none transition-all text-white font-medium placeholder:text-white/10"
+                />
+              </div>
             </div>
 
             {/* Submit */}
-            <button
-              onClick={handleSubmit}
-              disabled={loading || !bankCode || !accountNumber || !accountName}
-              className="w-full py-4 rounded-full font-bold text-sm transition-all active:scale-95"
-              style={{
-                background: bankCode && accountNumber && accountName && !loading ? GREEN : CARDH,
-                color: bankCode && accountNumber && accountName && !loading ? "#fff" : DIM,
-                fontFamily: "Raleway, sans-serif",
-                cursor: bankCode && accountNumber && accountName && !loading ? "pointer" : "not-allowed",
-              }}
-            >
-              {loading ? "Linking Account…" : "Link Bank Account"}
-            </button>
-
-            {existing && (
+            <div className="space-y-4">
               <button
-                onClick={() => setShowForm(false)}
-                className="w-full text-center text-sm py-2"
-                style={{ color: DIM }}
+                onClick={handleSubmit}
+                disabled={loading || !bankCode || !accountNumber || !accountName}
+                className="w-full h-16 rounded-[24px] flex items-center justify-center text-white text-lg font-black transition-all active:scale-95 disabled:opacity-50 disabled:grayscale group relative overflow-hidden"
+                style={{
+                  background: "#388E3C",
+                  boxShadow: "0 12px 24px -6px rgba(56,142,60,0.4)"
+                }}
               >
-                Cancel
+                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                <span className="relative z-10">
+                  {loading ? (
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Linking...
+                    </div>
+                  ) : "Securely Link Account"}
+                </span>
               </button>
-            )}
+
+              {existing && (
+                <button
+                  onClick={() => setShowForm(false)}
+                  className="w-full h-12 rounded-2xl text-xs font-black uppercase tracking-widest text-[#899485] hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </section>
         )}
 
-        {/* Security note */}
-        <div
-          className="flex items-center gap-2 px-4 py-3 rounded-full"
-          style={{ background: "rgba(39,42,47,0.3)", border: "1px solid rgba(64,73,61,0.15)" }}
-        >
-          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: MUTED }} />
-          <p className="text-[10px] uppercase tracking-wider" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
-            Your bank details are encrypted and stored securely
+        {/* Security Note */}
+        <div className="flex items-center justify-center gap-3 px-6 py-4 rounded-3xl bg-white/[0.02] border border-white/5">
+          <AlertCircle className="w-4 h-4 text-[#899485]" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#899485]">
+            Encrypted & PCI-DSS Compliant Storage
           </p>
         </div>
       </main>

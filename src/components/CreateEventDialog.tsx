@@ -242,7 +242,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
 
   const formContent = (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 min-h-0">
           <div className="space-y-4 max-w-4xl mx-auto">
             <FormField
@@ -405,9 +405,11 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
     return (
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetTrigger asChild>{children ? children : <Trigger />}</SheetTrigger>
-        <SheetContent side="bottom" className="p-0 flex flex-col h-[90vh] max-h-screen rounded-t-[11px] border border-[#BBBBBB] border-b-0 bg-[#1E2126] text-white [&>button]:text-white [&>button]:opacity-90">
+        <SheetContent side="bottom" className="p-0 flex flex-col h-[92vh] max-h-[92vh] rounded-t-[32px] border border-white/10 bg-[#1E2126] text-white overflow-hidden">
           {headerBlock}
-          {formContent}
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            {formContent}
+          </div>
         </SheetContent>
       </Sheet>
     );
@@ -418,9 +420,11 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
       {externalOpen === undefined && (
         <DialogTrigger asChild>{children ? children : <Trigger />}</DialogTrigger>
       )}
-      <DialogContent className={cn("sm:max-w-[626px] p-0 flex flex-col max-h-[90vh] border border-[#BBBBBB] rounded-[11px] bg-[#1E2126] text-white gap-0 [&>button]:text-white [&>button]:right-4 [&>button]:top-4")}>
+      <DialogContent className={cn("sm:max-w-[626px] p-0 flex flex-col h-[90vh] max-h-[90vh] border border-white/10 rounded-[24px] bg-[#1E2126] text-white gap-0 overflow-hidden")}>
         {headerBlock}
-        {formContent}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {formContent}
+        </div>
       </DialogContent>
     </Dialog>
   );

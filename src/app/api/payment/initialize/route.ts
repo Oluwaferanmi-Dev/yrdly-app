@@ -88,16 +88,37 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Check availability ────────────────────────────────
+    console.log("[PaymentInit] Checking availability for itemId:", itemId);
+    
     const { data: itemData, error: itemError } = await supabaseAdmin
       .from("posts")
-      .select("is_sold")
+      .select("id, is_sold, title, price, user_id")
       .eq("id", itemId)
       .single();
 
-    if (itemError || itemData?.is_sold) {
+    if (itemError) {
+      console.error("[PaymentInit] Database error or item not found:", itemError);
       return NextResponse.json(
-        { error: "This item is no longer available" },
+        { error: "Item not found or database error. Please try again." },
+        { status: 404 }
+      );
+    }
+
+    console.log("[PaymentInit] itemData:", JSON.stringify(itemData));
+
+    // 2. Check if item is already sold
+    if (itemData?.is_sold) {
+      return NextResponse.json(
+        { error: "Item is no longer available." },
         { status: 409 }
+      );
+    }
+
+    // 3. Check if user is buying their own item (using selected user_id)
+    if (itemData.user_id === authUser.id) {
+      return NextResponse.json(
+        { error: "You cannot buy your own item." },
+        { status: 400 }
       );
     }
 

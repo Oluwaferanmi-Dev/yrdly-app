@@ -366,235 +366,173 @@ function VerifyEmailContent() {
   }
 
   return (
-    <div className="min-h-screen pb-20 overflow-x-hidden" style={{ background: "#15181D", color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}>
+    <div className="min-h-screen pb-20 overflow-x-hidden" style={{ background: "#0d0f11", color: "#e1e2e9", fontFamily: "Raleway, sans-serif" }}>
       <OnboardingProgress />
-      <div className="flex items-center justify-center p-4 pt-8">
-        <div className="max-w-md w-full space-y-6">
-        {/* Logo */}
-        <div className="text-center">
-          <div className="mx-auto mb-4">
-            <YrdlyLogo />
-          </div>
-        </div>
+      
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[150px] opacity-20" style={{ background: "radial-gradient(circle, #388E3C 0%, transparent 70%)" }} />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[150px] opacity-10" style={{ background: "radial-gradient(circle, #388E3C 0%, transparent 70%)" }} />
+      </div>
 
-        <div 
-          className={`transition-all duration-500 rounded-2xl p-6 md:p-8 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-          style={{
-            background: "#1E2126",
-            border: "1px solid rgba(255,255,255,0.05)",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
-          }}
-        >
-          <div className="text-center mb-6">
-            <div 
-              className={`mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center transition-all duration-1000 ${isVisible ? 'scale-100' : 'scale-0'}`}
-              style={{ background: "rgba(56,142,60,0.1)" }}
-              role="img"
-              aria-label="Email verification icon"
-            >
-              <Mail className={`w-8 h-8 transition-all duration-1000 ${isVisible ? 'animate-pulse' : ''}`} style={{ color: "#388E3C" }} />
-            </div>
-            <h2 className="text-2xl font-extrabold mb-2" id="email-verification-title" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#fff" }}>
-              Check Your Email
-            </h2>
-            <div style={{ color: "#899485", fontSize: "15px" }}>
-              We&apos;ve sent a verification link to <strong style={{ color: "#e1e2e9" }}>{email}</strong>
-              {lastSentTime && timeSinceSent > 0 && (
-                <span className="block text-sm mt-1" aria-live="polite">
-                  Sent {formatTimeSinceSent(timeSinceSent)}
-                </span>
-              )}
-            </div>
-            
-            {/* Screen reader instructions */}
-            <div id="verification-instructions" className="sr-only">
-              To verify your email, check your inbox for a message from Yrdly and click the verification link. 
-              If you don&apos;t see the email, check your spam folder. You can also use the buttons below to open your email app or resend the verification email.
-            </div>
-          </div>
+      <div className="relative z-10 flex flex-col items-center justify-center p-4 pt-12 md:pt-20">
+        <div className="max-w-md w-full space-y-8">
           
-          <div className="space-y-6">
-            {error ? (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  {error}
-                </AlertDescription>
-              </Alert>
-            ) : (
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Click the verification link in your email to continue setting up your account.
-                </AlertDescription>
-              </Alert>
-            )}
+          {/* Logo & Header */}
+          <div className="text-center space-y-6">
+            <div className="flex justify-center transform hover:scale-105 transition-transform duration-500">
+              <YrdlyLogo />
+            </div>
+            <div className="space-y-3">
+              <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
+                Secure Your <span style={{ color: "#388E3C" }}>Account</span>
+              </h2>
+              <p className="text-[#899485] text-lg font-medium">
+                We've sent a portal link to your inbox
+              </p>
+            </div>
+          </div>
 
-            {/* Tips Carousel */}
-            <div className="rounded-xl p-4 text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }} role="region" aria-label="Helpful tips">
-              <div className="text-sm mb-2" style={{ color: "#a1a1aa" }}>💡 Tip:</div>
-              <div 
-                className="text-sm font-medium transition-all duration-500"
-                style={{ color: "#e1e2e9" }}
-                aria-live="polite"
-                aria-label={`Tip ${currentTip + 1} of ${tips.length}: ${tips[currentTip]}`}
-              >
-                {tips[currentTip]}
+          <div 
+            className={`transition-all duration-700 rounded-[40px] overflow-hidden backdrop-blur-xl ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+            style={{
+              background: "rgba(30, 33, 38, 0.7)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "0 40px 100px -20px rgba(0,0,0,0.6)"
+            }}
+          >
+            <div className="p-8 md:p-10 space-y-8">
+              <div className="text-center space-y-4">
+                <div 
+                  className="mx-auto w-24 h-24 rounded-[32px] flex items-center justify-center relative group"
+                  style={{ background: "rgba(56,142,60,0.1)", border: "1px solid rgba(56,142,60,0.2)" }}
+                >
+                  <div className="absolute inset-0 bg-[#388E3C] blur-2xl opacity-20 group-hover:opacity-40 transition-opacity duration-500 rounded-full" />
+                  <Mail className="w-10 h-10 text-[#388E3C] relative z-10 animate-bounce" style={{ animationDuration: '3s' }} />
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="text-xl font-bold text-white px-4">
+                    Verification Link Sent
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm font-bold text-[#388E3C]">
+                      {email}
+                    </span>
+                    {lastSentTime && timeSinceSent > 0 && (
+                      <span className="text-[10px] uppercase tracking-widest font-black text-[#899485]/60 mt-1">
+                        Dispatched {formatTimeSinceSent(timeSinceSent)}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-4" role="group" aria-labelledby="email-verification-title">
-              <button 
-                onClick={handleCheckVerification}
-                disabled={isChecking}
-                className="w-full py-3.5 rounded-full flex items-center justify-center text-white font-bold transition-all active:scale-95 disabled:opacity-50"
-                style={{
-                  background: "#388E3C",
-                  fontFamily: "Plus Jakarta Sans, sans-serif",
-                  boxShadow: "0 8px 20px rgba(56,142,60,0.25)"
-                }}
-                aria-describedby="verification-instructions"
-                aria-label={isChecking ? "Checking email verification status" : "Confirm that you have verified your email"}
-              >
-                {isChecking ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 mr-2 animate-spin" aria-hidden="true" />
-                    Checking...
-                  </>
+              <div className="space-y-6">
+                {error ? (
+                  <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-200 font-medium leading-relaxed">{error}</p>
+                  </div>
                 ) : (
-                  <>
-                    <CheckCircle className="w-5 h-5 mr-2" aria-hidden="true" />
-                    I&apos;ve Verified My Email
-                  </>
-                )}
-              </button>
-
-              <button 
-                onClick={handleOpenEmailApp}
-                className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95"
-                style={{
-                  background: "transparent",
-                  color: "#899485",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  fontFamily: "Plus Jakarta Sans, sans-serif",
-                }}
-                aria-label="Open your email app to check for verification email"
-              >
-                <Mail className="w-5 h-5 mr-2" aria-hidden="true" />
-                Open Email App
-              </button>
-
-              <button 
-                onClick={handleResendVerification}
-                disabled={isResending || cooldownTime > 0}
-                className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95 disabled:opacity-50"
-                style={{
-                  background: "transparent",
-                  color: "#899485",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  fontFamily: "Plus Jakarta Sans, sans-serif",
-                }}
-              >
-                {isResending ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                    Sending...
-                  </>
-                ) : cooldownTime > 0 ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 mr-2" />
-                    Resend in {cooldownTime}s
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-5 h-5 mr-2" />
-                    Resend Verification Email
-                  </>
-                )}
-              </button>
-
-              <button 
-                onClick={handleBackToSignup}
-                className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95"
-                style={{
-                  background: "transparent",
-                  color: "#899485",
-                  border: "none",
-                  fontFamily: "Plus Jakarta Sans, sans-serif",
-                }}
-              >
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                Back to Login
-              </button>
-            </div>
-
-            {error && (
-              <div className="space-y-4">
-                {/* Manual verification link */}
-                {error.includes('not configured') && (
-                  <div className="bg-muted/30 rounded-lg p-4">
-                    <div className="text-sm font-medium text-muted-foreground mb-2">
-                      Manual Verification Link:
-                    </div>
-                    <div className="bg-background border rounded-lg p-3 font-mono text-xs break-all">
-                      {BrevoEmailService.generateManualVerificationLink(user?.id || '', email)}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-2">
-                      Copy this link and open it in your browser to verify your email.
-                    </div>
+                  <div className="p-4 rounded-2xl bg-[#388E3C]/10 border border-[#388E3C]/20 flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-[#388E3C] shrink-0 mt-0.5" />
+                    <p className="text-sm text-[#e1e2e9] font-medium leading-relaxed">
+                      Tap the magic link in your email to instantly verify your residency.
+                    </p>
                   </div>
                 )}
 
-                <div className="space-y-3 mt-6">
+                {/* Interactive Tips */}
+                <div className="relative overflow-hidden rounded-[24px] bg-[#0d0f11]/40 border border-white/5 p-5">
+                   <div className="absolute top-0 left-0 w-1 h-full bg-[#388E3C]" />
+                   <div className="space-y-2">
+                      <div className="text-[10px] uppercase tracking-[0.2em] font-black text-[#388E3C]">Pro Tip</div>
+                      <div className="text-sm font-bold text-white/90 leading-relaxed animate-in fade-in slide-in-from-right-2 duration-500" key={currentTip}>
+                        {tips[currentTip]}
+                      </div>
+                   </div>
+                </div>
+
+                <div className="space-y-4">
                   <button 
-                    onClick={handleRetry}
-                    className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95 disabled:opacity-50"
+                    onClick={handleCheckVerification}
+                    disabled={isChecking}
+                    className="w-full h-16 rounded-[22px] flex items-center justify-center text-white text-lg font-black transition-all active:scale-[0.98] disabled:opacity-50 relative group overflow-hidden"
                     style={{
-                      background: "transparent",
-                      color: "#899485",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      fontFamily: "Plus Jakarta Sans, sans-serif",
+                      background: "#388E3C",
+                      boxShadow: "0 15px 30px -5px rgba(56,142,60,0.4)"
                     }}
-                    disabled={isResending}
                   >
-                    {isResending ? (
-                      <>
-                        <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
-                        Retrying...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-5 h-5 mr-2" />
-                        Try Again
-                      </>
-                    )}
+                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                    <span className="relative z-10 flex items-center gap-3">
+                      {isChecking ? (
+                        <>
+                          <RefreshCw className="w-6 h-6 animate-spin" />
+                          Checking Status...
+                        </>
+                      ) : (
+                        <>
+                          I've Verified My Email
+                          <CheckCircle className="w-6 h-6" />
+                        </>
+                      )}
+                    </span>
                   </button>
-                  
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <button 
+                      onClick={handleOpenEmailApp}
+                      className="h-14 rounded-[20px] flex items-center justify-center font-bold text-white bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95 text-sm gap-2"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Open Inbox
+                    </button>
+
+                    <button 
+                      onClick={handleResendVerification}
+                      disabled={isResending || cooldownTime > 0}
+                      className="h-14 rounded-[20px] flex items-center justify-center font-bold text-[#899485] bg-transparent border border-white/5 hover:border-white/10 transition-all active:scale-95 text-sm gap-2 disabled:opacity-50"
+                    >
+                      {isResending ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : cooldownTime > 0 ? (
+                        <span>{cooldownTime}s</span>
+                      ) : (
+                        <RefreshCw className="w-4 h-4" />
+                      )}
+                      Resend
+                    </button>
+                  </div>
+
                   <button 
-                    onClick={handleContactSupport}
-                    className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95"
-                    style={{
-                      background: "transparent",
-                      color: "#899485",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      fontFamily: "Plus Jakarta Sans, sans-serif",
-                    }}
+                    onClick={handleBackToSignup}
+                    className="w-full h-12 flex items-center justify-center font-bold text-[#899485]/60 hover:text-[#899485] transition-all text-sm gap-2 mt-4"
                   >
-                    Contact Support
+                    <ArrowLeft className="w-4 h-4" />
+                    Return to Login
                   </button>
                 </div>
               </div>
-            )}
-
-            <div className="text-center text-sm" style={{ color: "#666" }}>
-              <p>Didn&apos;t receive the email? Check your spam folder.</p>
-              <p>Still having trouble? Contact support.</p>
             </div>
           </div>
-        </div>
+
+          {/* Support Section */}
+          <div className="flex flex-col items-center gap-4 py-4">
+            <p className="text-[10px] text-[#899485]/40 font-black uppercase tracking-[0.3em]">
+              Encrypted • Community Verified
+            </p>
+            <button 
+              onClick={handleContactSupport}
+              className="text-xs font-black text-[#388E3C] hover:underline underline-offset-4 tracking-widest uppercase"
+            >
+              Need assistance? Contact Support
+            </button>
+          </div>
         </div>
       </div>
     </div>
+
   );
 }
 

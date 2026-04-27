@@ -282,315 +282,314 @@ export default function OnboardingProfilePage() {
   }
 
   return (
-    <div className="min-h-screen pb-20" style={{ background: "#15181D", color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}>
+    <div className="min-h-screen pb-20 overflow-x-hidden" style={{ background: "#0d0f11", color: "#e1e2e9", fontFamily: "Raleway, sans-serif" }}>
       <OnboardingProgress />
-      <div className="flex items-center justify-center p-4 pt-8">
-        <div className="max-w-md w-full space-y-6">
-        {/* Logo */}
-        <div className="text-center">
-          <div className="mx-auto mb-4">
-            <YrdlyLogo />
-          </div>
-        </div>
+      
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[150px] opacity-20 transition-all duration-1000" style={{ background: "radial-gradient(circle, #388E3C 0%, transparent 70%)" }} />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[150px] opacity-10 transition-all duration-1000" style={{ background: "radial-gradient(circle, #388E3C 0%, transparent 70%)" }} />
+      </div>
 
-        <div 
-          className="rounded-2xl p-6 md:p-8"
-          style={{
-            background: "#1E2126",
-            border: "1px solid rgba(255,255,255,0.05)",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
-          }}
-        >
-          <div className="text-center mb-8">
-            <div className="mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "rgba(56,142,60,0.1)" }}>
-              <User className="w-8 h-8" style={{ color: "#388E3C" }} />
-            </div>
-            <h2 className="text-2xl font-extrabold mb-2" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#fff" }}>
-              Complete Your Profile
-            </h2>
-            <p style={{ color: "#899485", fontSize: "15px" }}>
-              Help us connect you with your neighbors
-            </p>
-          </div>
+      <div className="relative z-10 flex flex-col items-center justify-center p-4 pt-12 md:pt-20">
+        <div className="max-w-lg w-full space-y-12">
           
-          <div>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Username */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="username">Username</Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="w-4 h-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Choose a unique username that others can use to find you. You can use letters, numbers, and underscores.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                
-                <div className="relative">
-                  <Input
-                    id="username"
-                    placeholder="Choose a unique username"
-                    {...form.register('username')}
-                    onFocus={() => setShowSuggestions(usernameSuggestions.length > 0)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                    maxLength={20}
-                  />
-                  
-                  {/* Character counter */}
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    {usernameValue.length}/20
-                  </div>
-                </div>
-
-                {/* Username suggestions */}
-                {showSuggestions && usernameSuggestions.length > 0 && (
-                  <div className="bg-muted/30 rounded-lg p-3 space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Lightbulb className="w-4 h-4" />
-                      <span>Suggestions based on your name:</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {usernameSuggestions.map((suggestion, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => handleUseSuggestion(suggestion)}
-                          className="px-3 py-1 text-xs bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors"
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {form.formState.errors.username && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.username.message}
-                  </p>
-                )}
-                {checkingUsername && (
-                  <div className="text-sm text-muted-foreground flex items-center gap-2">
-                    <div className="w-3 h-3 border-2 border-muted-foreground border-t-transparent rounded-full animate-spin"></div>
-                    Checking availability...
-                  </div>
-                )}
-                {usernameError && (
-                  <p className="text-sm text-destructive">{usernameError}</p>
-                )}
-                {usernameAvailable === true && !checkingUsername && (
-                  <p className="text-sm text-green-600 flex items-center gap-1">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Username is available
-                  </p>
-                )}
-                {usernameAvailable === false && !checkingUsername && (
-                  <p className="text-sm text-destructive flex items-center gap-1">
-                    <span>&times;</span> Username is already taken
-                  </p>
-                )}
-              </div>
-
-              {/* Full Name */}
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  placeholder="Enter your full name"
-                  {...form.register('fullName')}
-                />
-                {form.formState.errors.fullName && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.fullName.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Location */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <Label className="text-base font-medium">Location</Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <HelpCircle className="w-4 h-4 text-muted-foreground" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Your location helps us connect you with neighbors in your area and show you relevant posts and events.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-
-                {/* State */}
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Select
-                    value={form.watch('location.state')}
-                    onValueChange={handleStateChange}
-                    disabled={locationLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={locationLoading ? "Loading states..." : "Select your state"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {states.filter((s) => s != null && s !== '').map((state) => (
-                        <SelectItem key={state} value={state}>
-                          {state}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {locationError && (
-                    <p className="text-sm text-destructive">{locationError}</p>
-                  )}
-                  {form.formState.errors.location?.state && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.location.state.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* LGA */}
-                <div className="space-y-2">
-                  <Label htmlFor="lga">Local Government Area</Label>
-                  <Select
-                    value={form.watch('location.lga')}
-                    onValueChange={handleLgaChange}
-                    disabled={!form.watch('location.state') || locationLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={
-                        !form.watch('location.state') 
-                          ? "Select state first" 
-                          : locationLoading 
-                            ? "Loading LGAs..." 
-                            : "Select your LGA"
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {lgas.filter((l) => l != null && l !== '').map((lga) => (
-                        <SelectItem key={lga} value={lga}>
-                          {lga}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.location?.lga && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.location.lga.message}
-                    </p>
-                  )}
-                </div>
-
-                {/* Ward (Optional) */}
-                <div className="space-y-2">
-                  <Label htmlFor="ward">Ward (Optional)</Label>
-                  <Select
-                    value={form.watch('location.ward') || undefined}
-                    onValueChange={(value) => form.setValue('location.ward', value)}
-                    disabled={!form.watch('location.lga') || locationLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={
-                        !form.watch('location.lga') 
-                          ? "Select LGA first" 
-                          : locationLoading 
-                            ? "Loading wards..." 
-                            : "Select your ward"
-                      } />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {wards.filter((w) => w != null && w !== '').map((ward) => (
-                        <SelectItem key={ward} value={ward}>
-                          {ward}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Address (Optional) */}
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address (Optional)</Label>
-                  <Input
-                    id="address"
-                    placeholder="Enter your specific address"
-                    {...form.register('location.address')}
-                  />
-                </div>
-              </div>
-
-
-              {/* Profile Preview */}
-              <div className="rounded-xl p-4 space-y-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                <div className="text-sm font-medium" style={{ color: "#a1a1aa" }}>Profile Preview:</div>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: "rgba(56,142,60,0.1)" }}>
-                    <User className="w-6 h-6" style={{ color: "#388E3C" }} />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium">
-                      {form.watch('fullName') || 'Your Name'}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      @{form.watch('username') || 'username'}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {form.watch('location.state') && form.watch('location.lga') 
-                        ? `${form.watch('location.lga')}, ${form.watch('location.state')}`
-                        : 'Your Location'
-                      }
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Alert>
-                <AlertDescription>
-                  Your location helps us connect you with neighbors in your area. 
-                  This information is used to show you relevant posts and events.
-                </AlertDescription>
-              </Alert>
-
-              <div className="space-y-4 pt-4">
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting || usernameAvailable === false || checkingUsername}
-                  className="w-full py-3.5 rounded-full flex items-center justify-center text-white font-bold transition-all active:scale-95 disabled:opacity-50"
-                  style={{
-                    background: "#388E3C",
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                    boxShadow: "0 8px 20px rgba(56,142,60,0.25)"
-                  }}
-                >
-                  {isSubmitting ? 'Setting up...' : checkingUsername ? 'Checking username...' : 'Complete Profile'}
-                </button>
-
-                <button 
-                  type="button"
-                  onClick={handleBackToVerification}
-                  className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95"
-                  style={{
-                    background: "transparent",
-                    color: "#899485",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                  }}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Email Verification
-                </button>
-              </div>
-            </form>
+          {/* Logo & Header */}
+          <div className="text-center space-y-6">
+            <div className="flex justify-center transform hover:scale-105 transition-transform duration-500">
+              <YrdlyLogo />
+            </div>
+            <div className="space-y-3">
+              <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
+                Refine Your <span style={{ color: "#388E3C" }}>Presence</span>
+              </h2>
+              <p className="text-[#899485] text-lg font-medium">
+                Your neighborhood identity starts here
+              </p>
+            </div>
           </div>
-        </div>
+
+          {/* Premium Digital ID Preview */}
+          <div className="relative group perspective mx-auto w-full max-w-md px-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-[#388E3C]/30 to-transparent rounded-[32px] blur-3xl opacity-40 group-hover:opacity-60 transition-opacity duration-1000" />
+            <div 
+              className="relative aspect-[1.6/1] w-full rounded-[32px] p-8 border border-white/10 overflow-hidden transition-all duration-700 shadow-2xl backdrop-blur-2xl"
+              style={{ 
+                background: "linear-gradient(135deg, rgba(30, 33, 38, 0.8) 0%, rgba(13, 15, 17, 0.8) 100%)",
+                boxShadow: "inset 0 0 60px rgba(255,255,255,0.03)"
+              }}
+            >
+              {/* Card Holographic Pattern */}
+              <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "32px 32px" }} />
+              
+              <div className="absolute top-8 right-8">
+                <YrdlyLogo size={40} />
+              </div>
+
+              <div className="h-full flex flex-col justify-between relative z-10">
+                <div className="flex items-start gap-6">
+                  <div className="relative">
+                    <div className="w-24 h-24 rounded-3xl bg-[#0d0f11] border border-white/10 flex items-center justify-center overflow-hidden shadow-2xl relative group/avatar">
+                      <div className="absolute inset-0 bg-[#388E3C] opacity-0 group-hover/avatar:opacity-10 transition-opacity" />
+                      <User className="w-12 h-12 text-[#388E3C]/40 group-hover/avatar:scale-110 transition-transform duration-500" />
+                    </div>
+                    <div className="absolute -bottom-2 -right-2 w-9 h-9 rounded-full bg-[#388E3C] border-[4px] border-[#1e2126] flex items-center justify-center shadow-lg animate-pulse">
+                      <CheckCircle2 className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 py-1">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#388E3C]/10 border border-[#388E3C]/20">
+                      <Sparkles className="w-3 h-3 text-[#388E3C]" />
+                      <span className="text-[10px] uppercase tracking-[0.2em] font-black text-[#388E3C]">Citizen One</span>
+                    </div>
+                    <div className="text-3xl font-black text-white leading-none tracking-tight">
+                      {form.watch('fullName') || 'Identity Name'}
+                    </div>
+                    <div className="text-base font-bold text-[#899485]">
+                      @{form.watch('username') || 'handle'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-end justify-between border-t border-white/5 pt-6">
+                  <div className="space-y-2">
+                    <div className="text-[10px] uppercase tracking-widest font-black text-[#899485] opacity-60 ml-0.5">Primary Sector</div>
+                    <div className="flex items-center gap-2.5 text-white font-black">
+                      <div className="w-8 h-8 rounded-lg bg-[#388E3C]/10 flex items-center justify-center">
+                        <MapPin className="w-4 h-4 text-[#388E3C]" />
+                      </div>
+                      <span className="text-base">{form.watch('location.lga') || 'Sector Unassigned'}</span>
+                    </div>
+                  </div>
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <div className="text-[10px] uppercase tracking-widest font-black text-[#899485] opacity-60">Verification</div>
+                    <div className="px-3 py-1 rounded-lg bg-[#388E3C]/10 text-[#388E3C] text-[11px] font-black border border-[#388E3C]/20">
+                      ACTIVE RESIDENT
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div 
+            className="rounded-[48px] overflow-hidden backdrop-blur-2xl"
+            style={{
+              background: "rgba(30, 33, 38, 0.75)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "0 60px 120px -30px rgba(0,0,0,0.7)"
+            }}
+          >
+            <div className="p-10 md:p-12 space-y-12">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-12">
+                {/* Form Fields */}
+                <div className="space-y-10">
+                  {/* Name Input */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                      <Label className="text-[11px] uppercase tracking-[0.25em] font-black text-[#899485]">Full Legal Name</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-4 h-4 text-[#899485]/40 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-[#1d2025] border-white/10 text-white font-bold p-4 rounded-2xl max-w-[200px] shadow-2xl backdrop-blur-xl">
+                            Used for identity verification and official neighborhood transactions.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <div className="relative group">
+                      <div className="absolute inset-0 bg-[#388E3C] rounded-[24px] opacity-0 group-focus-within:opacity-5 blur-xl transition-opacity" />
+                      <Input
+                        placeholder="e.g. Tolu Oyelowo"
+                        className="h-18 rounded-[24px] bg-[#0d0f11]/60 border-white/10 focus:border-[#388E3C]/50 transition-all text-xl font-bold px-8"
+                        {...form.register('fullName')}
+                      />
+                    </div>
+                    {form.formState.errors.fullName && (
+                      <p className="text-sm text-red-400 font-bold px-2 animate-in fade-in slide-in-from-top-1">
+                        {form.formState.errors.fullName.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Username Input */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
+                      <Label className="text-[11px] uppercase tracking-[0.25em] font-black text-[#899485]">Neighborhood Handle</Label>
+                    </div>
+                    
+                    <div className="relative group">
+                      <div className="absolute inset-0 bg-[#388E3C] rounded-[24px] opacity-0 group-focus-within:opacity-5 blur-xl transition-opacity" />
+                      <div className="absolute left-8 top-1/2 -translate-y-1/2 text-[#388E3C] font-black text-2xl">@</div>
+                      <Input
+                        placeholder="username"
+                        className="h-18 pl-16 pr-16 rounded-[24px] bg-[#0d0f11]/60 border-white/10 focus:border-[#388E3C]/50 transition-all text-xl font-bold"
+                        {...form.register('username')}
+                        onFocus={() => setShowSuggestions(usernameSuggestions.length > 0)}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                        maxLength={20}
+                      />
+                      <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                         {checkingUsername && <div className="w-6 h-6 border-3 border-[#388E3C] border-t-transparent rounded-full animate-spin" />}
+                         {!checkingUsername && usernameAvailable === true && (
+                           <div className="w-8 h-8 rounded-full bg-[#388E3C]/10 flex items-center justify-center border border-[#388E3C]/20">
+                             <CheckCircle2 className="w-5 h-5 text-[#388E3C]" />
+                           </div>
+                         )}
+                         {!checkingUsername && usernameAvailable === false && (
+                           <div className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20">
+                             <span className="text-red-500 font-black text-xl">×</span>
+                           </div>
+                         )}
+                      </div>
+                    </div>
+
+                    {usernameAvailable === false && !checkingUsername && (
+                      <p className="text-sm text-red-400 font-bold px-2">This handle is already claimed by another neighbor</p>
+                    )}
+
+                    {showSuggestions && usernameSuggestions.length > 0 && (
+                      <div className="bg-[#0d0f11]/80 rounded-[32px] p-6 space-y-5 border border-white/10 animate-in fade-in zoom-in-95 duration-500 backdrop-blur-3xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.8)]">
+                        <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.25em] font-black text-[#388E3C]">
+                          <div className="w-10 h-10 rounded-xl bg-[#388E3C]/10 flex items-center justify-center border border-[#388E3C]/20">
+                            <Lightbulb className="w-5 h-5" />
+                          </div>
+                          <span>Recommended Handles</span>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          {usernameSuggestions.map((suggestion, index) => (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => handleUseSuggestion(suggestion)}
+                              className="px-6 py-3 text-sm bg-white/5 text-white font-bold rounded-2xl border border-white/10 hover:border-[#388E3C]/40 hover:bg-[#388E3C]/10 transition-all hover:scale-105 active:scale-95"
+                            >
+                              @{suggestion}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Location Grid */}
+                  <div className="space-y-8 pt-8 border-t border-white/5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-[18px] flex items-center justify-center bg-[#388E3C]/10 border border-[#388E3C]/20">
+                          <MapPin className="w-6 h-6 text-[#388E3C]" />
+                        </div>
+                        <h3 className="text-2xl font-black text-white tracking-tight">Geographic Sector</h3>
+                      </div>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-black text-[#899485] cursor-default">
+                              REQUIRED
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-[#1d2025] border-white/10 text-white font-bold p-3 rounded-xl shadow-2xl backdrop-blur-xl">
+                            Used to connect you with relevant local neighborhood content.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <Label className="text-[11px] uppercase tracking-widest font-black text-[#899485] ml-1">State / Region</Label>
+                        <Select value={form.watch('location.state')} onValueChange={handleStateChange}>
+                          <SelectTrigger className="h-16 rounded-[22px] bg-[#0d0f11]/60 border-white/10 text-lg font-bold px-6 focus:ring-[#388E3C]/30">
+                            <SelectValue placeholder="Select State" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1d2025] border-white/10 max-h-[300px] rounded-2xl shadow-2xl backdrop-blur-3xl">
+                            {states.filter(s => s).map(state => (
+                              <SelectItem key={state} value={state} className="focus:bg-[#388E3C] focus:text-white font-bold py-3 px-6 rounded-xl cursor-pointer transition-colors">{state}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-3">
+                        <Label className="text-[11px] uppercase tracking-widest font-black text-[#899485] ml-1">Local Gov Area</Label>
+                        <Select 
+                          value={form.watch('location.lga')} 
+                          onValueChange={handleLgaChange}
+                          disabled={!form.watch('location.state')}
+                        >
+                          <SelectTrigger className="h-16 rounded-[22px] bg-[#0d0f11]/60 border-white/10 text-lg font-bold px-6 focus:ring-[#388E3C]/30 disabled:opacity-30">
+                            <SelectValue placeholder="Select LGA" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#1d2025] border-white/10 max-h-[300px] rounded-2xl shadow-2xl backdrop-blur-3xl">
+                            {lgas.filter(l => l).map(lga => (
+                              <SelectItem key={lga} value={lga} className="focus:bg-[#388E3C] focus:text-white font-bold py-3 px-6 rounded-xl cursor-pointer transition-colors">{lga}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6 pt-10">
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting || usernameAvailable === false || checkingUsername}
+                    className="w-full h-20 rounded-[28px] flex items-center justify-center text-white text-2xl font-black transition-all active:scale-[0.98] disabled:opacity-50 disabled:grayscale overflow-hidden relative group"
+                    style={{
+                      background: "#388E3C",
+                      boxShadow: "0 25px 50px -12px rgba(56,142,60,0.5)"
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                    <span className="relative z-10 flex items-center gap-4">
+                      {isSubmitting ? (
+                        <>
+                          <div className="w-7 h-7 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                          Syncing Identity...
+                        </>
+                      ) : (
+                        <>
+                          Finalize Citizenship
+                          <ArrowLeft className="w-7 h-7 rotate-180" />
+                        </>
+                      )}
+                    </span>
+                  </button>
+
+                  <div className="flex items-center justify-center gap-6">
+                    <button 
+                      type="button"
+                      onClick={handleBackToVerification}
+                      className="text-sm font-black text-[#899485] hover:text-white transition-all uppercase tracking-widest border-b border-transparent hover:border-[#388E3C] pb-1"
+                    >
+                      Security Settings
+                    </button>
+                    <div className="w-1 h-1 rounded-full bg-white/10" />
+                    <button 
+                      type="button"
+                      className="text-sm font-black text-[#899485]/40 cursor-not-allowed uppercase tracking-widest"
+                    >
+                      Cancel Setup
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-6 py-8">
+             <div className="flex items-center gap-3 text-[11px] font-black text-[#388E3C] uppercase tracking-[0.3em]">
+               <CheckCircle2 className="w-4 h-4" />
+               Identity Encryption Active
+             </div>
+             <p className="text-center text-[10px] text-[#899485]/40 font-black uppercase tracking-[0.4em] max-w-xs leading-loose">
+               Securely connecting 10k+ verified neighbors across Nigeria
+             </p>
+          </div>
         </div>
       </div>
     </div>
