@@ -7,8 +7,7 @@ import {
   VerificationDocument,
   PayoutRequest,
   BankAccountDetails,
-  MobileMoneyDetails,
-  DigitalWalletDetails
+  MobileMoneyDetails
 } from '@/types/seller-account';
 
 export class SellerAccountService {
@@ -20,7 +19,7 @@ export class SellerAccountService {
   static async saveAccount(
     userId: string,
     accountType: AccountType,
-    accountDetails: BankAccountDetails | MobileMoneyDetails | DigitalWalletDetails,
+    accountDetails: BankAccountDetails | MobileMoneyDetails,
     isPrimary: boolean = false
   ): Promise<string> {
     try {

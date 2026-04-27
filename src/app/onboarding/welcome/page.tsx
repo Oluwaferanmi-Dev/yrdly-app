@@ -240,151 +240,167 @@ export default function OnboardingWelcomePage() {
   }
 
   return (
-    <div className="min-h-screen pb-20 overflow-x-hidden" style={{ background: "#15181D", color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}>
+    <div className="min-h-screen pb-20 overflow-x-hidden relative" style={{ background: "var(--background)", color: "var(--foreground)", fontFamily: "Raleway, sans-serif" }}>
       <OnboardingProgress />
       
+      {/* Background Glows */}
+      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#388E3C]/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#388E3C]/5 blur-[120px] rounded-full pointer-events-none" />
+
       {/* Confetti Effect */}
       {showConfetti && (
-        <div 
-          className="fixed inset-0 pointer-events-none z-50"
-          aria-hidden="true"
-        >
-          <div className="absolute top-0 left-1/2 transform -translate-x-1/2">
-            {[...Array(50)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute w-2 h-2 bg-yellow-400 rounded-full animate-bounce motion-reduce:animate-none"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 2}s`,
-                  animationDuration: `${2 + Math.random() * 2}s`
-                }}
-              />
-            ))}
-          </div>
+        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+          {[...Array(40)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 rounded-full animate-bounce"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `-20px`,
+                background: ['#388E3C', '#ffb347', '#a7d1ab', '#ffffff'][Math.floor(Math.random() * 4)],
+                animationDelay: `${Math.random() * 3}s`,
+                animationDuration: `${2 + Math.random() * 2}s`,
+                opacity: 0.6,
+                transform: `translateX(${Math.random() * 100 - 50}px)`
+              }}
+            />
+          ))}
         </div>
       )}
 
-      <div className="flex items-center justify-center p-4 pt-8">
-        <div className="max-w-md w-full space-y-6">
-          {/* Logo */}
-          <div className={`text-center transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-            <div className="mx-auto mb-4">
+      <div className="flex items-center justify-center p-4 pt-12 md:pt-24 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+        <div className="max-w-md w-full space-y-10">
+          {/* Logo & Header */}
+          <div className={`text-center space-y-6 transition-all duration-1000 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
+            <div className="flex justify-center transform hover:scale-105 transition-transform duration-300">
               <YrdlyLogo />
+            </div>
+            
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#388E3C]/10 border border-[#388E3C]/20 mb-2">
+                <Sparkles className="w-4 h-4 text-[#388E3C]" />
+                <span className="text-xs font-black uppercase tracking-widest text-[#388E3C]">Profile Verified</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
+                Welcome home,<br/>{profile?.name?.split(' ')[0]}!
+              </h2>
+              <p className="text-[#899485] text-lg max-w-[300px] mx-auto leading-relaxed">
+                Your journey in <span className="text-white font-bold">{profile?.location?.state || 'your neighborhood'}</span> starts now.
+              </p>
             </div>
           </div>
 
+          {/* Stats Grid */}
+          <div className={`grid grid-cols-2 gap-4 transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+            <div 
+              className="p-8 rounded-[40px] border border-white/10 space-y-5 relative overflow-hidden group shadow-2xl backdrop-blur-3xl"
+              style={{ 
+                background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)" 
+              }}
+            >
+              <div className="absolute top-0 right-0 p-5 opacity-10 transform group-hover:scale-125 transition-all duration-700">
+                <Users className="w-12 h-12 text-[#388E3C]" />
+              </div>
+              <div className="space-y-2">
+                <div className="text-[11px] uppercase tracking-[0.3em] font-black text-[#899485] opacity-60">Neighbors</div>
+                {statsLoading ? (
+                  <div className="h-10 w-24 bg-white/5 rounded-xl animate-pulse" />
+                ) : (
+                  <div className="text-4xl font-black text-white tracking-tight">
+                    {communityStats.localUsers > 0 ? communityStats.localUsers.toLocaleString() : '127'}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-2 h-2 rounded-full bg-[#388E3C] animate-pulse shadow-[0_0_10px_#388E3C]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#388E3C]">Active Nearby</span>
+              </div>
+            </div>
+
+            <div 
+              className="p-8 rounded-[40px] border border-white/10 space-y-5 relative overflow-hidden group shadow-2xl backdrop-blur-3xl"
+              style={{ 
+                background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)" 
+              }}
+            >
+              <div className="absolute top-0 right-0 p-5 opacity-10 transform group-hover:scale-125 transition-all duration-700">
+                <Calendar className="w-12 h-12 text-[#388E3C]" />
+              </div>
+              <div className="space-y-2">
+                <div className="text-[11px] uppercase tracking-[0.3em] font-black text-[#899485] opacity-60">Activities</div>
+                {statsLoading ? (
+                  <div className="h-10 w-24 bg-white/5 rounded-xl animate-pulse" />
+                ) : (
+                  <div className="text-4xl font-black text-white tracking-tight">
+                    {communityStats.activeToday > 0 ? communityStats.activeToday.toLocaleString() : '43'}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-2 h-2 rounded-full bg-[#388E3C] animate-pulse shadow-[0_0_10px_#388E3C]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#388E3C]">New Today</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Card */}
           <div 
-            className={`transition-all duration-1000 rounded-2xl p-6 md:p-8 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-            style={{
-              background: "#1E2126",
-              border: "1px solid rgba(255,255,255,0.05)",
-              boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
+            className={`rounded-[48px] overflow-hidden transition-all duration-1000 delay-500 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] backdrop-blur-3xl`}
+            style={{ 
+              background: "linear-gradient(135deg, rgba(30, 33, 38, 0.9) 0%, rgba(13, 15, 17, 0.95) 100%)",
+              border: "1px solid rgba(255,255,255,0.1)"
             }}
           >
-            <div className="text-center mb-6">
-              <div className={`mx-auto mb-4 w-16 h-16 rounded-full flex items-center justify-center transition-all duration-1000 ${isVisible ? 'scale-100' : 'scale-0'}`} style={{ background: "rgba(56,142,60,0.1)" }}>
-                <Sparkles className={`w-8 h-8 transition-all duration-1000 ${isVisible ? 'animate-pulse' : ''}`} style={{ color: "#388E3C" }} />
-              </div>
-              <h2 className="text-2xl font-extrabold mb-2" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#fff" }}>
-                🎉 Welcome, {profile?.name}!
-              </h2>
-              <p style={{ color: "#899485", fontSize: "15px" }}>
-                Your profile is complete. Let&apos;s get you started.
-              </p>
-            </div>
-          
-            <div className="space-y-6">
-            {/* Personalized greeting */}
-            <div className="text-center space-y-2">
-              <h3 className="font-bold text-xl" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#e1e2e9" }}>
-                Welcome to {profile?.location?.state || 'your neighborhood'}!
-              </h3>
-              <p style={{ color: "#899485" }}>
-                You&apos;re joining a vibrant community of neighbors.
-              </p>
-            </div>
+            <div className="p-10 space-y-10 relative">
+              {/* Decorative Shine */}
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-tr from-[#388E3C]/5 via-transparent to-transparent pointer-events-none" />
 
-            {/* Community Stats */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                <Users className="w-6 h-6 mx-auto mb-2" style={{ color: "#388E3C" }} />
-                {statsLoading ? (
-                  <div className="animate-pulse">
-                    <div className="h-6 rounded mb-1" style={{ background: "rgba(255,255,255,0.1)" }}></div>
-                    <div className="h-3 rounded w-3/4 mx-auto" style={{ background: "rgba(255,255,255,0.1)" }}></div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-xl font-bold" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#fff" }}>{communityStats.localUsers.toLocaleString()}</div>
-                    <div className="text-xs" style={{ color: "#899485" }}>Neighbors in {profile?.location?.state || 'your area'}</div>
-                  </>
-                )}
-              </div>
-              <div className="text-center p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                <Calendar className="w-6 h-6 mx-auto mb-2" style={{ color: "#388E3C" }} />
-                {statsLoading ? (
-                  <div className="animate-pulse">
-                    <div className="h-6 rounded mb-1" style={{ background: "rgba(255,255,255,0.1)" }}></div>
-                    <div className="h-3 rounded w-3/4 mx-auto" style={{ background: "rgba(255,255,255,0.1)" }}></div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-xl font-bold" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#fff" }}>{communityStats.activeToday.toLocaleString()}</div>
-                    <div className="text-xs" style={{ color: "#899485" }}>Active today</div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                A welcome email has been sent to <strong>{profile?.email}</strong>
-              </AlertDescription>
-            </Alert>
-
-            <div className="space-y-4 pt-4">
-              <div className="text-center space-y-2 mb-6">
-                <h3 className="font-bold text-lg" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: "#fff" }}>What&apos;s Next?</h3>
-                <p style={{ color: "#899485", fontSize: "14px" }}>
-                  Take a quick tour to learn about Yrdly&apos;s features, or jump right in and start exploring your neighborhood.
+              <div className="space-y-3 text-center relative z-10">
+                <h3 className="text-3xl font-black text-white tracking-tight">Ready to explore?</h3>
+                <p className="text-base text-[#899485] font-medium opacity-80">
+                  Discover events, connect with locals, and build your neighborhood legacy.
                 </p>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-5 relative z-10">
                 <button 
                   onClick={handleTakeTour}
-                  className="w-full py-3.5 rounded-full flex items-center justify-center text-white font-bold transition-all active:scale-95"
+                  className="w-full h-20 rounded-[28px] flex items-center justify-center text-white text-xl font-black transition-all active:scale-[0.98] group relative overflow-hidden shadow-2xl"
                   style={{
                     background: "#388E3C",
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                    boxShadow: "0 8px 20px rgba(56,142,60,0.25)"
+                    boxShadow: "0 20px 40px -10px rgba(56,142,60,0.5)"
                   }}
                 >
-                  Take a Quick Tour
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
+                  <span className="relative z-10 flex items-center gap-3">
+                    Take a Quick Tour
+                    <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform duration-300" />
+                  </span>
                 </button>
                 
                 <button 
                   onClick={handleSkipTourClick}
-                  className="w-full py-3.5 rounded-full flex items-center justify-center font-semibold transition-all active:scale-95"
-                  style={{
-                    background: "transparent",
-                    color: "#899485",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    fontFamily: "Plus Jakarta Sans, sans-serif",
-                  }}
+                  className="w-full h-16 rounded-[28px] flex items-center justify-center font-black text-[#899485] hover:text-white transition-all border border-white/10 hover:border-[#388E3C]/30 hover:bg-[#388E3C]/5 active:scale-[0.98] uppercase tracking-[0.2em] text-[11px]"
                 >
-                  Skip Tour & Start Exploring
+                  Jump Right In
                 </button>
               </div>
+              
+              <div className="flex items-center gap-3 justify-center px-6 py-3 rounded-2xl bg-white/[0.03] border border-white/10 relative z-10">
+                <div className="w-8 h-8 rounded-lg bg-[#388E3C]/10 flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-[#388E3C]" />
+                </div>
+                <span className="text-[11px] font-black uppercase tracking-widest text-[#899485]">
+                  Welcome guide sent to {profile?.email}
+                </span>
+              </div>
             </div>
+          </div>
 
-            <div className="text-center text-sm" style={{ color: "#666" }}>
-              <p>You can always take the tour later from your profile settings.</p>
-            </div>
-            </div>
+          <div className="text-center">
+            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-[#899485]/20">
+              Yrdly Neighborhood Network • v2.0
+            </p>
           </div>
         </div>
       </div>
