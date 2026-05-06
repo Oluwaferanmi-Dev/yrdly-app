@@ -67,8 +67,6 @@ export default function AdminDisputesPage() {
       return;
     }
 
-    // TODO: Add admin role check
-    // For now, we'll allow any user to access this page
     fetchDisputes();
   }, [user, statusFilter, router, fetchDisputes]);
 

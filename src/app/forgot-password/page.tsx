@@ -1,267 +1,156 @@
-"use client";
+'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Mail } from 'lucide-react';
 import Link from 'next/link';
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { YrdlyLogo } from "@/components/ui/yrdly-logo";
-import { ArrowLeft, Mail, Clock } from "lucide-react";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { useToast } from '@/hooks/use-toast';
-import { AUTH_CONSTANTS } from '@/lib/constants';
-
-const passwordResetSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address." }),
-});
-
-function ForgotPasswordForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [redirectCountdown, setRedirectCountdown] = useState(0);
-
-  const form = useForm<z.infer<typeof passwordResetSchema>>({
-    resolver: zodResolver(passwordResetSchema),
-    defaultValues: {
-      email: "",
-    },
-  });
-
-  // Pre-fill email from URL parameters
-  useEffect(() => {
-    const emailParam = searchParams.get('email');
-    if (emailParam) {
-      form.setValue('email', emailParam);
-    }
-  }, [searchParams, form]);
-
-  // Handle resend cooldown timer
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => {
-        setResendCooldown(resendCooldown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [resendCooldown]);
-
-  // Handle auto-redirect after successful submission
-  useEffect(() => {
-    if (isSubmitted && redirectCountdown > 0) {
-      const timer = setTimeout(() => {
-        setRedirectCountdown(redirectCountdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else if (isSubmitted && redirectCountdown === 0) {
-      router.push('/login');
-    }
-  }, [isSubmitted, redirectCountdown, router]);
-
-  const onSubmit = async (values: z.infer<typeof passwordResetSchema>) => {
-    if (resendCooldown > 0) return; // Prevent spam
-    
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      
-      if (error) throw error;
-      
-      setIsSubmitted(true);
-      setResendCooldown(AUTH_CONSTANTS.EMAIL_RESEND_COOLDOWN / 1000); // Convert to seconds
-      setRedirectCountdown(10); // Start 10-second countdown
-      toast({
-        title: "Password Reset Email Sent",
-        description: "Please check your inbox for instructions to reset your password.",
-      });
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      form.setError("email", { type: "manual", message: errorMessage });
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: errorMessage,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    if (resendCooldown > 0) return;
-    await onSubmit(form.getValues());
-  };
-
-  if (isSubmitted) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <Card className="border-0 shadow-lg">
-            <CardHeader className="space-y-6 text-center pb-8">
-              <div className="flex justify-center">
-                <YrdlyLogo />
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-center mb-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Mail className="w-6 h-6 text-primary" />
-                  </div>
-                </div>
-                <CardTitle className="text-2xl font-semibold text-balance">Check your email</CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  We&apos;ve sent a password reset link to <strong>{form.getValues("email")}</strong>
-                </CardDescription>
-              </div>
-            </CardHeader>
-
-            <CardContent className="space-y-6">
-              <div className="text-center space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Didn&apos;t receive the email? Check your spam folder or try again.
-                </p>
-
-                <div className="space-y-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={handleResend} 
-                    disabled={resendCooldown > 0}
-                    className="w-full h-11"
-                  >
-                    {resendCooldown > 0 ? (
-                      <>
-                        <Clock className="w-4 h-4 mr-2" />
-                        Try again in {resendCooldown}s
-                      </>
-                    ) : (
-                      'Resend email'
-                    )}
-                  </Button>
-                  
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => setIsSubmitted(false)} 
-                    className="w-full h-10"
-                  >
-                    Use different email
-                  </Button>
-                </div>
-              </div>
-
-              <div className="text-center text-sm text-muted-foreground">
-                {redirectCountdown > 0 ? (
-                  <p>Redirecting to login in {redirectCountdown}s...</p>
-                ) : (
-                  <Link href="/login" className="text-primary hover:underline font-medium inline-flex items-center gap-1">
-                    <ArrowLeft className="w-3 h-3" />
-                    Back to sign in
-                  </Link>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <Card className="border-0 shadow-lg">
-          <CardHeader className="space-y-6 text-center pb-8">
-            <div className="flex justify-center">
-              <YrdlyLogo />
-            </div>
-            <div className="space-y-2">
-              <CardTitle className="text-2xl font-semibold text-balance">Forgot your password?</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                No worries! Enter your email and we&apos;ll send you a reset link.
-              </CardDescription>
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-6">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter your email"
-                          {...field}
-                          className="h-11"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button type="submit" className="w-full h-11 font-medium" disabled={isLoading}>
-                  {isLoading ? "Sending reset link..." : "Send reset link"}
-                </Button>
-              </form>
-            </Form>
-
-            <div className="text-center text-sm text-muted-foreground">
-              <Link href="/login" className="text-primary hover:underline font-medium inline-flex items-center gap-1">
-                <ArrowLeft className="w-3 h-3" />
-                Back to sign in
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
+// Design tokens
+const colors = {
+  background: '#15181D',
+  blob: '#A154F2',
+  overlay: 'rgba(255, 255, 255, 0.05)',
+  border: '#388E3C',
+  primary: '#388E3C',
+  text: '#FFFFFF',
+  textFaded: '#BBBBBB',
+  link: '#1976D2',
+};
 
 export default function ForgotPasswordPage() {
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${appUrl}/reset-password`,
+      });
+
+      if (resetError) {
+        setError(resetError.message);
+      } else {
+        setSuccess(true);
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputClass =
+    'w-full h-12 sm:h-14 pl-4 pr-11 sm:pl-5 sm:pr-12 rounded-full font-raleway font-light text-sm text-white placeholder:text-[#BBBBBB] bg-transparent border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition';
+  const borderStyle = { border: '0.5px solid #388E3C' };
+  const pillRound = 'rounded-full';
+
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <Card>
-            <CardHeader className="text-center">
-              <div className="flex justify-center mb-4">
-                <YrdlyLogo />
-              </div>
-              <CardTitle className="text-2xl font-semibold text-balance">Loading...</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
+    <div
+      className="min-h-screen relative flex flex-col items-center justify-center px-4 py-6"
+      style={{ background: colors.background }}
+    >
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute w-[10%] min-w-[40px] aspect-square rounded-full"
+          style={{ background: colors.blob, opacity: 0.55, left: '5%', top: '10%' }}
+        />
+        <div
+          className="absolute w-[8%] min-w-[32px] aspect-square rounded-full"
+          style={{ background: colors.blob, opacity: 0.55, right: '5%', bottom: '10%' }}
+        />
       </div>
-    }>
-      <ForgotPasswordForm />
-    </Suspense>
+
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: colors.overlay,
+          border: '1px solid rgba(255,255,255,0.01)',
+          backdropFilter: 'blur(1.8px)',
+        }}
+      />
+
+      <div className="relative z-10 w-full max-w-[471px] flex flex-col items-center">
+        <div className="text-center mb-8 w-full">
+          <h1
+            className="text-2xl text-white leading-tight px-1"
+            style={{ fontFamily: '"Pacifico", cursive' }}
+          >
+            Reset Password
+          </h1>
+          <p className="font-raleway font-light text-sm text-[#BBBBBB] mt-2">
+            Enter your email to receive a password reset link
+          </p>
+        </div>
+
+        {error && (
+          <Alert className="mb-4 border-red-500/50 bg-red-500/10 text-red-200 w-full">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {success ? (
+          <div className="w-full text-center space-y-4">
+            <Alert className="mb-4 border-green-500/50 bg-green-500/10 text-green-200 w-full">
+              <AlertDescription>Check your email for a reset link.</AlertDescription>
+            </Alert>
+            <Button
+              onClick={() => router.push('/login')}
+              variant="outline"
+              className="w-full h-11 rounded-full font-raleway text-white border-[#388E3C] hover:bg-white/5"
+            >
+              Back to Sign in
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="w-full space-y-5">
+            <div className={`relative ${pillRound}`} style={borderStyle}>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <Mail className="h-5 w-5 text-[#BBBBBB]" />
+              </div>
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputClass}
+                required
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className={`w-full h-11 ${pillRound} font-raleway font-medium text-white hover:opacity-90`}
+              style={{ background: colors.primary }}
+              disabled={loading}
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Send Reset Link
+            </Button>
+
+            <div className="text-center mt-6">
+              <Link
+                href="/login"
+                className="font-raleway text-sm hover:underline"
+                style={{ color: colors.link }}
+              >
+                Back to Sign in
+              </Link>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
   );
 }

@@ -3,7 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ItemTrackingService } from "@/lib/item-tracking-service";
 import { DeliveryOption, PaymentMethod, EscrowStatus } from "@/types/escrow";
 import { MARKETPLACE_CONSTANTS } from "@/lib/constants";
-import { createClient } from "@supabase/supabase-js";
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 
 
 /**
@@ -18,27 +19,11 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(request: NextRequest) {
   try {
     // ── Authenticate the caller ────────────────────────
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    const supabase = createRouteHandlerClient({ cookies });
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    if (!authUser || authError) {
       return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const supabaseAuth = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: { headers: { Authorization: `Bearer ${token}` } },
-        auth: { autoRefreshToken: false, persistSession: false },
-      }
-    );
-    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser();
-    if (authError || !authUser) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
+        { error: "Unauthorized" },
         { status: 401 }
       );
     }

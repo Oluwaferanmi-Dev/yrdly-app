@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, AuthProvider } from '@/hooks/use-supabase-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { PushNotificationManager } from '@/components/PushNotificationManager';
 import Image from 'next/image';
 import { APIProvider } from '@vis.gl/react-google-maps';
@@ -93,16 +93,14 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthProvider>
-      <FriendshipProvider>
-        <LocationProvider>
-          <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} libraries={['places']}>
-            <ProtectedLayout>
-              {children}
-            </ProtectedLayout>
-          </APIProvider>
-        </LocationProvider>
-      </FriendshipProvider>
-    </AuthProvider>
+    <FriendshipProvider>
+      <LocationProvider>
+        <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} libraries={['places']}>
+          <ProtectedLayout>
+            {children}
+          </ProtectedLayout>
+        </APIProvider>
+      </LocationProvider>
+    </FriendshipProvider>
   );
 }
