@@ -26,9 +26,10 @@ export function OnboardingProgress({ className = '' }: OnboardingProgressProps) 
     <div 
       className={`sticky top-0 z-50 ${className}`}
       style={{ 
-        background: "#1E2126", 
-        borderBottom: "1px solid rgba(255,255,255,0.05)",
-        fontFamily: "Work Sans, sans-serif"
+        background: "#0d0f11", 
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        backdropFilter: "blur(20px)",
+        fontFamily: "Raleway, sans-serif"
       }}
     >
       <div className="max-w-md mx-auto px-4 py-3">
@@ -42,11 +43,18 @@ export function OnboardingProgress({ className = '' }: OnboardingProgressProps) 
         </div>
         
         {/* Progress Bar Container */}
-        <div className="h-2 w-full rounded-full mb-3" style={{ background: "rgba(255,255,255,0.1)" }}>
+        <div className="h-1.5 w-full rounded-full mb-3 bg-white/5 border border-white/5 overflow-hidden">
           <div 
-            className="h-full rounded-full transition-all duration-300"
-            style={{ width: `${progress}%`, background: "#388E3C" }}
-          />
+            className="h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
+            style={{ 
+              width: `${progress}%`, 
+              background: "linear-gradient(90deg, #388E3C 0%, #82DB7E 100%)",
+              boxShadow: "0 0 15px rgba(56, 142, 60, 0.4)"
+            }}
+          >
+            {/* Animated shimmer */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+          </div>
         </div>
         
         <div className="flex items-center justify-between">

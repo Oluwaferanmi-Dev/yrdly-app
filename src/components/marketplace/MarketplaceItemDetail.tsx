@@ -255,7 +255,7 @@ export function MarketplaceItemDetail({
 
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                       <MapPin className="w-4 h-4" />
-                      <span>Your Neighborhood</span>
+                      <span>{item.state ? `${item.lga ? item.lga + ', ' : ''}${item.state}` : 'Location Not Specified'}</span>
                     </div>
                   </CardContent>
                 </Card>

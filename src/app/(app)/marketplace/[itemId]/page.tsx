@@ -264,6 +264,14 @@ export default function MarketplaceItemPage() {
                   className="w-full h-full object-cover"
                 />
               </div>
+            ) : (item.lga || item.state) ? (
+              <div
+                className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm"
+                style={{ background: "#252B35", color: FADED, fontFamily: FONT_RALEWAY }}
+              >
+                <MapPin className="w-4 h-4" style={{ color: GREEN }} />
+                <span>{[item.lga, item.state].filter(Boolean).join(", ")}</span>
+              </div>
             ) : item.event_location?.address ? (
               <div
                 className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm"
@@ -271,14 +279,6 @@ export default function MarketplaceItemPage() {
               >
                 <MapPin className="w-4 h-4 flex-shrink-0" style={{ color: GREEN }} />
                 <span>{item.event_location.address}</span>
-              </div>
-            ) : item.lga || item.state ? (
-              <div
-                className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm"
-                style={{ background: "#252B35", color: FADED, fontFamily: FONT_RALEWAY }}
-              >
-                <MapPin className="w-4 h-4" style={{ color: GREEN }} />
-                <span>{[item.lga, item.state].filter(Boolean).join(", ")}</span>
               </div>
             ) : (
               <div

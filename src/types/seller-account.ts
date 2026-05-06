@@ -1,7 +1,6 @@
 export enum AccountType {
   BANK_ACCOUNT = 'bank_account',
-  MOBILE_MONEY = 'mobile_money',
-  DIGITAL_WALLET = 'digital_wallet'
+  MOBILE_MONEY = 'mobile_money'
 }
 
 export enum VerificationStatus {
@@ -32,17 +31,12 @@ export interface MobileMoneyDetails {
   accountName: string;
 }
 
-export interface DigitalWalletDetails {
-  provider: 'paystack' | 'flutterwave' | 'interswitch';
-  email: string;
-  accountName: string;
-}
 
 export interface SellerAccount {
   id: string;
   userId: string;
   accountType: AccountType;
-  accountDetails: BankAccountDetails | MobileMoneyDetails | DigitalWalletDetails;
+  accountDetails: BankAccountDetails | MobileMoneyDetails;
   verificationStatus: VerificationStatus;
   verificationLevel: VerificationLevel;
   isPrimary: boolean;

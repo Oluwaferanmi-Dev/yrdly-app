@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ItemTrackingService } from "@/lib/item-tracking-service";
 import { DeliveryOption, PaymentMethod, EscrowStatus } from "@/types/escrow";
 import { MARKETPLACE_CONSTANTS } from "@/lib/constants";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase-server";
 
 
 /**
@@ -18,27 +18,11 @@ import { createClient } from "@supabase/supabase-js";
 export async function POST(request: NextRequest) {
   try {
     // ── Authenticate the caller ────────────────────────
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    const supabase = await createClient();
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    if (!authUser || authError) {
       return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const supabaseAuth = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: { headers: { Authorization: `Bearer ${token}` } },
-        auth: { autoRefreshToken: false, persistSession: false },
-      }
-    );
-    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser();
-    if (authError || !authUser) {
-      return NextResponse.json(
-        { error: "Invalid or expired session" },
+        { error: "Unauthorized" },
         { status: 401 }
       );
     }
@@ -88,16 +72,37 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Check availability ────────────────────────────────
+    console.log("[PaymentInit] Checking availability for itemId:", itemId);
+    
     const { data: itemData, error: itemError } = await supabaseAdmin
       .from("posts")
-      .select("is_sold")
+      .select("id, is_sold, title, price, user_id")
       .eq("id", itemId)
       .single();
 
-    if (itemError || itemData?.is_sold) {
+    if (itemError) {
+      console.error("[PaymentInit] Database error or item not found:", itemError);
       return NextResponse.json(
-        { error: "This item is no longer available" },
+        { error: "Item not found or database error. Please try again." },
+        { status: 404 }
+      );
+    }
+
+    console.log("[PaymentInit] itemData:", JSON.stringify(itemData));
+
+    // 2. Check if item is already sold
+    if (itemData?.is_sold) {
+      return NextResponse.json(
+        { error: "Item is no longer available." },
         { status: 409 }
+      );
+    }
+
+    // 3. Check if user is buying their own item (using selected user_id)
+    if (itemData.user_id === authUser.id) {
+      return NextResponse.json(
+        { error: "You cannot buy your own item." },
+        { status: 400 }
       );
     }
 

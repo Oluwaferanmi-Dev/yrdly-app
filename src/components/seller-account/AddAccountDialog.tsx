@@ -18,13 +18,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SellerAccountService } from '@/lib/seller-account-service';
-import { AccountType, BankAccountDetails, MobileMoneyDetails, DigitalWalletDetails } from '@/types/seller-account';
+import { AccountType, BankAccountDetails, MobileMoneyDetails } from '@/types/seller-account';
 import { useToast } from '@/hooks/use-toast';
-import { CreditCard, Smartphone, Wallet } from 'lucide-react';
+import { Building2, Smartphone } from 'lucide-react';
 import nigerianBanks from '@/data/nigerian-banks.json';
 
 const accountFormSchema = z.object({
-  accountType: z.enum(['bank_account', 'mobile_money', 'digital_wallet']),
+  accountType: z.enum(['bank_account', 'mobile_money']),
   isPrimary: z.boolean().default(false),
   
   // Bank account fields
@@ -37,18 +37,12 @@ const accountFormSchema = z.object({
   provider: z.enum(['mtn', 'airtel', 'glo', '9mobile', 'opay', 'palmpay']).optional(),
   phoneNumber: z.string().optional(),
   
-  // Digital wallet fields
-  walletProvider: z.enum(['paystack', 'flutterwave', 'interswitch']).optional(),
-  email: z.string().email().optional(),
 }).refine((data) => {
   if (data.accountType === 'bank_account') {
     return data.accountNumber && data.accountName && data.bankCode && data.accountTypeBank;
   }
   if (data.accountType === 'mobile_money') {
     return data.provider && data.phoneNumber;
-  }
-  if (data.accountType === 'digital_wallet') {
-    return data.walletProvider && data.email;
   }
   return false;
 }, {
@@ -82,7 +76,7 @@ export function AddAccountDialog({ open, onOpenChange, onSuccess }: AddAccountDi
     try {
       setLoading(true);
       
-      let accountDetails: BankAccountDetails | MobileMoneyDetails | DigitalWalletDetails;
+      let accountDetails: BankAccountDetails | MobileMoneyDetails;
       
       switch (data.accountType) {
         case 'bank_account':
@@ -102,14 +96,6 @@ export function AddAccountDialog({ open, onOpenChange, onSuccess }: AddAccountDi
             phoneNumber: data.phoneNumber!,
             accountName: data.accountName || ''
           } as MobileMoneyDetails;
-          break;
-          
-        case 'digital_wallet':
-          accountDetails = {
-            provider: data.walletProvider!,
-            email: data.email!,
-            accountName: data.accountName || ''
-          } as DigitalWalletDetails;
           break;
           
         default:
@@ -146,246 +132,193 @@ export function AddAccountDialog({ open, onOpenChange, onSuccess }: AddAccountDi
   const getAccountTypeIcon = (type: string) => {
     switch (type) {
       case 'bank_account':
-        return <CreditCard className="h-5 w-5" />;
+        return <Building2 className="h-5 w-5" />;
       case 'mobile_money':
         return <Smartphone className="h-5 w-5" />;
-      case 'digital_wallet':
-        return <Wallet className="h-5 w-5" />;
       default:
-        return <CreditCard className="h-5 w-5" />;
+        return <Building2 className="h-5 w-5" />;
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add Payout Account</DialogTitle>
-          <DialogDescription>
-            Add a bank account, mobile money, or digital wallet to receive payments from your sales.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent 
+        className="max-w-lg w-[95vw] p-0 border-none bg-transparent shadow-2xl overflow-hidden"
+        style={{ fontFamily: "Raleway, sans-serif" }}
+      >
+        <div 
+          className="relative w-full max-h-[90vh] overflow-y-auto rounded-[32px] p-8 space-y-8 animate-in zoom-in-95 duration-300"
+          style={{ 
+            background: "var(--card)",
+            border: "1px solid rgba(255,255,255,0.05)"
+          }}
+        >
+          {/* Decorative Header Gradient */}
+          <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[#388E3C]/10 to-transparent pointer-events-none" />
 
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          {/* Account Type Selection */}
-          <div className="space-y-3">
-            <Label>Account Type</Label>
-            <RadioGroup
-              value={watchedAccountType}
-              onValueChange={(value) => form.setValue('accountType', value as any)}
-              className="grid grid-cols-1 gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="bank_account" id="bank_account" />
-                <Label htmlFor="bank_account" className="flex items-center space-x-2 cursor-pointer">
-                  <CreditCard className="h-4 w-4" />
-                  <span>Bank Account</span>
-                </Label>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-2xl font-black text-white tracking-tight">Add Payout Account</h2>
+              <div className="w-10 h-10 rounded-2xl bg-[#388E3C]/20 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-[#388E3C]" />
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="mobile_money" id="mobile_money" />
-                <Label htmlFor="mobile_money" className="flex items-center space-x-2 cursor-pointer">
-                  <Smartphone className="h-4 w-4" />
-                  <span>Mobile Money</span>
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="digital_wallet" id="digital_wallet" />
-                <Label htmlFor="digital_wallet" className="flex items-center space-x-2 cursor-pointer">
-                  <Wallet className="h-4 w-4" />
-                  <span>Digital Wallet</span>
-                </Label>
-              </div>
-            </RadioGroup>
+            </div>
+            <p className="text-sm text-[#899485] font-medium leading-relaxed">
+              Choose your preferred method to receive payments from your neighborhood sales.
+            </p>
           </div>
 
-          {/* Bank Account Fields */}
-          {watchedAccountType === 'bank_account' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <CreditCard className="h-5 w-5" />
-                  <span>Bank Account Details</span>
-                </CardTitle>
-                <CardDescription>
-                  Enter your Nigerian bank account information
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bankCode">Bank</Label>
-                    <Select onValueChange={(value) => form.setValue('bankCode', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your bank" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {nigerianBanks.map((bank) => (
-                          <SelectItem key={bank.code} value={bank.code}>
-                            {bank.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="accountTypeBank">Account Type</Label>
-                    <Select onValueChange={(value) => form.setValue('accountTypeBank', value as any)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select account type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="savings">Savings</SelectItem>
-                        <SelectItem value="current">Current</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accountNumber">Account Number</Label>
-                  <Input
-                    id="accountNumber"
-                    placeholder="Enter your account number"
-                    {...form.register('accountNumber')}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accountName">Account Name</Label>
-                  <Input
-                    id="accountName"
-                    placeholder="Enter account holder name"
-                    {...form.register('accountName')}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="relative z-10 space-y-8">
+            {/* Account Type Selection */}
+            <div className="space-y-4">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-black text-[#899485] ml-1">
+                Preferred Method
+              </label>
+              <div className="grid grid-cols-1 gap-3">
+                {[
+                  { id: 'bank_account', label: 'Bank Account', icon: Building2, desc: '97% Payout • Direct to local bank' },
+                  { id: 'mobile_money', label: 'Mobile Money', icon: Smartphone, desc: 'Fast processing • Carrier wallets' }
+                ].map((type) => (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => form.setValue('accountType', type.id as any)}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border transition-all text-left group ${
+                      watchedAccountType === type.id 
+                        ? 'bg-[#388E3C]/10 border-[#388E3C]/50 ring-1 ring-[#388E3C]/50' 
+                        : 'bg-white/5 border-white/10 hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                      watchedAccountType === type.id ? 'bg-[#388E3C] text-white' : 'bg-white/10 text-[#899485] group-hover:text-white'
+                    }`}>
+                      <type.icon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className={`font-black text-sm ${watchedAccountType === type.id ? 'text-white' : 'text-[#899485]'}`}>
+                        {type.label}
+                      </p>
+                      <p className="text-[10px] font-medium opacity-60">{type.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {/* Mobile Money Fields */}
-          {watchedAccountType === 'mobile_money' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Smartphone className="h-5 w-5" />
-                  <span>Mobile Money Details</span>
-                </CardTitle>
-                <CardDescription>
-                  Enter your mobile money account information
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="provider">Provider</Label>
-                    <Select onValueChange={(value) => form.setValue('provider', value as any)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mtn">MTN</SelectItem>
-                        <SelectItem value="airtel">Airtel</SelectItem>
-                        <SelectItem value="glo">Glo</SelectItem>
-                        <SelectItem value="9mobile">9mobile</SelectItem>
-                        <SelectItem value="opay">Opay</SelectItem>
-                        <SelectItem value="palmpay">PalmPay</SelectItem>
-                      </SelectContent>
-                    </Select>
+            {/* Dynamic Fields Section */}
+            <div className="space-y-6 pt-4 border-t border-white/5">
+              {watchedAccountType === 'bank_account' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Bank</label>
+                      <div className="relative">
+                        <select 
+                          className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                          onChange={(e) => form.setValue('bankCode', e.target.value)}
+                        >
+                          <option value="" className="bg-[#1e2025]">Select...</option>
+                          {nigerianBanks.map((bank) => (
+                            <option key={bank.code} value={bank.code} className="bg-[#1e2025]">{bank.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Type</label>
+                      <select 
+                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        onChange={(e) => form.setValue('accountTypeBank', e.target.value as any)}
+                      >
+                        <option value="savings" className="bg-[#1e2025]">Savings</option>
+                        <option value="current" className="bg-[#1e2025]">Current</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phoneNumber">Phone Number</Label>
-                    <Input
-                      id="phoneNumber"
-                      placeholder="08012345678"
-                      {...form.register('phoneNumber')}
+                    <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Account Number</label>
+                    <input
+                      className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                      placeholder="0123456789"
+                      {...form.register('accountNumber')}
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accountName">Account Name</Label>
-                  <Input
-                    id="accountName"
-                    placeholder="Enter account holder name"
-                    {...form.register('accountName')}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              )}
 
-          {/* Digital Wallet Fields */}
-          {watchedAccountType === 'digital_wallet' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Wallet className="h-5 w-5" />
-                  <span>Digital Wallet Details</span>
-                </CardTitle>
-                <CardDescription>
-                  Enter your digital wallet information
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="walletProvider">Provider</Label>
-                    <Select onValueChange={(value) => form.setValue('walletProvider', value as any)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select provider" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="paystack">Paystack</SelectItem>
-                        <SelectItem value="flutterwave">Flutterwave</SelectItem>
-                        <SelectItem value="interswitch">Interswitch</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter wallet email"
-                      {...form.register('email')}
-                    />
+              {watchedAccountType === 'mobile_money' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Provider</label>
+                      <select 
+                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        onChange={(e) => form.setValue('provider', e.target.value as any)}
+                      >
+                        <option value="mtn" className="bg-[#1e2025]">MTN</option>
+                        <option value="airtel" className="bg-[#1e2025]">Airtel</option>
+                        <option value="opay" className="bg-[#1e2025]">Opay</option>
+                        <option value="palmpay" className="bg-[#1e2025]">PalmPay</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Phone</label>
+                      <input
+                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                        placeholder="08012345678"
+                        {...form.register('phoneNumber')}
+                      />
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="accountName">Account Name</Label>
-                  <Input
-                    id="accountName"
-                    placeholder="Enter account holder name"
-                    {...form.register('accountName')}
+              )}
+
+              <div className="space-y-2">
+                <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Account Holder Name</label>
+                <input
+                  className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                  placeholder="e.g. John Doe"
+                  {...form.register('accountName')}
+                />
+              </div>
+
+              {/* Primary Checkbox */}
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    {...form.register('isPrimary')}
                   />
+                  <div className="w-5 h-5 rounded border border-white/20 bg-white/5 peer-checked:bg-[#388E3C] peer-checked:border-[#388E3C] transition-all" />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity">
+                    <div className="w-2 h-2 rounded-full bg-white" />
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+                <span className="text-xs font-bold text-[#899485] group-hover:text-white transition-colors">Set as primary payout method</span>
+              </label>
+            </div>
 
-          {/* Primary Account Option */}
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="isPrimary"
-              {...form.register('isPrimary')}
-              className="rounded border-gray-300"
-            />
-            <Label htmlFor="isPrimary">Set as primary payout account</Label>
-          </div>
-
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Adding...' : 'Add Account'}
-            </Button>
-          </div>
-        </form>
+            {/* Actions */}
+            <div className="flex flex-col gap-3 pt-4">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-14 rounded-2xl bg-[#388E3C] text-white font-black text-sm transition-all active:scale-95 disabled:opacity-50 disabled:grayscale"
+                style={{ boxShadow: "0 10px 20px -5px rgba(56,142,60,0.3)" }}
+              >
+                {loading ? 'Adding Account...' : 'Link Account'}
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="w-full h-12 rounded-2xl bg-white/5 text-[#899485] font-black text-xs uppercase tracking-widest hover:text-white transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

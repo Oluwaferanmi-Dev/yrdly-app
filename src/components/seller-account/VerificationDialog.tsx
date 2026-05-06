@@ -17,9 +17,8 @@ import { SellerAccountService } from '@/lib/seller-account-service';
 import { SellerAccount, AccountType, VerificationStatus } from '@/types/seller-account';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  CreditCard, 
+  Building2, 
   Smartphone, 
-  Wallet, 
   CheckCircle, 
   Clock, 
   AlertCircle,
@@ -103,13 +102,11 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
   const getAccountTypeIcon = (type: AccountType) => {
     switch (type) {
       case AccountType.BANK_ACCOUNT:
-        return <CreditCard className="h-5 w-5" />;
+        return <Building2 className="h-5 w-5" />;
       case AccountType.MOBILE_MONEY:
         return <Smartphone className="h-5 w-5" />;
-      case AccountType.DIGITAL_WALLET:
-        return <Wallet className="h-5 w-5" />;
       default:
-        return <CreditCard className="h-5 w-5" />;
+        return <Building2 className="h-5 w-5" />;
     }
   };
 
@@ -121,9 +118,6 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
       case AccountType.MOBILE_MONEY:
         const mobileDetails = account.accountDetails as any;
         return `${mobileDetails.provider.toUpperCase()} - ${mobileDetails.phoneNumber}`;
-      case AccountType.DIGITAL_WALLET:
-        const walletDetails = account.accountDetails as any;
-        return `${walletDetails.provider} - ${walletDetails.email}`;
       default:
         return 'Unknown Account';
     }
@@ -133,199 +127,148 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Shield className="h-5 w-5" />
-            <span>Verify Account</span>
-          </DialogTitle>
-          <DialogDescription>
-            Complete the verification process for your payout account
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent 
+        className="max-w-lg w-[95vw] p-0 border-none bg-transparent shadow-2xl overflow-hidden"
+        style={{ fontFamily: "Raleway, sans-serif" }}
+      >
+        <div 
+          className="relative w-full max-h-[90vh] overflow-y-auto rounded-[32px] p-8 space-y-8 animate-in zoom-in-95 duration-300"
+          style={{ 
+            background: "var(--card)",
+            border: "1px solid rgba(255,255,255,0.05)"
+          }}
+        >
+          {/* Decorative Header Gradient */}
+          <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[#388E3C]/10 to-transparent pointer-events-none" />
 
-        <div className="space-y-6">
-          {/* Account Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                {getAccountTypeIcon(account.accountType)}
-                <span>Account to Verify</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Account:</span>
-                  <span className="font-medium">{getAccountDisplayName(account)}</span>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-2xl bg-[#388E3C]/20 flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-[#388E3C]" />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Type:</span>
-                  <span className="capitalize">{account.accountType.replace('_', ' ')}</span>
+                <h2 className="text-2xl font-black text-white tracking-tight">Verify Account</h2>
+              </div>
+            </div>
+            <p className="text-sm text-[#899485] font-medium leading-relaxed">
+              Complete verification to unlock faster payouts and higher limits.
+            </p>
+          </div>
+
+          <div className="relative z-10 space-y-8">
+            {/* Account Preview Card */}
+            <div className="p-6 rounded-[24px] bg-white/5 border border-white/10 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-[#899485]">
+                  {getAccountTypeIcon(account.accountType)}
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status:</span>
-                  <Badge variant="secondary">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Pending Verification
+                <div>
+                  <p className="text-xs font-black text-white tracking-wide">{getAccountDisplayName(account)}</p>
+                  <p className="text-[10px] font-bold text-[#899485] uppercase tracking-wider">{account.accountType.replace('_', ' ')}</p>
+                </div>
+                <div className="ml-auto">
+                  <Badge variant="secondary" className="bg-[#388E3C]/20 text-[#388E3C] border-none font-bold text-[10px] px-3">
+                    PENDING
                   </Badge>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Verification Steps */}
-          {account.accountType === AccountType.BANK_ACCOUNT && (
-            <div className="space-y-4">
-              {/* Step 1: Micro-deposit Verification */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <CheckCircle className="h-5 w-5" />
-                    <span>Step 1: Micro-deposit Verification</span>
-                  </CardTitle>
-                  <CardDescription>
-                    We&apos;ll send a small amount to your account to verify ownership
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+            {/* Verification Content */}
+            {account.accountType === AccountType.BANK_ACCOUNT ? (
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-[#388E3C] flex items-center justify-center text-white text-[10px] font-black">1</div>
+                    <h3 className="text-sm font-black text-white">Micro-deposit Verification</h3>
+                  </div>
+                  
                   {verificationStep === 'initiate' && (
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Click the button below to send a micro-deposit (₦1-₦5) to your account. 
-                        You&apos;ll need to enter the exact amount to complete verification.
+                    <div className="space-y-4 pl-9">
+                      <p className="text-xs text-[#899485] leading-relaxed">
+                        We&apos;ll send a small amount (₦1-₦5) to your account. You&apos;ll need to enter the exact amount here to verify ownership.
                       </p>
-                      <Button 
-                        onClick={handleInitiateMicroDeposit} 
+                      <button
+                        onClick={handleInitiateMicroDeposit}
                         disabled={loading}
-                        className="w-full"
+                        className="w-full h-12 rounded-xl bg-[#388E3C] text-white font-black text-sm transition-all active:scale-95 disabled:opacity-50"
                       >
                         {loading ? 'Sending...' : 'Send Micro-deposit'}
-                      </Button>
+                      </button>
                     </div>
                   )}
 
                   {verificationStep === 'verify' && (
-                    <div className="space-y-4">
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-center space-x-2">
-                          <AlertCircle className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-800">
-                            Micro-deposit sent!
-                          </span>
-                        </div>
-                        <p className="text-sm text-blue-700 mt-1">
-                          We&apos;ve sent ₦{microDepositAmount} to your account. 
-                          Please check your bank statement and enter the exact amount below.
+                    <div className="space-y-6 pl-9">
+                      <div className="p-4 rounded-xl bg-[#388E3C]/10 border border-[#388E3C]/20">
+                        <p className="text-xs text-[#388E3C] font-bold">
+                          Deposit Sent! Please enter the ₦ amount shown in your bank statement.
                         </p>
                       </div>
                       
                       <div className="space-y-2">
-                        <Label htmlFor="amount">Enter the micro-deposit amount</Label>
-                        <Input
-                          id="amount"
+                        <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Enter Amount (₦)</label>
+                        <input
                           type="number"
-                          placeholder="Enter amount (e.g., 3)"
+                          className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                          placeholder="e.g. 3"
                           value={enteredAmount}
                           onChange={(e) => setEnteredAmount(e.target.value)}
                         />
                       </div>
                       
-                      <div className="flex space-x-2">
-                        <Button 
-                          variant="outline" 
+                      <div className="flex gap-3">
+                        <button
                           onClick={() => setVerificationStep('initiate')}
-                          className="flex-1"
+                          className="flex-1 h-12 rounded-xl bg-white/5 text-[#899485] font-black text-xs uppercase tracking-widest hover:text-white transition-all"
                         >
                           Back
-                        </Button>
-                        <Button 
-                          onClick={handleVerifyMicroDeposit} 
+                        </button>
+                        <button
+                          onClick={handleVerifyMicroDeposit}
                           disabled={loading || !enteredAmount}
-                          className="flex-1"
+                          className="flex-[2] h-12 rounded-xl bg-[#388E3C] text-white font-black text-sm transition-all active:scale-95"
                         >
                           {loading ? 'Verifying...' : 'Verify Amount'}
-                        </Button>
+                        </button>
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* Step 2: Document Verification */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <FileText className="h-5 w-5" />
-                    <span>Step 2: Document Verification (Optional)</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Upload additional documents for enhanced verification
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-center">
-                      <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                      <p className="text-sm text-muted-foreground">
-                        Upload government-issued ID, utility bill, or bank statement
-                      </p>
-                      <Button variant="outline" className="mt-2" disabled>
-                        Upload Document
-                      </Button>
-                    </div>
-                    
-                    <p className="text-xs text-muted-foreground">
-                      Document verification is optional but recommended for higher transaction limits.
+                <div className="pt-6 border-t border-white/5 space-y-4 opacity-50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center text-[#899485] text-[10px] font-black">2</div>
+                    <h3 className="text-sm font-black text-white">Identity Verification</h3>
+                  </div>
+                  <p className="text-[10px] text-[#899485] pl-9">
+                    Upload government ID or utility bill to increase your transaction limits. (Coming soon)
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="p-6 rounded-[24px] bg-[#388E3C]/5 border border-[#388E3C]/20 flex gap-4">
+                  <Clock className="w-5 h-5 text-[#388E3C] shrink-0" />
+                  <div>
+                    <p className="text-xs font-black text-white mb-1 uppercase tracking-widest">Manual Review Required</p>
+                    <p className="text-[10px] text-[#899485] leading-relaxed font-medium">
+                      Mobile money accounts are reviewed manually by our team. Verification typically completes within 24-48 hours.
                     </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+            )}
+
+            {/* Close Action */}
+            <div className="pt-4">
+              <button
+                onClick={() => onOpenChange(false)}
+                className="w-full h-12 rounded-2xl bg-white/5 text-[#899485] font-black text-xs uppercase tracking-widest hover:text-white transition-all"
+              >
+                Close
+              </button>
             </div>
-          )}
-
-          {/* Mobile Money & Digital Wallet Verification */}
-          {(account.accountType === AccountType.MOBILE_MONEY || account.accountType === AccountType.DIGITAL_WALLET) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <CheckCircle className="h-5 w-5" />
-                  <span>Verification Process</span>
-                </CardTitle>
-                <CardDescription>
-                  Verification for {account.accountType.replace('_', ' ')} accounts
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <AlertCircle className="h-4 w-4 text-yellow-600" />
-                    <span className="text-sm font-medium text-yellow-800">
-                      Manual Verification Required
-                    </span>
-                  </div>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    {account.accountType === AccountType.MOBILE_MONEY 
-                      ? 'Mobile money accounts require manual verification. Our team will review your account details and contact you if needed.'
-                      : 'Digital wallet accounts require manual verification. Our team will review your account details and contact you if needed.'
-                    }
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Your account is currently under review. You&apos;ll receive a notification once verification is complete.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Actions */}
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Close
-            </Button>
           </div>
         </div>
       </DialogContent>
