@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { EscrowStatus } from '@/types/escrow';
 import { MARKETPLACE_CONSTANTS } from '@/lib/constants';
+import { PayoutService } from '@/lib/payout-service';
 
 /**
  * POST /api/cron/auto-release
@@ -67,6 +68,14 @@ export async function POST(request: NextRequest) {
         if (updateError) {
           errors.push(`${tx.id}: ${updateError.message}`);
           continue;
+        }
+
+        // ── Initiate Payout ───────────────────────────────
+        try {
+          await PayoutService.initiateAutoPayout(tx.id);
+        } catch (payoutError) {
+          console.error(`Auto-release payout initiation error for ${tx.id}:`, payoutError);
+          errors.push(`${tx.id}: payout failed`);
         }
 
         // ── Notify both parties ───────────────────────────

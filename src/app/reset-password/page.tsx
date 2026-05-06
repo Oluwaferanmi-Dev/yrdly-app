@@ -1,223 +1,148 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { useToast } from "@/hooks/use-toast";
-import { Lock, Eye, EyeOff, CheckCircle, ArrowLeft } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
-/* ── Design tokens ─────────────────────────────────── */
-const BG     = "#101418";
-const CARD   = "#1d2025";
-const CARDH  = "#272a2f";
-const GREEN  = "#388E3C";
-const GREEN_L = "#82DB7E";
-const MUTED  = "#bfcab9";
-const DIM    = "#899485";
-const RED    = "#E53935";
+// Design tokens
+const colors = {
+  background: '#15181D',
+  blob: '#A154F2',
+  overlay: 'rgba(255, 255, 255, 0.05)',
+  border: '#388E3C',
+  primary: '#388E3C',
+  text: '#FFFFFF',
+  textFaded: '#BBBBBB',
+};
 
 export default function ResetPasswordPage() {
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { toast } = useToast();
 
-  const [password, setPassword]           = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [show, setShow]                   = useState(false);
-  const [showConfirm, setShowConfirm]     = useState(false);
-  const [loading, setLoading]             = useState(false);
-  const [success, setSuccess]             = useState(false);
-  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
-
-  // Listen for Supabase RECOVERY event (user came from reset email link)
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setIsRecoveryMode(true);
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event !== 'PASSWORD_RECOVERY') {
+        // If they just opened this without a token, redirect
+        if (!session) {
+          router.replace('/login');
+        }
       }
     });
-    return () => subscription.unsubscribe();
-  }, []);
 
-  const passwordValid   = password.length >= 6;
-  const passwordsMatch  = password === confirmPassword;
-  const canSubmit        = passwordValid && passwordsMatch && !loading;
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
-
+    setError('');
     setLoading(true);
+
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      const { error: updateError } = await supabase.auth.updateUser({ password });
 
-      setSuccess(true);
-      toast({ title: "Password updated!", description: "You can now sign in with your new password." });
-
-      // Redirect to home after a short delay
-      setTimeout(() => router.push("/"), 2000);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update password.",
-        variant: "destructive",
-      });
+      if (updateError) {
+        setError(updateError.message);
+      } else {
+        router.push('/home');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (success) {
-    return (
-      <div className="min-h-dvh flex items-center justify-center" style={{ background: BG }}>
-        <div className="text-center space-y-4">
-          <CheckCircle className="w-16 h-16 mx-auto" style={{ color: GREEN_L }} />
-          <h1 className="text-2xl font-bold text-white" style={{ fontFamily: "Raleway, sans-serif" }}>
-            Password Updated!
-          </h1>
-          <p className="text-sm" style={{ color: MUTED }}>
-            Redirecting you now…
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const inputClass =
+    'w-full h-12 sm:h-14 pl-4 pr-11 sm:pl-5 sm:pr-12 rounded-full font-raleway font-light text-sm text-white placeholder:text-[#BBBBBB] bg-transparent border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition';
+  const borderStyle = { border: '0.5px solid #388E3C' };
+  const pillRound = 'rounded-full';
 
   return (
-    <div className="min-h-dvh" style={{ background: BG, color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}>
-      {/* Ambient glow */}
-      <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
+    <div
+      className="min-h-screen relative flex flex-col items-center justify-center px-4 py-6"
+      style={{ background: colors.background }}
+    >
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
-          className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full"
-          style={{ background: "rgba(130,219,126,0.05)", filter: "blur(120px)" }}
+          className="absolute w-[10%] min-w-[40px] aspect-square rounded-full"
+          style={{ background: colors.blob, opacity: 0.55, left: '5%', top: '10%' }}
+        />
+        <div
+          className="absolute w-[8%] min-w-[32px] aspect-square rounded-full"
+          style={{ background: colors.blob, opacity: 0.55, right: '5%', bottom: '10%' }}
         />
       </div>
 
-      {/* Header */}
-      <header
-        className="fixed top-0 w-full z-50 flex items-center gap-4 px-6 h-16"
-        style={{ background: "rgba(21,24,29,0.85)", backdropFilter: "blur(20px)" }}
-      >
-        <button onClick={() => router.push("/signin")} className="hover:opacity-70 transition-opacity">
-          <ArrowLeft className="w-5 h-5" style={{ color: GREEN_L }} />
-        </button>
-        <h1 style={{ fontFamily: "Pacifico, cursive", fontSize: 22, color: "#fff" }}>
-          Reset Password
-        </h1>
-      </header>
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: colors.overlay,
+          border: '1px solid rgba(255,255,255,0.01)',
+          backdropFilter: 'blur(1.8px)',
+        }}
+      />
 
-      <main className="pt-24 pb-12 px-6 max-w-md mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Lock icon */}
-          <div className="flex justify-center mb-6">
-            <div
-              className="w-20 h-20 rounded-full flex items-center justify-center"
-              style={{ background: "rgba(56,142,60,0.15)" }}
-            >
-              <Lock className="w-10 h-10" style={{ color: GREEN_L }} />
-            </div>
-          </div>
-
-          <div className="text-center mb-8">
-            <h2 className="text-xl font-bold text-white" style={{ fontFamily: "Raleway, sans-serif" }}>
-              Create a new password
-            </h2>
-            <p className="text-sm mt-2" style={{ color: MUTED }}>
-              Your password must be at least 6 characters.
-            </p>
-          </div>
-
-          {/* New password */}
-          <div className="space-y-2">
-            <label className="text-[11px] uppercase tracking-widest font-bold" style={{ color: DIM }}>
-              New Password
-            </label>
-            <div className="relative">
-              <input
-                type={show ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-[11px] p-3 pr-12 text-sm focus:outline-none transition-all"
-                style={{
-                  background: CARDH,
-                  color: "#e1e2e9",
-                  border: `1px solid ${password && !passwordValid ? RED : "rgba(64,73,61,0.2)"}`,
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setShow(!show)}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-              >
-                {show ? (
-                  <EyeOff className="w-4 h-4" style={{ color: DIM }} />
-                ) : (
-                  <Eye className="w-4 h-4" style={{ color: DIM }} />
-                )}
-              </button>
-            </div>
-            {password && !passwordValid && (
-              <p className="text-xs" style={{ color: RED }}>
-                Must be at least 6 characters
-              </p>
-            )}
-          </div>
-
-          {/* Confirm password */}
-          <div className="space-y-2">
-            <label className="text-[11px] uppercase tracking-widest font-bold" style={{ color: DIM }}>
-              Confirm Password
-            </label>
-            <div className="relative">
-              <input
-                type={showConfirm ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-[11px] p-3 pr-12 text-sm focus:outline-none transition-all"
-                style={{
-                  background: CARDH,
-                  color: "#e1e2e9",
-                  border: `1px solid ${confirmPassword && !passwordsMatch ? RED : "rgba(64,73,61,0.2)"}`,
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-              >
-                {showConfirm ? (
-                  <EyeOff className="w-4 h-4" style={{ color: DIM }} />
-                ) : (
-                  <Eye className="w-4 h-4" style={{ color: DIM }} />
-                )}
-              </button>
-            </div>
-            {confirmPassword && !passwordsMatch && (
-              <p className="text-xs" style={{ color: RED }}>
-                Passwords do not match
-              </p>
-            )}
-          </div>
-
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            className="w-full py-4 rounded-full font-bold text-sm transition-all active:scale-95 mt-8"
-            style={{
-              background: canSubmit ? GREEN : CARDH,
-              color: canSubmit ? "#fff" : DIM,
-              fontFamily: "Raleway, sans-serif",
-              boxShadow: canSubmit ? "0 8px 24px rgba(56,142,60,0.2)" : "none",
-              cursor: canSubmit ? "pointer" : "not-allowed",
-            }}
+      <div className="relative z-10 w-full max-w-[471px] flex flex-col items-center">
+        <div className="text-center mb-8 w-full">
+          <h1
+            className="text-2xl text-white leading-tight px-1"
+            style={{ fontFamily: '"Pacifico", cursive' }}
           >
-            {loading ? "Updating…" : "Update Password"}
-          </button>
+            Set New Password
+          </h1>
+          <p className="font-raleway font-light text-sm text-[#BBBBBB] mt-2">
+            Please enter your new password
+          </p>
+        </div>
+
+        {error && (
+          <Alert className="mb-4 border-red-500/50 bg-red-500/10 text-red-200 w-full">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="w-full space-y-5">
+          <div className={`relative ${pillRound}`} style={borderStyle}>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="flex items-center justify-center w-full h-full text-[#BBBBBB] hover:text-white"
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+            <Input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Enter new password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+              required
+              minLength={6}
+            />
+          </div>
+
+          <Button
+            type="submit"
+            className={`w-full h-11 ${pillRound} font-raleway font-medium text-white hover:opacity-90`}
+            style={{ background: colors.primary }}
+            disabled={loading}
+          >
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Update Password
+          </Button>
         </form>
-      </main>
+      </div>
     </div>
   );
 }
