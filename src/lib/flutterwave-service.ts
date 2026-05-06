@@ -182,6 +182,10 @@ export class FlutterwaveService {
     bankCode: string;
     accountNumber: string;
   }): Promise<string> {
+    if (!flw) {
+      throw new Error('Flutterwave service not available');
+    }
+
     try {
       const payload = {
         account_name: sellerData.accountName,
@@ -194,21 +198,34 @@ export class FlutterwaveService {
         business_email: sellerData.email,
         business_contact: sellerData.accountName,
         business_contact_mobile: '', // Optional
+        business_contact_email: sellerData.email,
         business_address: '', // Optional
-        meta: {
-          seller_id: sellerData.email, // Use email as identifier
-        },
+        split_type: 'percentage',
+        split_value: 0.97,
       };
 
       const response = await flw.Subaccount.create(payload);
       
       if (response.status === 'success') {
         return response.data.subaccount_id;
+      } else if (response.message?.toLowerCase().includes('already exists')) {
+        // Find existing subaccount
+        const listResponse = await flw.Subaccount.fetch_all();
+        if (listResponse.status === 'success' && Array.isArray(listResponse.data)) {
+          const existing = listResponse.data.find(
+            (s: any) => s.account_number === sellerData.accountNumber && s.account_bank === sellerData.bankCode
+          );
+          if (existing) {
+            return existing.subaccount_id;
+          }
+        }
+        throw new Error('Subaccount already exists but could not be retrieved');
       } else {
         throw new Error(response.message || 'Failed to create subaccount');
       }
     } catch (error) {
       console.error('Subaccount creation error:', error);
+      if (error instanceof Error) throw error;
       throw new Error('Failed to create seller subaccount');
     }
   }

@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Create Flutterwave subaccount ─────────────────────
+    let subaccountId: string | null = null;
+    
     const flwRes = await fetch('https://api.flutterwave.com/v3/subaccounts', {
       method: 'POST',
       headers: {
@@ -62,15 +64,45 @@ export async function POST(request: NextRequest) {
 
     const flwData = await flwRes.json();
 
-    if (flwData.status !== 'success') {
+    if (flwData.status === 'success') {
+      subaccountId = flwData.data.subaccount_id;
+    } else if (flwData.message?.toLowerCase().includes('already exists')) {
+      // ── Handle existing subaccount ───────────────────────
+      // If it already exists, we need to find it to get the ID
+      console.log('Subaccount already exists, fetching list to find ID...');
+      
+      const listRes = await fetch('https://api.flutterwave.com/v3/subaccounts', {
+        headers: {
+          Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+        },
+      });
+      
+      const listData = await listRes.json();
+      
+      if (listData.status === 'success' && Array.isArray(listData.data)) {
+        const existing = listData.data.find(
+          (s: any) => s.account_number === accountNumber && s.account_bank === bankCode
+        );
+        
+        if (existing) {
+          subaccountId = existing.subaccount_id;
+          console.log('Found existing subaccount ID:', subaccountId);
+        }
+      }
+      
+      if (!subaccountId) {
+        return NextResponse.json(
+          { error: 'A subaccount with these details already exists on Flutterwave, but we could not retrieve its ID. Please contact support.' },
+          { status: 409 }
+        );
+      }
+    } else {
       console.error('Flutterwave subaccount error:', flwData);
       return NextResponse.json(
         { error: flwData.message || 'Failed to create subaccount' },
         { status: 502 }
       );
     }
-
-    const subaccountId = flwData.data.subaccount_id;
 
     // ── Deactivate any existing accounts ──────────────────
     await supabaseAdmin
