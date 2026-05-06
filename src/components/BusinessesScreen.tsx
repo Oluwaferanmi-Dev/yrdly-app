@@ -436,8 +436,12 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
       {/* FAB */}
       <CreateBusinessDialog>
         <button
-          className="fixed bottom-20 right-4 w-14 h-14 rounded-full flex items-center justify-center z-50 transition-transform active:scale-90"
-          style={{ background: GREEN, boxShadow: "0 20px 40px rgba(0,0,0,0.4)" }}
+          className="fixed right-4 w-14 h-14 rounded-full flex items-center justify-center z-[110] transition-transform active:scale-90"
+          style={{
+            bottom: "calc(64px + env(safe-area-inset-bottom) + 16px)",
+            background: GREEN,
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+          }}
         >
           <Plus className="w-7 h-7 text-white" />
         </button>

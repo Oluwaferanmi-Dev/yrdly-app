@@ -28,6 +28,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { supabase } from "@/lib/supabase";
 import { HomeRightSidebar } from "./HomeRightSidebar";
 import { cn } from "@/lib/utils";
+import { CreatePostDialog } from "@/components/CreatePostDialog";
+import { usePosts } from "@/hooks/use-posts";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -45,9 +47,11 @@ export function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, profile, signOut } = useAuth();
+  const { createPost } = usePosts();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
@@ -297,15 +301,20 @@ export function MainLayout({ children }: MainLayoutProps) {
               })}
             </div>
 
-            <Link href="/home" className="mt-4">
+            <CreatePostDialog
+              createPost={createPost}
+              open={postDialogOpen}
+              onOpenChange={setPostDialogOpen}
+            >
               <Button
                 className="w-full h-11 rounded-full text-white font-medium text-sm"
                 style={{ background: "#388E3C", fontFamily: "Raleway, sans-serif" }}
+                onClick={() => setPostDialogOpen(true)}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Post
               </Button>
-            </Link>
+            </CreatePostDialog>
 
 
           </nav>

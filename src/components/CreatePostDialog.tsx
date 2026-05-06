@@ -19,8 +19,9 @@ import { useState, useEffect, memo, useCallback, useMemo, useRef } from "react";
 import * as React from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Post } from "@/types";
-import { X, Paperclip, MapPin } from "lucide-react";
+import { X, Paperclip, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 // ── Design tokens ──────────────────────────────────────────────
 const BG       = "#15181D";
@@ -89,6 +90,53 @@ function PostForm({
   fileInputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   const text = form.watch("text") as string;
+  const { toast } = useToast();
+  const [fetchingLocation, setFetchingLocation] = React.useState(false);
+
+  const handleGif = () => {
+    toast({
+      title: "GIFs coming soon! 🎉",
+      description: "GIF picker will be available in the next update.",
+    });
+  };
+
+  const handleLocation = async () => {
+    if (!navigator.geolocation) {
+      toast({ title: "Location not supported", description: "Your browser doesn't support geolocation.", variant: "destructive" });
+      return;
+    }
+    setFetchingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const data = await res.json();
+          const locationText = data.display_name
+            ? `📍 ${data.display_name.split(',').slice(0, 3).join(',').trim()}`
+            : `📍 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          const currentText = form.getValues('text') || '';
+          const separator = currentText && !currentText.endsWith('\n') ? '\n' : '';
+          form.setValue('text', `${currentText}${separator}${locationText}`, { shouldDirty: true });
+        } catch {
+          toast({ title: "Location error", description: "Could not fetch your address. Please try again.", variant: "destructive" });
+        } finally {
+          setFetchingLocation(false);
+        }
+      },
+      (err) => {
+        setFetchingLocation(false);
+        const msg = err.code === 1
+          ? "Location access denied. Please allow location in your browser settings."
+          : "Could not get your location. Please try again.";
+        toast({ title: "Location unavailable", description: msg, variant: "destructive" });
+      },
+      { timeout: 10000, maximumAge: 60000 }
+    );
+  };
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
@@ -153,6 +201,7 @@ function PostForm({
           {/* GIF */}
           <button
             type="button"
+            onClick={handleGif}
             className="hover:opacity-70 transition-opacity"
             aria-label="Add GIF"
           >
@@ -162,10 +211,14 @@ function PostForm({
           {/* Location */}
           <button
             type="button"
-            className="hover:opacity-70 transition-opacity"
+            onClick={handleLocation}
+            disabled={fetchingLocation}
+            className="hover:opacity-70 transition-opacity disabled:opacity-50"
             aria-label="Add location"
           >
-            <LocationIcon />
+            {fetchingLocation
+              ? <Loader2 size={22} color={GREEN} strokeWidth={2} className="animate-spin" />
+              : <LocationIcon />}
           </button>
         </div>
 

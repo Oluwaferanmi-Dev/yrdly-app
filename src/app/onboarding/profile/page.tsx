@@ -61,16 +61,32 @@ export default function OnboardingProfilePage() {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      username: profile?.username || '',
-      fullName: profile?.name || '',
+      username: '',
+      fullName: '',
       location: {
-        state: profile?.location?.state || '',
-        lga: profile?.location?.lga || '',
-        ward: profile?.location?.ward || '',
+        state: '',
+        lga: '',
+        ward: '',
         address: '',
       },
     },
   });
+
+  // Sync form values once the async profile data arrives
+  useEffect(() => {
+    if (!profile) return;
+    form.reset({
+      username: profile.username || '',
+      fullName: profile.name || '',
+      location: {
+        state: profile.location?.state || '',
+        lga: profile.location?.lga || '',
+        ward: profile.location?.ward || '',
+        address: '',
+      },
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id]);
 
   // Get the current username value and debounce it
   const usernameValue = form.watch('username');
@@ -404,7 +420,8 @@ export default function OnboardingProfilePage() {
                       <div className="absolute inset-0 bg-[#388E3C] rounded-[24px] opacity-0 group-focus-within:opacity-5 blur-xl transition-opacity" />
                       <Input
                         placeholder="e.g. Tolu Oyelowo"
-                        className="h-18 rounded-[24px] bg-[#0d0f11]/60 border-white/10 focus:border-[#388E3C]/50 transition-all text-xl font-bold px-8"
+                        className="h-16 rounded-[24px] bg-[#0d0f11]/60 border-white/10 focus:border-[#388E3C]/50 transition-all text-xl font-bold px-8"
+                        autoComplete="name"
                         {...form.register('fullName')}
                       />
                     </div>
