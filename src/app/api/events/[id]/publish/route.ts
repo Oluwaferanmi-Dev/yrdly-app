@@ -6,7 +6,8 @@ import { createClient } from '@supabase/supabase-js';
  * POST /api/events/[id]/publish
  * Transitions a DRAFT event to PUBLISHED.
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const { data: event } = await supabaseAdmin
       .from('events')
       .select('id, organizer_id, status')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const { error } = await supabaseAdmin
       .from('events')
       .update({ status: 'PUBLISHED', published_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) return NextResponse.json({ error: 'Failed to publish' }, { status: 500 });
     return NextResponse.json({ success: true });

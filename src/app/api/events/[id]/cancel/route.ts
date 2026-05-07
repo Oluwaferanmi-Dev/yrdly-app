@@ -9,7 +9,8 @@ const COMMISSION = 0.05;
  * Cancels the event, triggers Flutterwave refunds for all PAID tickets,
  * updates statuses, and notifies all buyers via in-app notification.
  */
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const { data: event } = await supabaseAdmin
       .from('events')
       .select('id, organizer_id, title, status')
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
@@ -39,13 +40,13 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     await supabaseAdmin
       .from('events')
       .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
-      .eq('id', params.id);
+      .eq('id', id);
 
     // Fetch all PAID tickets for this event
     const { data: paidTickets } = await supabaseAdmin
       .from('tickets')
       .select('id, buyer_id, flutterwave_flw_ref, amount_paid, attendee_email, attendee_name')
-      .eq('event_id', params.id)
+      .eq('event_id', id)
       .eq('status', 'PAID');
 
     let refunded = 0;
@@ -81,9 +82,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
           type: 'event_cancelled',
           title: `Event Cancelled — Refund Issued 💰`,
           message: `"${event.title}" has been cancelled. Your refund of ₦${ticket.amount_paid.toLocaleString()} will appear within 3–5 business days.`,
-          related_id: params.id,
+          related_id: id,
           related_type: 'event',
-          data: { eventId: params.id, eventTitle: event.title, amount: ticket.amount_paid },
+          data: { eventId: id, eventTitle: event.title, amount: ticket.amount_paid },
         });
 
         refunded++;
