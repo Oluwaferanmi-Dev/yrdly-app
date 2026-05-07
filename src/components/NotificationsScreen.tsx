@@ -32,7 +32,7 @@ interface NotificationsScreenProps {
 
 interface Notification {
   id: string;
-  type: 'friend_request' | 'message' | 'post_like' | 'post_comment' | 'event_invite' | 'system';
+  type: string;
   title: string;
   message: string;
   data?: any;
@@ -41,6 +41,7 @@ interface Notification {
   from_user_id?: string;
   from_user_name?: string;
   from_user_avatar?: string;
+  related_id?: string;
 }
 
 function NotificationIcon({ type }: { type: string }) {
@@ -165,30 +166,10 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: {
               return;
             }
 
-            // Accept request
-            const { error: updateError } = await supabase
-              .from('friend_requests')
-              .update({ status: 'accepted', updated_at: new Date().toISOString() })
-              .eq('id', requestData.id);
+            // Accept request via RPC to bypass RLS issues updating the other user
+            const { error: rpcError } = await supabase.rpc('accept_friend_request', { req_id: requestData.id });
+            if (rpcError) throw rpcError;
 
-            if (updateError) throw updateError;
-
-            // Update both users' friends lists (dedupe)
-            const [{ data: meData }, { data: senderData }] = await Promise.all([
-              supabase.from('users').select('friends').eq('id', currentUser.id).single(),
-              supabase.from('users').select('friends').eq('id', fromUserId).single(),
-            ]);
-
-            const myFriends = Array.isArray(meData?.friends) ? meData!.friends : [];
-            const senderFriends = Array.isArray(senderData?.friends) ? senderData!.friends : [];
-
-            const updatedMyFriends = Array.from(new Set([...myFriends, fromUserId]));
-            const updatedSenderFriends = Array.from(new Set([...senderFriends, toUserId]));
-
-            await Promise.all([
-              supabase.from('users').update({ friends: updatedMyFriends }).eq('id', toUserId),
-              supabase.from('users').update({ friends: updatedSenderFriends }).eq('id', fromUserId),
-            ]);
 
             // Mark as read (best-effort)
             onMarkAsRead(notification.id);
@@ -270,8 +251,10 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: {
 
         // Navigate based on type
         switch (notification.type) {
-          case 'friend_request': {
-            const targetUserId = notification.from_user_id;
+          case 'friend_request': 
+          case 'friend_request_accepted': 
+          case 'friend_request_declined': {
+            const targetUserId = notification.from_user_id || notification.related_id;
             if (targetUserId) {
               router.push(`/profile/${targetUserId}`);
             } else {
@@ -279,8 +262,9 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: {
             }
             break;
           }
-          case 'message': {
-            const conversationId = notification.data?.conversation_id;
+          case 'message':
+          case 'message_reaction': {
+            const conversationId = notification.related_id || notification.data?.conversation_id;
             if (conversationId) {
               router.push(`/messages/${conversationId}`);
             } else {
@@ -289,8 +273,9 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: {
             break;
           }
           case 'post_like':
-          case 'post_comment': {
-            const postId = notification.data?.post_id || notification.data?.related_id;
+          case 'post_comment':
+          case 'post_share': {
+            const postId = notification.related_id || notification.data?.post_id || notification.data?.related_id;
             if (postId) {
               router.push(`/posts/${postId}`);
             } else {
@@ -298,14 +283,66 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: {
             }
             break;
           }
-          case 'event_invite': {
-            const eventPostId = notification.data?.post_id || notification.data?.related_id;
+          case 'event_invite':
+          case 'event_reminder':
+          case 'event_cancelled':
+          case 'event_updated': {
+            const eventPostId = notification.related_id || notification.data?.post_id || notification.data?.related_id;
             if (eventPostId) {
-              router.push(`/posts/${eventPostId}`);
+              router.push(`/events/${eventPostId}`);
             } else {
               router.push('/events');
             }
             break;
+          }
+          case 'marketplace_item_sold':
+          case 'marketplace_item_interest':
+          case 'marketplace_message':
+          case 'catalog_item_inquiry':
+          case 'catalog_item_out_of_stock': {
+            const itemId = notification.related_id || notification.data?.item_id || notification.data?.related_id;
+            if (itemId) {
+              router.push(`/marketplace/${itemId}`);
+            } else {
+              router.push('/marketplace');
+            }
+            break;
+          }
+          case 'payment_successful':
+          case 'item_shipped':
+          case 'delivery_confirmed':
+          case 'funds_released': {
+            const transactionId = notification.related_id || notification.data?.transactionId || notification.data?.related_id;
+            if (transactionId) {
+              router.push(`/transactions/${transactionId}`);
+            } else {
+              router.push('/marketplace');
+            }
+            break;
+          }
+          case 'dispute_opened':
+          case 'dispute_resolved': {
+            const disputeId = notification.related_id || notification.data?.disputeId;
+            if (disputeId) {
+              router.push(`/admin/disputes/${disputeId}`);
+            } else {
+              router.push('/admin/disputes');
+            }
+            break;
+          }
+          case 'business_review_received': {
+            const businessId = notification.data?.businessId;
+            if (businessId) {
+              router.push(`/businesses/${businessId}`);
+            } else {
+              router.push('/businesses');
+            }
+            break;
+          }
+          case 'payout_processed':
+          case 'payout_failed': {
+             router.push('/profile/payout-settings');
+             break;
           }
           default: {
             router.push('/home');
@@ -463,6 +500,7 @@ export function NotificationsScreen({ className }: NotificationsScreenProps) {
           from_user_id: notif.sender_id || notif.data?.from_user_id,
           from_user_name: notif.data?.fromUserName || notif.data?.from_user_name,
           from_user_avatar: notif.data?.from_user_avatar,
+          related_id: notif.related_id,
         })) as Notification[];
 
         setNotifications(formattedNotifications);
@@ -514,6 +552,7 @@ export function NotificationsScreen({ className }: NotificationsScreenProps) {
             from_user_id: newNotification.sender_id || newNotification.data?.from_user_id,
             from_user_name: newNotification.data?.fromUserName || newNotification.data?.from_user_name,
             from_user_avatar: newNotification.data?.from_user_avatar,
+            related_id: newNotification.related_id,
           }, ...prev]);
         } else if (payload.eventType === 'UPDATE') {
           const updatedNotification = payload.new as any;

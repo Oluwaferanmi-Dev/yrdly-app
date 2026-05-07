@@ -19,7 +19,7 @@ type Profile = {
 
 export default function EditProfilePage() {
   const router = useRouter();
-  const { user, profile: authProfile } = useAuth();
+  const { user, profile: authProfile, updateProfile } = useAuth();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -60,22 +60,22 @@ export default function EditProfilePage() {
       if (avatarFile) {
         const ext = avatarFile.name.split(".").pop();
         const path = `${user.id}/avatar-${Date.now()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage.from("avatars").upload(path, avatarFile, { upsert: true });
+        const { error: uploadErr } = await supabase.storage.from("user-avatars").upload(path, avatarFile, { upsert: true });
         if (!uploadErr) {
-          const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+          const { data } = supabase.storage.from("user-avatars").getPublicUrl(path);
           finalAvatarUrl = data.publicUrl;
+        } else {
+          console.error("Avatar upload failed:", uploadErr);
         }
       }
 
-      const { error } = await supabase.from("users").update({
+      await updateProfile({
         name,
         bio,
         avatar_url: finalAvatarUrl,
-        location: { state, lga, ward },
+        location: { state, lga, ward } as any,
         updated_at: new Date().toISOString(),
-      }).eq("id", user.id);
-
-      if (error) throw error;
+      });
 
       window.dispatchEvent(new Event("refresh-profile"));
       toast({ title: "Profile saved!", description: "Your changes have been saved." });
@@ -189,18 +189,12 @@ export default function EditProfilePage() {
           </div>
         </section>
 
-      </main>
-
-      {/* ── Save bar ── */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-50 p-6"
-        style={{ background: "linear-gradient(to top, #15181D 60%, transparent)" }}
-      >
-        <div className="max-w-2xl mx-auto">
+        {/* ── Save bar ── */}
+        <div className="pt-8">
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full py-5 rounded-full flex items-center justify-center gap-3 text-white font-extrabold uppercase tracking-[0.2em] transition-all active:scale-[0.98] shadow-[0_20px_40px_rgba(56,142,60,0.3)]"
+            className="w-full py-4 rounded-full flex items-center justify-center gap-3 text-white font-extrabold uppercase tracking-[0.2em] transition-all active:scale-[0.98] shadow-[0_10px_30px_rgba(56,142,60,0.2)]"
             style={{ background: "#388E3C", fontFamily: "Plus Jakarta Sans, sans-serif", opacity: saving ? 0.7 : 1 }}
           >
             {saving ? "Saving…" : "Save Changes"}
@@ -209,7 +203,7 @@ export default function EditProfilePage() {
             )}
           </button>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -153,13 +153,13 @@ function PostForm({
       </div>
 
       {/* ── Textarea ── */}
-      <div className="flex-1 px-5 pb-2">
+      <div className="flex-1 px-5 pb-2 flex flex-col">
         <textarea
           {...form.register("text")}
           placeholder="What's going on?"
           rows={4}
           className={cn(
-            "w-full bg-transparent resize-none outline-none border-none",
+            "w-full bg-transparent resize-none outline-none border-none flex-1",
             "text-white placeholder:text-white/90 text-[14px] leading-[16px]",
           )}
           style={{ fontFamily: FONT_RL, fontWeight: 400 }}
@@ -169,6 +169,40 @@ function PostForm({
           <p className="text-red-400 text-xs mt-1">
             {form.formState.errors.text.message as string}
           </p>
+        )}
+        
+        {/* ── Image Previews ── */}
+        {form.watch("imageFiles")?.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide mt-2">
+            {Array.from(form.watch("imageFiles") as FileList).map((file, i) => (
+              <div key={i} className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden">
+                <img 
+                  src={URL.createObjectURL(file)} 
+                  alt="Preview" 
+                  className="w-full h-full object-cover" 
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const dt = new DataTransfer();
+                    const currentFiles = form.getValues("imageFiles") as FileList;
+                    for (let j = 0; j < currentFiles.length; j++) {
+                      if (j !== i) dt.items.add(currentFiles[j]);
+                    }
+                    form.setValue("imageFiles", dt.files, { shouldDirty: true });
+                    if (fileInputRef.current) {
+                      fileInputRef.current.files = dt.files;
+                    }
+                  }}
+                  className="absolute top-1 right-1 bg-black/60 rounded-full p-1 hover:bg-black"
+                >
+                  <X size={12} color="white" />
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

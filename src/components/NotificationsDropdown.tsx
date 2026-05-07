@@ -27,7 +27,7 @@ interface NotificationsDropdownProps {
 interface Notification {
   id: string;
   user_id: string;
-  type: 'friend_request' | 'message' | 'post_like' | 'post_comment' | 'event_invite' | 'system';
+  type: string;
   title: string;
   message: string;
   data?: any;

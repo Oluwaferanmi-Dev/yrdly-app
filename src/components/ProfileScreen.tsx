@@ -223,25 +223,29 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
 
   const handleAddFriend = async () => {
     if (!currentUser || !targetUser) return;
+    if (currentUser.id === targetUser.id) {
+      toast({ title: "Action Failed", description: "You cannot add yourself as a friend.", variant: "destructive" });
+      return;
+    }
     try {
       if (isFriend) {
-        const { data: cu } = await supabase.from("users").select("friends").eq("id", currentUser.id).single();
-        await supabase.from("users").update({ friends: cu?.friends?.filter((id: string) => id !== targetUser.id) || [] }).eq("id", currentUser.id);
-        const { data: tu } = await supabase.from("users").select("friends").eq("id", targetUser.id).single();
-        await supabase.from("users").update({ friends: tu?.friends?.filter((id: string) => id !== currentUser.id) || [] }).eq("id", targetUser.id);
+        const { error } = await supabase.rpc('remove_friend', { target_user_id: targetUser.id });
+        if (error) throw error;
         setIsFriend(false);
         await refreshProfileData();
         toast({ title: "Friend Removed" });
       } else if (isFriendRequestSent) {
-        await supabase.from("friend_requests").delete().eq("from_user_id", currentUser.id).eq("to_user_id", targetUser.id);
+        const { error } = await supabase.from("friend_requests").delete().eq("from_user_id", currentUser.id).eq("to_user_id", targetUser.id);
+        if (error) throw error;
         setIsFriendRequestSent(false);
         toast({ title: "Request Cancelled" });
       } else {
-        await supabase.from("friend_requests").insert({
+        const { error } = await supabase.from("friend_requests").insert({
           from_user_id: currentUser.id, to_user_id: targetUser.id,
           participant_ids: [currentUser.id, targetUser.id].sort(),
           status: "pending", created_at: new Date().toISOString(),
         });
+        if (error) throw error;
         setIsFriendRequestSent(true);
         toast({ title: "Friend Request Sent" });
         try {
@@ -365,7 +369,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
           </div>
 
           {/* Action buttons for external profile */}
-          {!actualIsOwnProfile && (
+          {!actualIsOwnProfile && currentUser?.id !== targetUser?.id && (
             <div className="flex flex-row items-center justify-center gap-4 mt-8 w-full max-w-[400px] mx-auto px-4">
               <button
                 onClick={handleAddFriend}

@@ -59,15 +59,33 @@ export const usePosts = (opts?: { filterState?: string | null; filterLga?: strin
     fetchPosts();
 
     // Set up real-time subscription for all posts
+    let filterString: string | undefined = undefined;
+    if (filterLga) {
+      filterString = `lga=eq.${filterLga}`;
+    } else if (filterState) {
+      filterString = `state=eq.${filterState}`;
+    }
+
     const channel = supabase
       .channel('posts-all')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'posts',
+        filter: filterString,
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newPost = payload.new as Post;
+          
+          // Double check filter client-side just in case
+          if (filterState && newPost.state && newPost.state !== filterState) return;
+          if (filterLga && newPost.lga && newPost.lga !== filterLga) return;
+          
+          // Check if post already exists in state
+          setPosts(currentPosts => {
+            if (currentPosts.some(p => p.id === newPost.id)) return currentPosts;
+            return [newPost, ...currentPosts];
+          });
           
           // Fetch user data for the new post
           const fetchUserData = async () => {
@@ -83,13 +101,12 @@ export const usePosts = (opts?: { filterState?: string | null; filterLga?: strin
                   ...newPost,
                   user: userData
                 };
-                setPosts(prevPosts => [postWithUser, ...prevPosts]);
+                setPosts(prevPosts => prevPosts.map(p => p.id === newPost.id ? postWithUser : p));
               } else {
-                // Fallback to post without user data
-                setPosts(prevPosts => [newPost, ...prevPosts]);
+                // Keep the post as is (already added)
               }
             } catch (error) {
-              setPosts(prevPosts => [newPost, ...prevPosts]);
+              // Keep the post as is (already added)
             }
           };
           
