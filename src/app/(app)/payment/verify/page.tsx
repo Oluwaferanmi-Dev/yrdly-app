@@ -69,7 +69,7 @@ export default function PaymentVerificationPage() {
       setVerificationStatus('error');
       setErrorMessage('An unexpected error occurred during verification');
     }
-  }, [transactionRef, txRef, toast, router]);
+  }, [transactionRef, txRef, router]);
 
   useEffect(() => {
     if (!user) {

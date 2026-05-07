@@ -330,7 +330,7 @@ export const usePosts = () => {
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save business.' });
       }
     },
-    [user, profile, toast, uploadImages]
+    [user, toast, uploadImages]
   );
 
   const deletePost = useCallback(

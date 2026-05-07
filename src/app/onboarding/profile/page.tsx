@@ -167,6 +167,7 @@ export default function OnboardingProfilePage() {
   };
 
   // Debounced username checking effect
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (debouncedUsername && debouncedUsername.length >= 3) {
       checkUsernameAvailability(debouncedUsername);
