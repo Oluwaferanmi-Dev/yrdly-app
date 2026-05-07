@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Bell, UserPlus, MessageCircle, Heart, Calendar, Check, X, MoreHorizontal, MessageSquare } from "lucide-react";
@@ -36,6 +37,7 @@ interface Notification {
   from_user_id?: string;
   from_user_name?: string;
   from_user_avatar?: string;
+  related_id?: string;
 }
 
 // Map types to circular badge colors and icons
@@ -56,15 +58,94 @@ function getNotificationBadge(type: string) {
   }
 }
 
-function NotificationItem({ notification, onMarkAsRead, onDelete }: {
+function NotificationItem({ notification, onMarkAsRead, onDelete, onClose }: {
   notification: Notification;
   onMarkAsRead: (id: string) => void;
   onDelete: (id: string) => void;
+  onClose: () => void;
 }) {
+  const router = useRouter();
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
   const badgeConfig = getNotificationBadge(notification.type);
   const Icon = badgeConfig.icon;
+
+  // Navigate to the source of the notification, close dropdown, mark as read
+  const handleNavigate = () => {
+    // Mark as read (fire and forget)
+    if (!notification.is_read) {
+      onMarkAsRead(notification.id);
+    }
+    // Close the dropdown
+    onClose();
+
+    // Route based on type
+    switch (notification.type) {
+      case 'friend_request':
+      case 'friend_request_accepted':
+      case 'friend_request_declined': {
+        const targetId = notification.from_user_id || notification.related_id || notification.data?.fromUserId;
+        router.push(targetId ? `/profile/${targetId}` : '/neighbors');
+        break;
+      }
+      case 'message':
+      case 'message_reaction': {
+        const convId = notification.related_id || notification.data?.conversation_id || notification.data?.conversationId;
+        router.push(convId ? `/messages/${convId}` : '/messages');
+        break;
+      }
+      case 'post_like':
+      case 'post_comment':
+      case 'post_share': {
+        const postId = notification.related_id || notification.data?.post_id || notification.data?.postId;
+        router.push(postId ? `/posts/${postId}` : '/home');
+        break;
+      }
+      case 'event_invite':
+      case 'event_reminder':
+      case 'event_cancelled':
+      case 'event_updated': {
+        const eventId = notification.related_id || notification.data?.eventId;
+        router.push(eventId ? `/events` : '/events');
+        break;
+      }
+      case 'marketplace_item_sold':
+      case 'marketplace_item_interest':
+      case 'marketplace_message':
+      case 'catalog_item_inquiry':
+      case 'catalog_item_out_of_stock': {
+        const itemId = notification.related_id || notification.data?.item_id || notification.data?.itemId;
+        router.push(itemId ? `/marketplace/${itemId}` : '/marketplace');
+        break;
+      }
+      case 'payment_successful':
+      case 'item_shipped':
+      case 'delivery_confirmed':
+      case 'funds_released': {
+        const txId = notification.related_id || notification.data?.transactionId;
+        router.push(txId ? `/transactions/${txId}` : '/marketplace');
+        break;
+      }
+      case 'dispute_opened':
+      case 'dispute_resolved': {
+        const disputeId = notification.related_id || notification.data?.disputeId;
+        router.push(disputeId ? `/disputes/${disputeId}` : '/disputes');
+        break;
+      }
+      case 'business_review_received': {
+        const bizId = notification.data?.businessId || notification.related_id;
+        router.push(bizId ? `/businesses/${bizId}` : '/businesses');
+        break;
+      }
+      case 'payout_processed':
+      case 'payout_failed': {
+        router.push('/profile/payout-settings');
+        break;
+      }
+      default:
+        router.push('/notifications');
+    }
+  };
 
   const handleAction = async (action: string) => {
     if (action === 'accept_friend') {
@@ -176,12 +257,16 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: {
 
   return (
     <div
-      className="px-4 py-4 flex gap-3 relative transition-colors"
+      className="px-4 py-4 flex gap-3 relative transition-colors cursor-pointer group"
       style={{
         background: notification.is_read ? "transparent" : "rgba(56,142,60,0.08)",
         borderBottom: "0.2px solid rgba(64,73,61,0.2)",
         opacity: notification.is_read ? 0.8 : 1,
       }}
+      onClick={handleNavigate}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && handleNavigate()}
     >
       {/* Avatar + Badge */}
       <div className="relative flex-shrink-0">
@@ -217,27 +302,30 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: {
             {/* Actions Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="text-[#899485] hover:text-white transition-colors">
+                <button
+                  className="text-[#899485] hover:text-white transition-colors"
+                  onClick={(e) => e.stopPropagation()} // don't trigger row navigation
+                >
                   <MoreHorizontal className="w-3 h-3" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" style={{ background: SURFACE, border: "1px solid rgba(130,219,126,0.2)", fontFamily: FONT }}>
+                <DropdownMenuContent align="end" style={{ background: SURFACE, border: "1px solid rgba(130,219,126,0.2)", fontFamily: FONT }}>
                 {!notification.is_read && (
-                  <DropdownMenuItem onClick={() => onMarkAsRead(notification.id)} className="text-white hover:bg-[#1E2126] cursor-pointer">
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMarkAsRead(notification.id); }} className="text-white hover:bg-[#1E2126] cursor-pointer">
                     <Check className="w-4 h-4 mr-2" style={{ color: GREEN_LIGHT }} /> Mark as Read
                   </DropdownMenuItem>
                 )}
                 {notification.type === 'friend_request' && (
                   <>
-                    <DropdownMenuItem onClick={() => handleAction('accept_friend')} className="text-white hover:bg-[#1E2126] cursor-pointer">
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAction('accept_friend'); }} className="text-white hover:bg-[#1E2126] cursor-pointer">
                       <UserPlus className="w-4 h-4 mr-2" style={{ color: "#006ec9" }} /> Accept
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleAction('decline_friend')} className="text-[#E53935] hover:bg-[#1E2126] cursor-pointer">
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAction('decline_friend'); }} className="text-[#E53935] hover:bg-[#1E2126] cursor-pointer">
                       <X className="w-4 h-4 mr-2" /> Decline
                     </DropdownMenuItem>
                   </>
                 )}
-                <DropdownMenuItem onClick={() => onDelete(notification.id)} className="text-[#E53935] hover:bg-[#1E2126] cursor-pointer">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(notification.id); }} className="text-[#E53935] hover:bg-[#1E2126] cursor-pointer">
                   <X className="w-4 h-4 mr-2" /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -258,6 +346,7 @@ function NotificationItem({ notification, onMarkAsRead, onDelete }: {
 }
 
 export function NotificationsDropdown({ isOpen, onClose, onNotificationCountChange }: NotificationsDropdownProps) {
+  const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -275,6 +364,7 @@ export function NotificationsDropdown({ isOpen, onClose, onNotificationCountChan
             from_user_id: notif.sender_id || notif.data?.from_user_id,
             from_user_name: notif.data?.fromUserName || notif.data?.from_user_name,
             from_user_avatar: notif.data?.from_user_avatar,
+            related_id: notif.related_id,
           }));
           setNotifications(formatted as Notification[]);
         }
@@ -292,6 +382,7 @@ export function NotificationsDropdown({ isOpen, onClose, onNotificationCountChan
             id: n.id, user_id: n.user_id, type: n.type, title: n.title, message: n.message, data: n.data,
             is_read: n.is_read, created_at: n.created_at, from_user_id: n.sender_id || n.data?.from_user_id,
             from_user_name: n.data?.fromUserName || n.data?.from_user_name, from_user_avatar: n.data?.from_user_avatar,
+            related_id: n.related_id,
           }, ...prev.slice(0, 9)]);
         } else if (payload.eventType === 'UPDATE') {
           const u = payload.new as any;
@@ -380,6 +471,7 @@ export function NotificationsDropdown({ isOpen, onClose, onNotificationCountChan
                 notification={notification}
                 onMarkAsRead={handleMarkAsRead}
                 onDelete={handleDelete}
+                onClose={onClose}
               />
             ))
           ) : (
@@ -396,7 +488,11 @@ export function NotificationsDropdown({ isOpen, onClose, onNotificationCountChan
         {/* Footer */}
         {notifications.length > 0 && (
           <div className="px-4 py-3 text-center" style={{ background: "#272a2f" }}>
-            <button className="font-bold text-xs hover:underline" style={{ color: "#a5c8ff", fontFamily: FONT }}>
+            <button
+              className="font-bold text-xs hover:underline"
+              style={{ color: "#a5c8ff", fontFamily: FONT }}
+              onClick={() => { onClose(); router.push('/notifications'); }}
+            >
               View All Notifications
             </button>
           </div>
