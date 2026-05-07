@@ -1,0 +1,127 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { createClient } from '@supabase/supabase-js';
+
+/**
+ * POST /api/events/create
+ * Creates a new event (as DRAFT or PUBLISHED) with ticket tiers.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    // ── Auth ──────────────────────────────────────────────
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { autoRefreshToken: false, persistSession: false } }
+    );
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const {
+      title, description, category, coverImageUrl,
+      locationAddress, locationOnline, onlineLink, lat, lng, ward, lga, state,
+      startTime, endTime, timezone,
+      visibility, payoutMode, publish,
+      ticketTiers, // array of { name, description, price, capacity, saleEndsAt }
+    } = body;
+
+    if (!title || !startTime) {
+      return NextResponse.json({ error: 'title and startTime are required' }, { status: 400 });
+    }
+
+    // ── Gate: paid events require a payout account ────────
+    const hasPaidTiers = (ticketTiers || []).some((t: any) => t.price > 0);
+    if (hasPaidTiers || payoutMode === 'INSTANT') {
+      const { data: sellerAccount } = await supabaseAdmin
+        .from('seller_accounts')
+        .select('id, flutterwave_subaccount_id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .eq('is_primary', true)
+        .single();
+
+      if (!sellerAccount?.flutterwave_subaccount_id) {
+        return NextResponse.json(
+          { error: 'PAYOUT_ACCOUNT_REQUIRED', message: 'Link your bank account in Settings → Payout Settings before creating a paid event.' },
+          { status: 402 }
+        );
+      }
+    }
+
+    // Get subaccount ID if exists
+    const { data: sa } = await supabaseAdmin
+      .from('seller_accounts')
+      .select('flutterwave_subaccount_id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single();
+
+    const now = new Date().toISOString();
+    const status = publish ? 'PUBLISHED' : 'DRAFT';
+
+    // ── Create event ──────────────────────────────────────
+    const { data: event, error: eventError } = await supabaseAdmin
+      .from('events')
+      .insert({
+        organizer_id: user.id,
+        title,
+        description,
+        category: category || 'General',
+        cover_image_url: coverImageUrl,
+        location_address: locationAddress,
+        location_online: locationOnline || false,
+        online_link: onlineLink,
+        lat, lng, ward, lga, state,
+        start_time: startTime,
+        end_time: endTime,
+        timezone: timezone || 'Africa/Lagos',
+        status,
+        visibility: visibility || 'PUBLIC',
+        payout_mode: payoutMode || 'POST_EVENT',
+        flutterwave_subaccount_id: sa?.flutterwave_subaccount_id || null,
+        published_at: publish ? now : null,
+      })
+      .select('id')
+      .single();
+
+    if (eventError) {
+      console.error('Event create error:', eventError);
+      return NextResponse.json({ error: 'Failed to create event' }, { status: 500 });
+    }
+
+    // ── Create ticket tiers ───────────────────────────────
+    if (ticketTiers && ticketTiers.length > 0) {
+      const tiersToInsert = ticketTiers.map((t: any) => ({
+        event_id: event.id,
+        name: t.name,
+        description: t.description || null,
+        price: t.price ?? 0,
+        capacity: t.capacity || null,
+        sold: 0,
+        is_visible: true,
+        sale_ends_at: t.saleEndsAt || null,
+      }));
+
+      const { error: tiersError } = await supabaseAdmin
+        .from('ticket_tiers')
+        .insert(tiersToInsert);
+
+      if (tiersError) {
+        console.error('Ticket tiers error:', tiersError);
+      }
+    }
+
+    return NextResponse.json({ success: true, eventId: event.id, status });
+  } catch (error) {
+    console.error('Create event error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
