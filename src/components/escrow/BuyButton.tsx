@@ -5,6 +5,8 @@ import { X, Lock, Info, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useRouter } from "next/navigation";
+import { MARKETPLACE_CONSTANTS } from "@/lib/constants";
+import { supabase } from "@/lib/supabase";
 
 
 /* ── Design tokens ─────────────────────────────────── */
@@ -42,7 +44,7 @@ export function BuyButton({
   const [open, setOpen]         = useState(false);
   const [loading, setLoading]   = useState(false);
 
-  const commission = Math.round(price * 0.03); // 3%
+  const commission = Math.round(price * MARKETPLACE_CONSTANTS.COMMISSION_RATE);
   const totalPay   = price + commission;
 
   const handleBuy = async () => {
@@ -57,9 +59,19 @@ export function BuyButton({
 
     setLoading(true);
     try {
+      // Get current session token for auth
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast({ title: "Session expired", description: "Please log in again.", variant: "destructive" });
+        return;
+      }
+
       const res = await fetch("/api/payment/initialize", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           itemId,
           buyerId: user.id,
@@ -206,7 +218,7 @@ export function BuyButton({
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[13px]" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
-                      Yrdly Escrow Fee
+                      Platform Fee
                     </span>
                     <Info className="w-3.5 h-3.5" style={{ color: "rgba(191,202,185,0.5)" }} />
                   </div>
@@ -249,35 +261,6 @@ export function BuyButton({
                   </p>
                 </div>
               </section>
-
-              {/* Payment method */}
-              <div className="mb-10">
-                <p
-                  className="text-[12px] font-medium mb-3 px-1"
-                  style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}
-                >
-                  Pay with
-                </p>
-                <div
-                  className="rounded-[11px] p-4 flex items-center justify-between border"
-                  style={{ background: CARDH, borderColor: GREEN }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-8 h-8 flex items-center justify-center rounded-md"
-                      style={{ background: "#fff" }}
-                    >
-                      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="#00315f">
-                        <path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
-                      </svg>
-                    </div>
-                    <span className="text-[14px]" style={{ fontFamily: "Raleway, sans-serif" }}>
-                      Debit/Credit Card
-                    </span>
-                  </div>
-                  <ChevronRight className="w-4 h-4" style={{ color: GREEN_L }} />
-                </div>
-              </div>
 
               {/* CTA */}
               <div className="flex flex-col items-center gap-4">

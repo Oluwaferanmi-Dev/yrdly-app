@@ -314,6 +314,22 @@ function FormBody({
               )}
             />
 
+            {/* Newly selected image previews */}
+            {form.watch("image") && form.watch("image").length > 0 && Array.from(form.watch("image") as FileList).some(f => f instanceof File) && (
+              <div className="space-y-2 ml-5">
+                <p className="text-[11px] text-white/50" style={{ fontFamily: FONT_RALEWAY }}>
+                  New images:
+                </p>
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  {Array.from(form.watch("image") as FileList).filter(f => f instanceof File).map((file, i) => (
+                    <div key={i} className="relative w-16 h-16 flex-shrink-0 rounded-md overflow-hidden">
+                      <img src={URL.createObjectURL(file as File)} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Existing images (edit mode) */}
             {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
               <div className="space-y-2 ml-5">

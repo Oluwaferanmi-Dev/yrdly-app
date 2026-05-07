@@ -11,16 +11,19 @@ import { useToast } from './use-toast';
 
 
 
-export const usePosts = () => {
+export const usePosts = (opts?: { filterState?: string | null; filterLga?: string | null }) => {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const filterState = opts?.filterState;
+  const filterLga = opts?.filterLga;
+
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const query = supabase
+        let query = supabase
           .from('posts')
           .select(`
             *,
@@ -31,6 +34,14 @@ export const usePosts = () => {
               created_at
             )
           `);
+
+        // Apply location filters
+        if (filterState) {
+          query = query.eq('state', filterState);
+        }
+        if (filterLga) {
+          query = query.eq('lga', filterLga);
+        }
 
         const { data, error } = await query.order('timestamp', { ascending: false });
 
@@ -48,15 +59,33 @@ export const usePosts = () => {
     fetchPosts();
 
     // Set up real-time subscription for all posts
+    let filterString: string | undefined = undefined;
+    if (filterLga) {
+      filterString = `lga=eq.${filterLga}`;
+    } else if (filterState) {
+      filterString = `state=eq.${filterState}`;
+    }
+
     const channel = supabase
       .channel('posts-all')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'posts',
+        filter: filterString,
       }, (payload) => {
         if (payload.eventType === 'INSERT') {
           const newPost = payload.new as Post;
+          
+          // Double check filter client-side just in case
+          if (filterState && newPost.state && newPost.state !== filterState) return;
+          if (filterLga && newPost.lga && newPost.lga !== filterLga) return;
+          
+          // Check if post already exists in state
+          setPosts(currentPosts => {
+            if (currentPosts.some(p => p.id === newPost.id)) return currentPosts;
+            return [newPost, ...currentPosts];
+          });
           
           // Fetch user data for the new post
           const fetchUserData = async () => {
@@ -72,13 +101,12 @@ export const usePosts = () => {
                   ...newPost,
                   user: userData
                 };
-                setPosts(prevPosts => [postWithUser, ...prevPosts]);
+                setPosts(prevPosts => prevPosts.map(p => p.id === newPost.id ? postWithUser : p));
               } else {
-                // Fallback to post without user data
-                setPosts(prevPosts => [newPost, ...prevPosts]);
+                // Keep the post as is (already added)
               }
             } catch (error) {
-              setPosts(prevPosts => [newPost, ...prevPosts]);
+              // Keep the post as is (already added)
             }
           };
           
@@ -137,7 +165,7 @@ export const usePosts = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [filterState, filterLga]);
 
   // Listen for profile changes to refresh posts with updated user data
   useEffect(() => {
@@ -170,7 +198,7 @@ export const usePosts = () => {
     };
 
     refreshUserPosts();
-  }, [user?.id, profile?.name, profile?.avatar_url, profile, user]);
+  }, [user?.id, profile?.name, profile?.avatar_url]);
 
   const uploadImages = useCallback(async (
     files: FileList,
@@ -236,6 +264,9 @@ export const usePosts = () => {
           )
         );
 
+        // Auto-stamp the creator's location from their profile
+        const userLocation = profile.location as { state?: string; lga?: string; ward?: string } | undefined;
+
         const finalPostData = {
           ...cleanedPostData,
           user_id: user.id,
@@ -243,7 +274,14 @@ export const usePosts = () => {
           author_image: profile.avatar_url || '',
           image_urls: imageUrls.length > 0 ? imageUrls : [],
           timestamp: postIdToUpdate ? postData.timestamp : new Date().toISOString(),
-          category: postData.category || 'General', // Ensure category is always provided
+          category: postData.category || 'General',
+          // Location stamping — only set on new posts, preserve on edits
+          ...(postIdToUpdate ? {} : {
+            state: userLocation?.state || null,
+            lga: userLocation?.lga || null,
+            ward: userLocation?.ward || null,
+            author_location: userLocation ? { state: userLocation.state, lga: userLocation.lga, ward: userLocation.ward } : null,
+          }),
         };
 
         if (postIdToUpdate) {
@@ -296,10 +334,20 @@ export const usePosts = () => {
             imageUrls = businessIdToUpdate ? [...imageUrls, ...uploadedUrls] : uploadedUrls;
         }
 
+        // Auto-stamp the creator's location from their profile
+        const bizLocation = profile?.location as { state?: string; lga?: string; ward?: string } | undefined;
+
         const finalBusinessData = {
             ...businessData,
             owner_id: user.id,
             image_urls: imageUrls,
+            // Location stamping — only set on new businesses, preserve on edits
+            ...(businessIdToUpdate ? {} : {
+              state: bizLocation?.state || null,
+              lga: bizLocation?.lga || null,
+              ward: bizLocation?.ward || null,
+              admin_location: bizLocation ? { state: bizLocation.state, lga: bizLocation.lga, ward: bizLocation.ward } : null,
+            }),
         }
 
         if (businessIdToUpdate) {

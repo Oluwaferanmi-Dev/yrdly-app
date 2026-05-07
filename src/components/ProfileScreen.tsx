@@ -223,25 +223,29 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
 
   const handleAddFriend = async () => {
     if (!currentUser || !targetUser) return;
+    if (currentUser.id === targetUser.id) {
+      toast({ title: "Action Failed", description: "You cannot add yourself as a friend.", variant: "destructive" });
+      return;
+    }
     try {
       if (isFriend) {
-        const { data: cu } = await supabase.from("users").select("friends").eq("id", currentUser.id).single();
-        await supabase.from("users").update({ friends: cu?.friends?.filter((id: string) => id !== targetUser.id) || [] }).eq("id", currentUser.id);
-        const { data: tu } = await supabase.from("users").select("friends").eq("id", targetUser.id).single();
-        await supabase.from("users").update({ friends: tu?.friends?.filter((id: string) => id !== currentUser.id) || [] }).eq("id", targetUser.id);
+        const { error } = await supabase.rpc('remove_friend', { target_user_id: targetUser.id });
+        if (error) throw error;
         setIsFriend(false);
         await refreshProfileData();
         toast({ title: "Friend Removed" });
       } else if (isFriendRequestSent) {
-        await supabase.from("friend_requests").delete().eq("from_user_id", currentUser.id).eq("to_user_id", targetUser.id);
+        const { error } = await supabase.from("friend_requests").delete().eq("from_user_id", currentUser.id).eq("to_user_id", targetUser.id);
+        if (error) throw error;
         setIsFriendRequestSent(false);
         toast({ title: "Request Cancelled" });
       } else {
-        await supabase.from("friend_requests").insert({
+        const { error } = await supabase.from("friend_requests").insert({
           from_user_id: currentUser.id, to_user_id: targetUser.id,
           participant_ids: [currentUser.id, targetUser.id].sort(),
           status: "pending", created_at: new Date().toISOString(),
         });
+        if (error) throw error;
         setIsFriendRequestSent(true);
         toast({ title: "Friend Request Sent" });
         try {
@@ -365,23 +369,32 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
           </div>
 
           {/* Action buttons for external profile */}
-          {!actualIsOwnProfile && (
-            <div className="flex items-center gap-3 mt-6">
+          {!actualIsOwnProfile && currentUser?.id !== targetUser?.id && (
+            <div className="flex flex-row items-center justify-center gap-4 mt-8 w-full max-w-[400px] mx-auto px-4">
               <button
                 onClick={handleAddFriend}
-                className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white transition-all active:scale-95"
-                style={{ background: isFriend ? "#E53935" : GREEN, fontFamily: FONT }}
+                className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-white transition-all active:scale-95 shadow-lg"
+                style={{ 
+                  background: isFriend ? "#E53935" : GREEN, 
+                  fontFamily: FONT,
+                  boxShadow: isFriend ? "0 8px 20px rgba(229,57,53,0.2)" : "0 8px 20px rgba(56,142,60,0.2)"
+                }}
               >
-                <Users className="w-4 h-4" />
+                <Users className="w-5 h-5" />
                 {isFriend ? "Remove Friend" : isFriendRequestSent ? "Request Sent" : "Add Friend"}
               </button>
               {isFriend && (
                 <button
                   onClick={handleMessageUser}
-                  className="flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-bold text-white transition-all active:scale-95"
-                  style={{ background: "#1B2B3A", border: `1px solid rgba(130,219,126,0.3)`, fontFamily: FONT }}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-white transition-all active:scale-95 border shadow-lg"
+                  style={{ 
+                    background: "#1B2B3A", 
+                    borderColor: "rgba(130,219,126,0.3)", 
+                    fontFamily: FONT,
+                    boxShadow: "0 8px 20px rgba(0,0,0,0.2)"
+                  }}
                 >
-                  <MessageCircle className="w-4 h-4" style={{ color: GREEN_LIGHT }} />
+                  <MessageCircle className="w-5 h-5 text-[#82DB7E]" />
                   Message
                 </button>
               )}

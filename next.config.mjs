@@ -5,10 +5,20 @@ import { withSentryConfig } from '@sentry/nextjs';
 const nextConfig = {
   // Optimize images for mobile
   images: {
-    unoptimized: true,
+    unoptimized: false,
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.in',
+      }
+    ]
   },
   
   // Experimental features for better mobile performance
@@ -32,32 +42,15 @@ const nextConfig = {
   productionBrowserSourceMaps: false,
 };
 
-// Sentry configuration
-const sentryWebpackPluginOptions = {
-  // Suppresses source map uploading logs during build
-  silent: true,
-  
-  // Disable source map uploading for faster builds
-  widenClientFileUpload: false,
-  
-  // Routes browser requests to Sentry through a Next.js rewrite
-  tunnelRoute: "/monitoring",
-  
-  // Hides source maps from generated client bundles
-  hideSourceMaps: true,
-  
-  // Additional options
-  org: "yrdly",
-  project: "yrdly-app",
-};
+
 
 export default withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-  org: "yrdly",
+  org: "yrdly-yo",
 
-  project: "yrdly-app",
+  project: "yrdly-web-app",
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
@@ -66,11 +59,13 @@ export default withSentryConfig(nextConfig, {
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
 
   // Disable source map uploading for faster builds
-  widenClientFileUpload: false,
+  widenClientFileUpload: true,
+
+  authToken: process.env.SENTRY_AUTH_TOKEN,
 
   // Uncomment to route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
   // This can increase your server load as well as your hosting bill.
   // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
   // side errors will fail.
-  // tunnelRoute: "/monitoring",
+  tunnelRoute: "/monitoring",
 });

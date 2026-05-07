@@ -266,7 +266,11 @@ export function BusinessDetailScreen({
             <span className="text-sm" title={typeof business.location === 'string' ? business.location : business.location?.address || 'Location not specified'}>
               {typeof business.location === 'string' 
                 ? shortenAddress(business.location, 60)
-                : shortenAddress(business.location?.address || 'Location not specified', 60)
+                : business.location?.address 
+                  ? shortenAddress(business.location.address, 60)
+                  : (business.state || business.lga)
+                    ? [business.lga, business.state].filter(Boolean).join(", ")
+                    : 'Location not specified'
               }
             </span>
             {business.distance && (
@@ -506,7 +510,11 @@ export function BusinessDetailScreen({
                   <span className="text-muted-foreground" title={typeof business.location === 'string' ? business.location : business.location?.address || 'Location not specified'}>
                     {typeof business.location === 'string' 
                       ? shortenAddress(business.location, 50)
-                      : shortenAddress(business.location?.address || 'Location not specified', 50)
+                      : business.location?.address 
+                        ? shortenAddress(business.location.address, 50)
+                        : (business.state || business.lga)
+                          ? [business.lga, business.state].filter(Boolean).join(", ")
+                          : 'Location not specified'
                     }
                   </span>
                 </div>

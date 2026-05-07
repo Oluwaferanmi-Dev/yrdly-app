@@ -3,12 +3,14 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { usePosts } from "@/hooks/use-posts";
+import { useLocation } from "@/contexts/LocationContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyFeed } from "@/components/EmptyFeed";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { CreateItemDialog } from "@/components/CreateItemDialog";
 import { PostCard } from "@/components/PostCard";
+import { LocationChip } from "@/components/LocationChip";
 
 /* ─── gradient SVG icons ──────────────────────────────────────── */
 function HandshakeGradient() {
@@ -67,10 +69,15 @@ interface HomeScreenProps {
 
 export function HomeScreen({ onViewProfile }: HomeScreenProps) {
   const { user, profile } = useAuth();
-  const { posts, loading, deletePost, createPost } = usePosts();
+  const { filterState, filterLga } = useLocation();
+  const { posts, loading, deletePost, createPost } = usePosts({ filterState, filterLga });
 
   return (
     <div className="w-full pb-4 space-y-3">
+      {/* ── Location Chip ── */}
+      <div className="flex items-center gap-2 px-1">
+        <LocationChip />
+      </div>
       {/* ── Post Bar ── */}
       <div className="rounded-[11px] overflow-hidden" style={{ background: "#1E2126" }}>
         <div className="p-4">

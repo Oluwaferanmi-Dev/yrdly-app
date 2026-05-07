@@ -19,8 +19,9 @@ import { useState, useEffect, memo, useCallback, useMemo, useRef } from "react";
 import * as React from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Post } from "@/types";
-import { X, Paperclip, MapPin } from "lucide-react";
+import { X, Paperclip, MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 // ── Design tokens ──────────────────────────────────────────────
 const BG       = "#15181D";
@@ -89,6 +90,53 @@ function PostForm({
   fileInputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   const text = form.watch("text") as string;
+  const { toast } = useToast();
+  const [fetchingLocation, setFetchingLocation] = React.useState(false);
+
+  const handleGif = () => {
+    toast({
+      title: "GIFs coming soon! 🎉",
+      description: "GIF picker will be available in the next update.",
+    });
+  };
+
+  const handleLocation = async () => {
+    if (!navigator.geolocation) {
+      toast({ title: "Location not supported", description: "Your browser doesn't support geolocation.", variant: "destructive" });
+      return;
+    }
+    setFetchingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const data = await res.json();
+          const locationText = data.display_name
+            ? `📍 ${data.display_name.split(',').slice(0, 3).join(',').trim()}`
+            : `📍 ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+          const currentText = form.getValues('text') || '';
+          const separator = currentText && !currentText.endsWith('\n') ? '\n' : '';
+          form.setValue('text', `${currentText}${separator}${locationText}`, { shouldDirty: true });
+        } catch {
+          toast({ title: "Location error", description: "Could not fetch your address. Please try again.", variant: "destructive" });
+        } finally {
+          setFetchingLocation(false);
+        }
+      },
+      (err) => {
+        setFetchingLocation(false);
+        const msg = err.code === 1
+          ? "Location access denied. Please allow location in your browser settings."
+          : "Could not get your location. Please try again.";
+        toast({ title: "Location unavailable", description: msg, variant: "destructive" });
+      },
+      { timeout: 10000, maximumAge: 60000 }
+    );
+  };
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
@@ -105,13 +153,13 @@ function PostForm({
       </div>
 
       {/* ── Textarea ── */}
-      <div className="flex-1 px-5 pb-2">
+      <div className="flex-1 px-5 pb-2 flex flex-col">
         <textarea
           {...form.register("text")}
           placeholder="What's going on?"
           rows={4}
           className={cn(
-            "w-full bg-transparent resize-none outline-none border-none",
+            "w-full bg-transparent resize-none outline-none border-none flex-1",
             "text-white placeholder:text-white/90 text-[14px] leading-[16px]",
           )}
           style={{ fontFamily: FONT_RL, fontWeight: 400 }}
@@ -121,6 +169,40 @@ function PostForm({
           <p className="text-red-400 text-xs mt-1">
             {form.formState.errors.text.message as string}
           </p>
+        )}
+        
+        {/* ── Image Previews ── */}
+        {form.watch("imageFiles")?.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide mt-2">
+            {Array.from(form.watch("imageFiles") as FileList).map((file, i) => (
+              <div key={i} className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden">
+                <img 
+                  src={URL.createObjectURL(file)} 
+                  alt="Preview" 
+                  className="w-full h-full object-cover" 
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const dt = new DataTransfer();
+                    const currentFiles = form.getValues("imageFiles") as FileList;
+                    for (let j = 0; j < currentFiles.length; j++) {
+                      if (j !== i) dt.items.add(currentFiles[j]);
+                    }
+                    form.setValue("imageFiles", dt.files, { shouldDirty: true });
+                    if (fileInputRef.current) {
+                      fileInputRef.current.files = dt.files;
+                    }
+                  }}
+                  className="absolute top-1 right-1 bg-black/60 rounded-full p-1 hover:bg-black"
+                >
+                  <X size={12} color="white" />
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
@@ -153,6 +235,7 @@ function PostForm({
           {/* GIF */}
           <button
             type="button"
+            onClick={handleGif}
             className="hover:opacity-70 transition-opacity"
             aria-label="Add GIF"
           >
@@ -162,10 +245,14 @@ function PostForm({
           {/* Location */}
           <button
             type="button"
-            className="hover:opacity-70 transition-opacity"
+            onClick={handleLocation}
+            disabled={fetchingLocation}
+            className="hover:opacity-70 transition-opacity disabled:opacity-50"
             aria-label="Add location"
           >
-            <LocationIcon />
+            {fetchingLocation
+              ? <Loader2 size={22} color={GREEN} strokeWidth={2} className="animate-spin" />
+              : <LocationIcon />}
           </button>
         </div>
 

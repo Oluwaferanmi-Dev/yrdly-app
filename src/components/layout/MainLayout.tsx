@@ -28,6 +28,8 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { supabase } from "@/lib/supabase";
 import { HomeRightSidebar } from "./HomeRightSidebar";
 import { cn } from "@/lib/utils";
+import { CreatePostDialog } from "@/components/CreatePostDialog";
+import { usePosts } from "@/hooks/use-posts";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -45,9 +47,11 @@ export function MainLayout({ children }: MainLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, profile, signOut } = useAuth();
+  const { createPost } = usePosts();
   const [showProfile, setShowProfile] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [postDialogOpen, setPostDialogOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
@@ -59,6 +63,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const isChatPage =
     (pathname.startsWith("/messages/") && pathname !== "/messages") ||
     pathname.includes("/chat");
+  const isSubPage = pathname === "/profile/payout-settings";
 
   useEffect(() => {
     if (!user) return;
@@ -148,7 +153,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     <>
       <div className="min-h-screen bg-[#15181D] dark" role="application">
         {/* ── Top Header ── */}
-        {!isChatPage && (
+        {!isChatPage && !isSubPage && (
           <Suspense fallback={null}>
             <header
               className="fixed top-0 left-0 right-0 z-50 h-16 md:h-[84px] flex items-center px-4 md:px-6"
@@ -251,7 +256,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         <div
           className={cn(
             "flex flex-col lg:flex-row min-h-screen",
-            !isChatPage && "pt-16 md:pt-[84px]",
+            (!isChatPage && !isSubPage) && "pt-16 md:pt-[84px]",
             !isChatPage && "pb-20 lg:pb-0"
           )}
         >
@@ -296,15 +301,20 @@ export function MainLayout({ children }: MainLayoutProps) {
               })}
             </div>
 
-            <Link href="/home" className="mt-4">
+            <CreatePostDialog
+              createPost={createPost}
+              open={postDialogOpen}
+              onOpenChange={setPostDialogOpen}
+            >
               <Button
                 className="w-full h-11 rounded-full text-white font-medium text-sm"
                 style={{ background: "#388E3C", fontFamily: "Raleway, sans-serif" }}
+                onClick={() => setPostDialogOpen(true)}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Post
               </Button>
-            </Link>
+            </CreatePostDialog>
 
 
           </nav>
@@ -330,51 +340,54 @@ export function MainLayout({ children }: MainLayoutProps) {
 
           {showRightSidebar && <HomeRightSidebar />}
         </div>
+      </div>
 
-        {/* ── Mobile Bottom Nav ── */}
-        {!isChatPage && (
-          <Suspense fallback={null}>
-            <nav
-              className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2"
-              style={{
-                background: "#1B2B3A",
-                height: "calc(56px + env(safe-area-inset-bottom))",
-                paddingBottom: "env(safe-area-inset-bottom)",
-              }}
-            >
-              {navItems.map(({ href, label, icon: Icon }) => {
-                const isActive = pathname === href || (href !== "/home" && pathname.startsWith(href));
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className="flex flex-col items-center justify-center flex-1 py-2"
-                  >
+      {/* ── Mobile Bottom Nav ── */}
+      {!isChatPage && (
+        <Suspense fallback={null}>
+          <nav
+            className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] flex items-center justify-around px-2 border-t border-white/5 shadow-[0_-4px_12px_rgba(0,0,0,0.5)]"
+            style={{
+              background: "#1B2B3A",
+              height: "64px",
+              paddingBottom: "env(safe-area-inset-bottom)",
+            }}
+          >
+            {navItems.map(({ href, label, icon: Icon }) => {
+              const isActive = pathname === href || (href !== "/home" && pathname.startsWith(href));
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className="flex flex-col items-center justify-center flex-1 h-full"
+                >
+                  <div className={cn(
+                    "p-2 rounded-xl transition-all duration-300",
+                    isActive ? "bg-[#388E3C] scale-110 shadow-[0_0_15px_rgba(56,142,60,0.3)]" : "bg-transparent"
+                  )}>
                     <Icon
                       className={cn(
-                        "w-6 h-6 mb-0.5",
-                        isActive ? "fill-[#388E3C] text-white stroke-white" : "text-white/80 fill-none"
+                        "w-5 h-5",
+                        isActive ? "text-white fill-white" : "text-[#899485] fill-none"
                       )}
-                      strokeWidth={2}
+                      strokeWidth={2.5}
                     />
-                    <span
-                      className={cn(
-                        "text-[10px] leading-tight",
-                        isActive ? "text-white font-medium" : "text-white/70"
-                      )}
-                      style={{ fontFamily: '"Raleway", sans-serif' }}
-                    >
-                      {label}
-                    </span>
-                  </Link>
-                );
-              })}
-
-
-            </nav>
-          </Suspense>
-        )}
-      </div>
+                  </div>
+                  <span
+                    className={cn(
+                      "text-[9px] font-bold tracking-tight mt-1 transition-colors",
+                      isActive ? "text-white" : "text-[#899485]"
+                    )}
+                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                  >
+                    {label}
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
+        </Suspense>
+      )}
 
       {showProfile && <ProfileDropdown onClose={() => setShowProfile(false)} />}
       <NotificationsDropdown isOpen={showNotifications} onClose={() => setShowNotifications(false)} />

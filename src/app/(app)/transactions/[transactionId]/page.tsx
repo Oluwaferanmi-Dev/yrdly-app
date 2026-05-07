@@ -345,7 +345,7 @@ export default function TransactionDetailsPage() {
                 <span>₦{transaction.amount.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Platform Fee (2%):</span>
+                <span className="text-muted-foreground">Platform Fee (3%):</span>
                 <span>₦{transaction.commission.toLocaleString()}</span>
               </div>
               <Separator />

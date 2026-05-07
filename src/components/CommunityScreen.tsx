@@ -12,6 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { PostCard } from "@/components/PostCard";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
 import { usePosts } from "@/hooks/use-posts";
+import { useFriendshipGlobal } from "@/hooks/use-friendship-global";
+import { useLocation } from "@/contexts/LocationContext";
+import { LocationChip } from "@/components/LocationChip";
 
 const GREEN = "#388E3C";
 const CARD = "#1E2126";
@@ -20,6 +23,75 @@ const PACIFICO = "Pacifico, cursive";
 
 interface CommunityScreenProps {
   className?: string;
+}
+
+// Sub-component for rendering user action buttons with global friendship state
+function UserActionButton({
+  userId,
+  onFriendAction,
+}: {
+  userId: string;
+  onFriendAction: (userId: string, action: "add" | "remove" | "accept" | "decline", actionFn: () => Promise<void>) => Promise<void>;
+}) {
+  const friendshipHook = useFriendshipGlobal(userId);
+  const status = friendshipHook.status;
+  const isLoading = friendshipHook.isLoading;
+
+  switch (status) {
+    case "none":
+      return (
+        <button
+          onClick={() => onFriendAction(userId, "add", () => friendshipHook.addFriend())}
+          className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase disabled:opacity-50"
+          style={{ background: GREEN, fontFamily: FONT }}
+          disabled={isLoading}
+        >
+          {isLoading ? "..." : "Add"}
+        </button>
+      );
+    case "request_sent":
+      return (
+        <button
+          className="rounded-full px-3 py-1 text-[11px] text-[#BBBBBB] font-bold uppercase"
+          style={{ border: "0.5px solid #388E3C", fontFamily: FONT }}
+          disabled
+        >
+          Sent
+        </button>
+      );
+    case "friends":
+      return (
+        <button
+          onClick={() => onFriendAction(userId, "remove", () => friendshipHook.removeFriend())}
+          className="rounded-full px-3 py-1 text-[11px] font-bold uppercase disabled:opacity-50"
+          style={{ border: "0.5px solid rgba(229,57,53,0.4)", color: "#E53935", fontFamily: FONT }}
+          disabled={isLoading}
+        >
+          {isLoading ? "..." : "Remove"}
+        </button>
+      );
+    case "request_received":
+      return (
+        <>
+          <button
+            onClick={() => onFriendAction(userId, "accept", () => friendshipHook.acceptRequest())}
+            className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase disabled:opacity-50"
+            style={{ background: GREEN, fontFamily: FONT }}
+            disabled={isLoading}
+          >
+            {isLoading ? "..." : "Accept"}
+          </button>
+          <button
+            onClick={() => onFriendAction(userId, "decline", () => friendshipHook.declineRequest())}
+            className="rounded-full px-3 py-1 text-[11px] font-bold uppercase disabled:opacity-50"
+            style={{ border: "0.5px solid rgba(229,57,53,0.4)", color: "#E53935", fontFamily: FONT }}
+            disabled={isLoading}
+          >
+            {isLoading ? "..." : "Decline"}
+          </button>
+        </>
+      );
+  }
 }
 
 function fmt(n: number): string {
@@ -31,14 +103,19 @@ function StatCard({
   icon: Icon,
   value,
   label,
+  onClick,
 }: {
   icon: React.ElementType;
   value: string | number;
   label: string;
+  onClick?: () => void;
 }) {
   return (
     <div
-      className="flex flex-col items-center text-center p-4 space-y-2"
+      onClick={onClick}
+      className={`flex flex-col items-center text-center p-4 space-y-2 ${
+        onClick ? "cursor-pointer transition-all hover:opacity-80" : ""
+      }`}
       style={{ background: CARD, borderRadius: 11 }}
     >
       <div
@@ -66,14 +143,12 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
   const { user: currentUser, profile } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const { posts, loading: postsLoading, createPost, deletePost } = usePosts();
+  const { filterState, filterLga } = useLocation();
+  const { posts, loading: postsLoading, createPost, deletePost } = usePosts({ filterState, filterLga });
   const [searchQuery, setSearchQuery] = useState("");
   const [showUserSearch, setShowUserSearch] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
-  const [friendshipStatus, setFriendshipStatus] = useState<
-    Record<string, "friends" | "request_sent" | "request_received" | "none">
-  >({});
   const [pendingFriendRequests, setPendingFriendRequests] = useState<any[]>([]);
   const [friendRequestsLoading, setFriendRequestsLoading] = useState(true);
   const [stats, setStats] = useState({ totalUsers: 0, activeToday: 0, newPosts24h: 0 });
@@ -83,9 +158,18 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
   useEffect(() => {
     if (!currentUser) return;
     const fetchStats = async () => {
-      const { count: totalUsers } = await supabase
+      // Count users in the same location
+      let usersQuery = supabase
         .from("users")
         .select("*", { count: "exact", head: true });
+      // Filter neighbors by location
+      if (filterState) {
+        usersQuery = usersQuery.contains('location', { state: filterState });
+      }
+      if (filterLga) {
+        usersQuery = usersQuery.contains('location', { lga: filterLga });
+      }
+      const { count: totalUsers } = await usersQuery;
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const { data: activePosters } = await supabase
@@ -100,10 +184,17 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
         ...(activePosters?.map((p) => p.user_id) || []),
         ...(activeCommenters?.map((c) => c.user_id) || []),
       ]);
-      const { count: newPosts24h } = await supabase
+      let postsQuery = supabase
         .from("posts")
         .select("*", { count: "exact", head: true })
         .gte("timestamp", yesterday.toISOString());
+      if (filterState) {
+        postsQuery = postsQuery.eq('state', filterState);
+      }
+      if (filterLga) {
+        postsQuery = postsQuery.eq('lga', filterLga);
+      }
+      const { count: newPosts24h } = await postsQuery;
       setStats({
         totalUsers: totalUsers || 0,
         activeToday: activeUserIds.size,
@@ -111,7 +202,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
       });
     };
     fetchStats();
-  }, [currentUser]);
+  }, [currentUser, filterState, filterLga]);
 
   /* ── Pending Friend Requests ── */
   useEffect(() => {
@@ -145,24 +236,6 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
     return () => document.removeEventListener("mousedown", handler);
   }, [showUserSearch]);
 
-  const checkFriendshipStatus = async (userId: string) => {
-    if (!currentUser || !profile) return "none" as const;
-    if (profile.friends?.includes(userId)) return "friends" as const;
-    const { data: requests } = await supabase
-      .from("friend_requests")
-      .select("*")
-      .or(
-        `and(from_user_id.eq.${currentUser.id},to_user_id.eq.${userId}),and(from_user_id.eq.${userId},to_user_id.eq.${currentUser.id})`
-      )
-      .eq("status", "pending");
-    if (requests && requests.length > 0) {
-      return requests[0].from_user_id === currentUser.id
-        ? ("request_sent" as const)
-        : ("request_received" as const);
-    }
-    return "none" as const;
-  };
-
   const searchUsers = async (query: string) => {
     if (!query.trim()) { setUsers([]); setShowUserSearch(false); return; }
     setUserSearchLoading(true);
@@ -176,12 +249,6 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
       const usersData = data || [];
       setUsers(usersData);
       setShowUserSearch(true);
-      const statuses = await Promise.all(
-        usersData.map(async (u) => ({ userId: u.id, status: await checkFriendshipStatus(u.id) }))
-      );
-      setFriendshipStatus(
-        statuses.reduce((acc, { userId, status }) => ({ ...acc, [userId]: status }), {})
-      );
     } catch { /* ignore */ } finally {
       setUserSearchLoading(false);
     }
@@ -195,65 +262,16 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
 
   const handleFriendAction = async (
     userId: string,
-    action: "add" | "remove" | "accept" | "decline"
+    action: "add" | "remove" | "accept" | "decline",
+    actionFn: () => Promise<void>
   ) => {
     if (!currentUser) return;
     try {
-      if (action === "add") {
-        await supabase.from("friend_requests").insert({
-          from_user_id: currentUser.id,
-          to_user_id: userId,
-          participant_ids: [currentUser.id, userId].sort(),
-          status: "pending",
-          created_at: new Date().toISOString(),
-        });
-        setFriendshipStatus((p) => ({ ...p, [userId]: "request_sent" }));
-        try {
-          const { NotificationTriggers } = await import("@/lib/notification-triggers");
-          await NotificationTriggers.onFriendRequestSent(currentUser.id, userId);
-        } catch {}
-        toast({ title: "Friend Request Sent" });
-      } else if (action === "accept") {
-        const { data: req } = await supabase
-          .from("friend_requests")
-          .select("*")
-          .eq("from_user_id", userId)
-          .eq("to_user_id", currentUser.id)
-          .eq("status", "pending")
-          .single();
-        if (!req) return;
-        await supabase
-          .from("friend_requests")
-          .update({ status: "accepted", updated_at: new Date().toISOString() })
-          .eq("id", req.id);
-        const { data: cu } = await supabase.from("users").select("friends").eq("id", currentUser.id).single();
-        const { data: su } = await supabase.from("users").select("friends").eq("id", userId).single();
-        await supabase.from("users").update({ friends: [...(cu?.friends || []), userId] }).eq("id", currentUser.id);
-        await supabase.from("users").update({ friends: [...(su?.friends || []), currentUser.id] }).eq("id", userId);
+      await actionFn();
+      
+      // Update pending requests list if needed
+      if (action === "accept" || action === "decline") {
         setPendingFriendRequests((p) => p.filter((r) => r.from_user_id !== userId));
-        setFriendshipStatus((p) => ({ ...p, [userId]: "friends" }));
-        try {
-          const { NotificationTriggers } = await import("@/lib/notification-triggers");
-          await NotificationTriggers.onFriendRequestAccepted(userId, currentUser.id);
-        } catch {}
-        toast({ title: "Friend Request Accepted" });
-      } else if (action === "decline") {
-        await supabase
-          .from("friend_requests")
-          .delete()
-          .eq("from_user_id", userId)
-          .eq("to_user_id", currentUser.id)
-          .eq("status", "pending");
-        setPendingFriendRequests((p) => p.filter((r) => r.from_user_id !== userId));
-        setFriendshipStatus((p) => ({ ...p, [userId]: "none" }));
-        toast({ title: "Friend Request Declined" });
-      } else if (action === "remove") {
-        const { data: cu } = await supabase.from("users").select("friends").eq("id", currentUser.id).single();
-        const { data: tu } = await supabase.from("users").select("friends").eq("id", userId).single();
-        await supabase.from("users").update({ friends: (cu?.friends || []).filter((id: string) => id !== userId) }).eq("id", currentUser.id);
-        await supabase.from("users").update({ friends: (tu?.friends || []).filter((id: string) => id !== currentUser.id) }).eq("id", userId);
-        setFriendshipStatus((p) => ({ ...p, [userId]: "none" }));
-        toast({ title: "Friend Removed" });
       }
     } catch (error) {
       console.error("Error handling friend action:", error);
@@ -287,9 +305,12 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
 
         {/* ── Header ── */}
         <header className="space-y-1">
-          <h1 className="text-[20px] text-white" style={{ fontFamily: PACIFICO }}>
-            Community
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-[20px] text-white" style={{ fontFamily: PACIFICO }}>
+              Community
+            </h1>
+            <LocationChip />
+          </div>
           <p className="text-[12px]" style={{ fontFamily: FONT, fontStyle: "italic", fontWeight: 300, color: "#BBBBBB" }}>
             Connecting neighbors, one story at a time.
           </p>
@@ -345,51 +366,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      {friendshipStatus[u.id] === "none" && (
-                        <button
-                          onClick={() => handleFriendAction(u.id, "add")}
-                          className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase"
-                          style={{ background: GREEN, fontFamily: FONT }}
-                        >
-                          Add
-                        </button>
-                      )}
-                      {friendshipStatus[u.id] === "request_sent" && (
-                        <button
-                          className="rounded-full px-3 py-1 text-[11px] text-[#BBBBBB] font-bold uppercase"
-                          style={{ border: "0.5px solid #388E3C", fontFamily: FONT }}
-                          disabled
-                        >
-                          Sent
-                        </button>
-                      )}
-                      {friendshipStatus[u.id] === "friends" && (
-                        <button
-                          onClick={() => handleFriendAction(u.id, "remove")}
-                          className="rounded-full px-3 py-1 text-[11px] font-bold uppercase"
-                          style={{ border: "0.5px solid rgba(229,57,53,0.4)", color: "#E53935", fontFamily: FONT }}
-                        >
-                          Remove
-                        </button>
-                      )}
-                      {friendshipStatus[u.id] === "request_received" && (
-                        <>
-                          <button
-                            onClick={() => handleFriendAction(u.id, "accept")}
-                            className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase"
-                            style={{ background: GREEN, fontFamily: FONT }}
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => handleFriendAction(u.id, "decline")}
-                            className="rounded-full px-3 py-1 text-[11px] font-bold uppercase"
-                            style={{ border: "0.5px solid rgba(229,57,53,0.4)", color: "#E53935", fontFamily: FONT }}
-                          >
-                            Decline
-                          </button>
-                        </>
-                      )}
+                      <UserActionButton userId={u.id} onFriendAction={handleFriendAction} />
                     </div>
                   </div>
                 ))
@@ -398,12 +375,17 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
           )}
         </div>
 
-        {/* ── Stats Row ── */}
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard icon={Users} value={fmt(stats.totalUsers)} label="Neighbors" />
-          <StatCard icon={Zap} value={fmt(stats.activeToday)} label="Active Today" />
-          <StatCard icon={FileText} value={fmt(stats.newPosts24h)} label="New Posts" />
-        </div>
+  {/* ── Stats Row ── */}
+  <div className="grid grid-cols-3 gap-3">
+    <StatCard 
+      icon={Users} 
+      value={fmt(stats.totalUsers)} 
+      label="Neighbors"
+      onClick={() => router.push('/neighbours')}
+    />
+    <StatCard icon={Zap} value={fmt(stats.activeToday)} label="Active Today" />
+    <StatCard icon={FileText} value={fmt(stats.newPosts24h)} label="New Posts" />
+  </div>
 
         {/* ── Friend Requests ── */}
         {(pendingFriendRequests.length > 0 || friendRequestsLoading) && (
@@ -461,24 +443,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
                           )}
                         </div>
                         <div className="flex gap-2 w-full">
-                          <button
-                            onClick={() => handleFriendAction(sender.id, "accept")}
-                            className="flex-1 py-2 rounded-full text-[10px] font-bold uppercase text-white"
-                            style={{ background: GREEN, fontFamily: FONT }}
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={() => handleFriendAction(sender.id, "decline")}
-                            className="flex-1 py-2 rounded-full text-[10px] font-bold uppercase"
-                            style={{
-                              border: "1px solid rgba(229,57,53,0.3)",
-                              color: "#E53935",
-                              fontFamily: FONT,
-                            }}
-                          >
-                            Decline
-                          </button>
+                          <UserActionButton userId={sender.id} onFriendAction={handleFriendAction} />
                         </div>
                       </div>
                     );

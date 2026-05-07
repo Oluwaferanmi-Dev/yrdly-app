@@ -1,9 +1,11 @@
 
 "use client";
 
+import Script from 'next/script';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, AuthProvider } from '@/hooks/use-supabase-auth';
+import { useAuth } from '@/hooks/use-supabase-auth';
 import { PushNotificationManager } from '@/components/PushNotificationManager';
 import Image from 'next/image';
 import { APIProvider } from '@vis.gl/react-google-maps';
@@ -15,6 +17,8 @@ import { OnboardingGuard } from '@/components/OnboardingGuard';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useActivityTracking } from '@/hooks/use-activity-tracking';
 import { setUserContext, clearUserContext, trackUserAction } from '@/lib/sentry';
+import { FriendshipProvider } from '@/contexts/FriendshipContext';
+import { LocationProvider } from '@/contexts/LocationContext';
 
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth(); // Using Supabase auth
@@ -91,12 +95,19 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthProvider>
-      <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} libraries={['places']}>
-        <ProtectedLayout>
-          {children}
-        </ProtectedLayout>
-      </APIProvider>
-    </AuthProvider>
+    <FriendshipProvider>
+      <Script
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7576498244677518"
+        strategy="afterInteractive"
+        crossOrigin="anonymous"
+      />
+      <LocationProvider>
+        <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!} libraries={['places']}>
+          <ProtectedLayout>
+            {children}
+          </ProtectedLayout>
+        </APIProvider>
+      </LocationProvider>
+    </FriendshipProvider>
   );
 }

@@ -26,9 +26,12 @@ export default function ConfirmReceiptPage() {
     if (!user) return;
     setLoading(true);
     try {
+      // Step 1: Confirm delivery received
       await TransactionStatusService.confirmDelivered(transactionId, user.id);
-      toast({ title: "Receipt confirmed!", description: "Funds are being released to the seller." });
-      router.push(`/payment/success?txn=${transactionId}`);
+      // Step 2: Immediately complete the transaction and release funds
+      await TransactionStatusService.completeTransaction(transactionId);
+      toast({ title: "Receipt confirmed!", description: "Funds have been released to the seller." });
+      router.push(`/transactions/${transactionId}`);
     } catch {
       toast({ title: "Error", description: "Could not confirm receipt. Try again.", variant: "destructive" });
     } finally {

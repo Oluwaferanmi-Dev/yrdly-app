@@ -584,9 +584,9 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children || <DefaultTrigger />}</DialogTrigger>
-      <DialogContent style={{ ...contentStyle, maxWidth: 680, maxHeight: "90vh", borderRadius: 20 }} hideClose>
+      <DialogContent style={{ ...contentStyle, maxWidth: 640, height: "92vh", maxHeight: "92vh", borderRadius: 20, overflow: "hidden" }} hideClose>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full min-h-0">
             <BusinessFormBody {...sharedProps} />
           </form>
         </Form>

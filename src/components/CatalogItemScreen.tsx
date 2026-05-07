@@ -260,7 +260,11 @@ export function CatalogItemScreen({
               <span className="text-foreground">
                 {typeof business.location === 'string' 
                   ? business.location 
-                  : business.location?.address || 'Location not specified'
+                  : business.location?.address 
+                    ? business.location.address
+                    : (business.state || business.lga)
+                      ? [business.lga, business.state].filter(Boolean).join(", ")
+                      : 'Location not specified'
                 }
               </span>
             </div>

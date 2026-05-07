@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ItemTrackingService } from "@/lib/item-tracking-service";
 import { DeliveryOption, PaymentMethod, EscrowStatus } from "@/types/escrow";
+import { MARKETPLACE_CONSTANTS } from "@/lib/constants";
+import { createClient } from "@/lib/supabase-server";
 
 
 /**
@@ -15,6 +17,16 @@ import { DeliveryOption, PaymentMethod, EscrowStatus } from "@/types/escrow";
  */
 export async function POST(request: NextRequest) {
   try {
+    // ── Authenticate the caller ────────────────────────
+    const supabase = await createClient();
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    if (!authUser || authError) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
       itemId,
@@ -44,6 +56,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure the authenticated user matches the buyerId
+    if (authUser.id !== buyerId) {
+      return NextResponse.json(
+        { error: "Buyer ID does not match authenticated user" },
+        { status: 403 }
+      );
+    }
+
     if (buyerId === sellerId) {
       return NextResponse.json(
         { error: "You cannot buy your own item" },
@@ -52,17 +72,51 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Check availability ────────────────────────────────
-    const isAvailable = await ItemTrackingService.isItemAvailable(itemId);
-    if (!isAvailable) {
+    console.log("[PaymentInit] Checking availability for itemId:", itemId);
+    
+    const { data: itemData, error: itemError } = await supabaseAdmin
+      .from("posts")
+      .select("id, is_sold, title, price, user_id")
+      .eq("id", itemId)
+      .single();
+
+    if (itemError) {
+      console.error("[PaymentInit] Database error or item not found:", itemError);
       return NextResponse.json(
-        { error: "This item is no longer available" },
+        { error: "Item not found or database error. Please try again." },
+        { status: 404 }
+      );
+    }
+
+    console.log("[PaymentInit] itemData:", JSON.stringify(itemData));
+
+    // 2. Check if item is already sold
+    if (itemData?.is_sold) {
+      return NextResponse.json(
+        { error: "Item is no longer available." },
         { status: 409 }
       );
     }
 
+    // 3. Check if user is buying their own item (using selected user_id)
+    if (itemData.user_id === authUser.id) {
+      return NextResponse.json(
+        { error: "You cannot buy your own item." },
+        { status: 400 }
+      );
+    }
+
     // ── Create escrow transaction (admin client bypasses RLS) ──
-    const commission = Math.round(price * 0.03);
+    const commission = Math.round(price * MARKETPLACE_CONSTANTS.COMMISSION_RATE);
     const totalAmount = price + commission;
+
+    // ── Look up seller's Flutterwave subaccount ──────────
+    const { data: sellerAccount } = await supabaseAdmin
+      .from("seller_accounts")
+      .select("flutterwave_subaccount_id")
+      .eq("user_id", sellerId)
+      .eq("is_active", true)
+      .single();
 
     const { data: txData, error: txError } = await supabaseAdmin
       .from("escrow_transactions")
@@ -93,17 +147,14 @@ export async function POST(request: NextRequest) {
 
     const transactionId = txData.id;
 
-    // ── Commission already calculated above ───────────────
-
-
     // ── Build Flutterwave Standard payment payload ────────
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL || "http://localhost:9002";
 
-    const flwPayload = {
+    const flwPayload: Record<string, any> = {
       tx_ref: transactionId,
       amount: totalAmount,
-      currency: "NGN",
+      currency: MARKETPLACE_CONSTANTS.CURRENCY,
       redirect_url: `${appUrl}/payment/verify?tx_ref=${transactionId}&itemId=${itemId}`,
       payment_options: "card,banktransfer,ussd",
       customer: {
@@ -123,6 +174,17 @@ export async function POST(request: NextRequest) {
         item_price: price,
       },
     };
+
+    // ── Add split payment if seller has a subaccount ──────
+    if (sellerAccount?.flutterwave_subaccount_id) {
+      flwPayload.subaccounts = [
+        {
+          id: sellerAccount.flutterwave_subaccount_id,
+          transaction_charge_type: "percentage",
+          transaction_charge: MARKETPLACE_CONSTANTS.COMMISSION_RATE * 100, // 3
+        },
+      ];
+    }
 
     // ── Call Flutterwave Standard API ─────────────────────
     const flwRes = await fetch(
