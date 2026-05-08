@@ -168,12 +168,6 @@ export function MainLayout({ children }: MainLayoutProps) {
                     height={37}
                     className="h-8 w-8 object-contain md:h-[37px] md:w-[39px]"
                   />
-                  <span
-                    className="text-white text-xl md:text-2xl leading-tight"
-                    style={{ fontFamily: 'var(--font-jersey25), "Jersey 25", sans-serif' }}
-                  >
-                    rdly
-                  </span>
                 </Link>
 
                 <div className="hidden md:flex flex-1 justify-center max-w-xl">
@@ -212,9 +206,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                       <MessageCircle className="w-5 h-5" />
                       {unreadMessagesCount > 0 && (
                         <span
-                          className="absolute top-0.5 right-0.5 w-2 h-2 rounded-full"
-                          style={{ background: "#388E3C", border: "1px solid #020817" }}
-                        />
+                          className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold px-1"
+                          style={{ background: "#388E3C", color: "#fff", border: "1.5px solid #1B2B3A" }}
+                        >
+                          {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
+                        </span>
                       )}
                     </Button>
                   </Link>
@@ -227,9 +223,11 @@ export function MainLayout({ children }: MainLayoutProps) {
                     <Bell className="w-5 h-5" />
                     {unreadCount > 0 && (
                       <span
-                        className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full border-2"
-                        style={{ background: "#6edf51", borderColor: "#1B2B3A" }}
-                      />
+                        className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold px-1"
+                        style={{ background: "#6edf51", color: "#003207", border: "1.5px solid #1B2B3A" }}
+                      >
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
                     )}
                   </Button>
                   <Button

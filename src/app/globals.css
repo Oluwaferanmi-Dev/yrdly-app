@@ -94,6 +94,11 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+    /* Prevent iOS/Android bounce overscroll that extends content below bottom nav */
+    overscroll-behavior-y: none;
+  }
+  html {
+    overscroll-behavior-y: none;
   }
 }
 

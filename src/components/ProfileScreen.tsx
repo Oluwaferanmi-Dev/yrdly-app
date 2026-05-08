@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, MapPin, Calendar, Users, MessageCircle, ShoppingBag,
-  Briefcase, CalendarDays, Clock, Heart,
+  Briefcase, CalendarDays, Clock, Heart, MoreHorizontal, UserMinus,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
@@ -16,6 +16,13 @@ import { useToast } from "@/hooks/use-toast";
 import { shortenAddress } from "@/lib/utils";
 import { ActivityIndicator } from "@/components/ActivityIndicator";
 import Image from "next/image";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const GREEN = "#388E3C";
 const GREEN_LIGHT = "#82DB7E";
@@ -370,35 +377,95 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
 
           {/* Action buttons for external profile */}
           {!actualIsOwnProfile && currentUser?.id !== targetUser?.id && (
-            <div className="flex flex-row items-center justify-center gap-4 mt-8 w-full max-w-[400px] mx-auto px-4">
-              <button
-                onClick={handleAddFriend}
-                className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-white transition-all active:scale-95 shadow-lg"
-                style={{ 
-                  background: isFriend ? "#E53935" : GREEN, 
-                  fontFamily: FONT,
-                  boxShadow: isFriend ? "0 8px 20px rgba(229,57,53,0.2)" : "0 8px 20px rgba(56,142,60,0.2)"
-                }}
-              >
-                <Users className="w-5 h-5" />
-                {isFriend ? "Remove Friend" : isFriendRequestSent ? "Request Sent" : "Add Friend"}
-              </button>
-              {isFriend && (
+            <div className="flex flex-row items-center justify-center gap-3 mt-8 w-full max-w-[400px] mx-auto px-4">
+              {isFriend ? (
+                // Friends: show Message button + ⋯ overflow with Remove
+                <>
+                  <button
+                    onClick={handleMessageUser}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-white transition-all active:scale-95 shadow-lg"
+                    style={{
+                      background: GREEN,
+                      fontFamily: FONT,
+                      boxShadow: "0 8px 20px rgba(56,142,60,0.25)"
+                    }}
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    Message
+                  </button>
+                  <AlertDialog>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="w-12 h-12 rounded-full flex items-center justify-center border transition-colors"
+                          style={{ background: "#1E2126", borderColor: "rgba(130,219,126,0.2)", color: "#899485" }}
+                        >
+                          <MoreHorizontal className="w-5 h-5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" style={{ background: "#1E2126", border: "1px solid rgba(130,219,126,0.2)" }}>
+                        <DropdownMenuItem
+                          className="text-red-400 focus:text-red-400 focus:bg-red-500/10 cursor-pointer"
+                          onClick={() => {
+                            // open AlertDialog by programmatic state
+                            setShowRemoveFriendDialog(true);
+                          }}
+                        >
+                          <UserMinus className="w-4 h-4 mr-2" /> Remove Friend
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </AlertDialog>
+                </>
+              ) : isFriendRequestSent ? (
+                // Request pending
                 <button
-                  onClick={handleMessageUser}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-white transition-all active:scale-95 border shadow-lg"
-                  style={{ 
-                    background: "#1B2B3A", 
-                    borderColor: "rgba(130,219,126,0.3)", 
+                  disabled
+                  className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-white/50 border transition-all"
+                  style={{ background: "transparent", borderColor: "rgba(255,255,255,0.1)", fontFamily: FONT }}
+                >
+                  <Users className="w-5 h-5" />
+                  Request Sent
+                </button>
+              ) : (
+                // No relationship: Add Friend
+                <button
+                  onClick={handleAddFriend}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-white transition-all active:scale-95 shadow-lg"
+                  style={{
+                    background: GREEN,
                     fontFamily: FONT,
-                    boxShadow: "0 8px 20px rgba(0,0,0,0.2)"
+                    boxShadow: "0 8px 20px rgba(56,142,60,0.2)"
                   }}
                 >
-                  <MessageCircle className="w-5 h-5 text-[#82DB7E]" />
-                  Message
+                  <Users className="w-5 h-5" />
+                  Add Friend
                 </button>
               )}
             </div>
+          )}
+
+          {/* Remove Friend confirmation dialog */}
+          {showRemoveFriendDialog && (
+            <AlertDialog open={showRemoveFriendDialog} onOpenChange={setShowRemoveFriendDialog}>
+              <AlertDialogContent style={{ background: "#1E2126", border: "1px solid rgba(130,219,126,0.2)" }}>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-white">Remove Friend?</AlertDialogTitle>
+                  <AlertDialogDescription style={{ color: "#899485" }}>
+                    Are you sure you want to remove {name} as a friend? This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: 0 }}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    style={{ background: "#E53935" }}
+                    onClick={handleAddFriend}
+                  >
+                    Remove
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
       </section>

@@ -45,6 +45,28 @@ export function useFriendshipGlobal(targetUserId: string | undefined): UseFriend
       setIsLoading(true);
       setError(null);
 
+      // Guard: check if a pending request already exists in either direction
+      const { data: existing } = await supabase
+        .from("friend_requests")
+        .select("id, from_user_id, status")
+        .or(
+          `and(from_user_id.eq.${user.id},to_user_id.eq.${targetUserId}),` +
+          `and(from_user_id.eq.${targetUserId},to_user_id.eq.${user.id})`
+        )
+        .eq("status", "pending")
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        const isIncoming = existing[0].from_user_id === targetUserId;
+        toast({
+          title: isIncoming ? "They already sent you a request" : "Request already sent",
+          description: isIncoming
+            ? "Accept their request from your notifications."
+            : "Your request is pending their response.",
+        });
+        return;
+      }
+
       const { error: insertError } = await supabase.from("friend_requests").insert({
         from_user_id: user.id,
         to_user_id: targetUserId,

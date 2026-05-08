@@ -139,9 +139,9 @@ function PostForm({
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col" style={{ minHeight: 0, flex: 1 }}>
       {/* ── Top close button ── */}
-      <div className="flex items-center justify-end px-3 pt-3 pb-1">
+      <div className="flex items-center justify-end px-3 pt-3 pb-1 flex-shrink-0">
         <button
           type="button"
           onClick={onClose}
@@ -152,14 +152,14 @@ function PostForm({
         </button>
       </div>
 
-      {/* ── Textarea ── */}
-      <div className="flex-1 px-5 pb-2 flex flex-col">
+      {/* ── Scrollable body: textarea + image previews ── */}
+      <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col" style={{ minHeight: 0 }}>
         <textarea
           {...form.register("text")}
           placeholder="What's going on?"
           rows={4}
           className={cn(
-            "w-full bg-transparent resize-none outline-none border-none flex-1",
+            "w-full bg-transparent resize-none outline-none border-none flex-shrink-0",
             "text-white placeholder:text-white/90 text-[14px] leading-[16px]",
           )}
           style={{ fontFamily: FONT_RL, fontWeight: 400 }}
@@ -173,7 +173,7 @@ function PostForm({
         
         {/* ── Image Previews ── */}
         {form.watch("imageFiles")?.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide mt-2">
+          <div className="flex gap-2 flex-wrap py-2 mt-2">
             {Array.from(form.watch("imageFiles") as FileList).map((file, i) => (
               <div key={i} className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden">
                 <img 
@@ -207,10 +207,10 @@ function PostForm({
       </div>
 
       {/* ── Divider ── */}
-      <div className="mx-5" style={{ borderTop: "0.2px solid #FFFFFF" }} />
+      <div className="mx-5 flex-shrink-0" style={{ borderTop: "0.2px solid #FFFFFF" }} />
 
-      {/* ── Bottom toolbar ── */}
-      <div className="flex items-center justify-between px-5 py-3">
+      {/* ── Bottom toolbar — always visible, pinned ── */}
+      <div className="flex items-center justify-between px-5 py-3 flex-shrink-0">
         {/* Left icons */}
         <div className="flex items-center gap-4">
           {/* Paperclip / attachment */}

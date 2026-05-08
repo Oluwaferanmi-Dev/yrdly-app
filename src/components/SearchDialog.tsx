@@ -99,7 +99,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChan
   const handleGo = (result: SearchResult) => {
     if (searchTerm) saveRecent(searchTerm);
     onOpenChange(false);
-    if (result.type === 'user')     { setSelectedUser(result.data); }
+    if (result.type === 'user') router.push(`/profile/${result.data.id}`);
     else if (result.type === 'post') router.push(`/posts/${result.data.id}`);
     else if (result.type === 'business') router.push(`/businesses/${result.data.id}`);
   };
@@ -297,8 +297,8 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                           </div>
                           <p className="text-sm leading-relaxed line-clamp-2" style={{ color: 'rgba(225,226,233,0.9)' }}>{p.text}</p>
                         </div>
-                        {p.image_urls?.[0] && (
-                          <div className="w-20 h-20 rounded-[11px] overflow-hidden flex-shrink-0">
+                      {p.image_urls?.[0] && (
+                          <div className="relative w-20 h-20 rounded-[11px] overflow-hidden flex-shrink-0">
                             <Image src={p.image_urls[0]} alt="" fill className="object-cover" sizes="80px" />
                           </div>
                         )}
