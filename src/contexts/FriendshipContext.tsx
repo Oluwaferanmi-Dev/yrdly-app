@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/use-supabase-auth";
-import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export type FriendshipStatus = "friends" | "request_sent" | "request_received" | "none";
 
@@ -18,8 +17,7 @@ const FriendshipContext = createContext<FriendshipContextType | undefined>(undef
 
 export function FriendshipProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [statuses, setStatuses] = useState<Record<string, FriendshipStatus>>({});
-  const [subscription, setSubscription] = useState<RealtimeChannel | null>(null);
+  const [statuses, setStatuses] = useState<Record<string, FriendshipStatus>>({})
 
   const updateStatus = useCallback((userId: string, status: FriendshipStatus) => {
     setStatuses((prev) => ({
@@ -73,77 +71,55 @@ export function FriendshipProvider({ children }: { children: React.ReactNode }) 
     [user, updateStatus]
   );
 
-  // Subscribe to friend_requests changes
+  // Subscribe to friend_requests changes.
+  // NOTE: Supabase realtime filters only support simple `column=eq.value` syntax,
+  // NOT `or(...)`. So we create two separate channels — one for sent, one for received.
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel(`friend_requests:${user.id}`)
+    const handleChange = async (payload: { new?: unknown; old?: unknown }) => {
+      const record = (payload.new || payload.old) as { from_user_id: string; to_user_id: string };
+      if (!record) return;
+      const otherUserId =
+        record.from_user_id === user.id ? record.to_user_id : record.from_user_id;
+      await refreshUserStatus(otherUserId);
+    };
+
+    // Channel for requests sent BY current user
+    const sentChannel = supabase
+      .channel(`friend_requests_sent:${user.id}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "friend_requests",
-          filter: `or(from_user_id.eq.${user.id},to_user_id.eq.${user.id})`,
+          filter: `from_user_id=eq.${user.id}`,
         },
-        async (payload) => {
-          console.log("[v0] Friendship event received:", payload);
-
-          // Determine which user ID we need to refresh
-          const record = (payload.new || payload.old) as { from_user_id: string; to_user_id: string };
-          const otherUserId =
-            record.from_user_id === user.id
-              ? record.to_user_id
-              : record.from_user_id;
-
-          // Refresh the status for this user
-          await refreshUserStatus(otherUserId);
-        }
+        handleChange
       )
       .subscribe();
 
-    setSubscription(channel);
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [user, refreshUserStatus]);
-
-  // Subscribe to users.friends array changes (for friend additions/removals)
-  useEffect(() => {
-    if (!user) return;
-
-    const channel = supabase
-      .channel(`users:${user.id}`)
+    // Channel for requests received BY current user
+    const receivedChannel = supabase
+      .channel(`friend_requests_received:${user.id}`)
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
-          table: "users",
-          filter: `id.eq.${user.id}`,
+          table: "friend_requests",
+          filter: `to_user_id=eq.${user.id}`,
         },
-        async (payload) => {
-          console.log("[v0] User friends updated:", payload);
-
-          // Re-check all statuses when friends array changes
-          // This is a fallback for when friend_requests table doesn't have event
-          if (payload.new && payload.new.friends) {
-            // Trigger a full refresh for currently cached statuses
-            const cachedUserIds = Object.keys(statuses);
-            for (const userId of cachedUserIds) {
-              await refreshUserStatus(userId);
-            }
-          }
-        }
+        handleChange
       )
       .subscribe();
 
     return () => {
-      channel.unsubscribe();
+      sentChannel.unsubscribe();
+      receivedChannel.unsubscribe();
     };
-  }, [user, statuses, refreshUserStatus]);
+  }, [user, refreshUserStatus]);
 
   return (
     <FriendshipContext.Provider value={{ statuses, updateStatus, getStatus, refreshUserStatus }}>

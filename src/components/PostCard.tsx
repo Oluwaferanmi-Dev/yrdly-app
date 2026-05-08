@@ -301,10 +301,48 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
 
   const handleShare = async () => {
     const url = `${window.location.origin}/posts/${post.id}`;
+    // Derive image URLs at call time (not at definition time)
+    const imageUrls = post.image_urls?.length ? post.image_urls : post.image_url ? [post.image_url] : [];
+    const imageUrl = imageUrls[0];
+
     if (navigator.share) {
-      try { await navigator.share({ title: "Post on Yrdly", text: post.text, url }); } catch {}
+      try {
+        // Attempt to share with an image file if available and supported
+        if (imageUrl && navigator.canShare) {
+          try {
+            const resp = await fetch(imageUrl);
+            const blob = await resp.blob();
+            const ext = blob.type.split("/")[1] || "jpg";
+            const file = new File([blob], `yrdly-post.${ext}`, { type: blob.type });
+            const shareData = {
+              title: post.title || "Post on Yrdly",
+              text: post.text ? post.text.slice(0, 100) : "",
+              url,
+              files: [file],
+            };
+            if (navigator.canShare(shareData)) {
+              await navigator.share(shareData);
+              return;
+            }
+          } catch {
+            // Image fetch failed or files not supported — fall through to text-only share
+          }
+        }
+        // Text-only share fallback
+        await navigator.share({
+          title: post.title || "Post on Yrdly",
+          text: post.text ? post.text.slice(0, 100) : "",
+          url,
+        });
+      } catch {
+        // User cancelled share — do nothing
+      }
     } else {
-      try { await navigator.clipboard.writeText(url); toast({ title: "Link copied!" }); } catch {
+      // Desktop fallback: copy link to clipboard
+      try {
+        await navigator.clipboard.writeText(url);
+        toast({ title: "Link copied!", description: "Post link copied to clipboard." });
+      } catch {
         toast({ variant: "destructive", title: "Error", description: "Could not copy link." });
       }
     }

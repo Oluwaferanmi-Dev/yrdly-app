@@ -255,7 +255,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           className={cn(
             "flex flex-col lg:flex-row min-h-screen",
             (!isChatPage && !isSubPage) && "pt-16 md:pt-[84px]",
-            !isChatPage && "pb-20 lg:pb-0"
+            !isChatPage && "pb-[calc(64px+env(safe-area-inset-bottom)+2rem)] lg:pb-0"
           )}
         >
           {/* ── Desktop Left Nav ── */}

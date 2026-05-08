@@ -153,7 +153,8 @@ function PostForm({
       </div>
 
       {/* ── Scrollable body: textarea + image previews ── */}
-      <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col" style={{ minHeight: 0 }}>
+      {/* maxHeight on this section ensures the Post button is never pushed off-screen */}
+      <div className="px-5 pb-2 flex flex-col overflow-y-auto" style={{ maxHeight: "340px", minHeight: 0 }}>
         <textarea
           {...form.register("text")}
           placeholder="What's going on?"

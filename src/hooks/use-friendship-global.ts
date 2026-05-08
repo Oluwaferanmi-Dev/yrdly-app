@@ -134,6 +134,15 @@ export function useFriendshipGlobal(targetUserId: string | undefined): UseFriend
         throw new Error(res1.error?.message || res2.error?.message || "Failed to remove friend");
       }
 
+      // Also delete the accepted friend_request row so status resets cleanly
+      await supabase
+        .from("friend_requests")
+        .delete()
+        .or(
+          `and(from_user_id.eq.${user.id},to_user_id.eq.${targetUserId}),` +
+          `and(from_user_id.eq.${targetUserId},to_user_id.eq.${user.id})`
+        );
+
       // Refresh status
       await refreshUserStatus(targetUserId);
 

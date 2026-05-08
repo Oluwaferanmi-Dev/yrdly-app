@@ -381,7 +381,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
       icon={Users} 
       value={fmt(stats.totalUsers)} 
       label="Neighbors"
-      onClick={() => router.push('/neighbours')}
+      onClick={() => router.push('/neighbors')}
     />
     <StatCard icon={Zap} value={fmt(stats.activeToday)} label="Active Today" />
     <StatCard icon={FileText} value={fmt(stats.newPosts24h)} label="New Posts" />

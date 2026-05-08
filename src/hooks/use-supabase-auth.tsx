@@ -110,15 +110,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           },
           async (payload) => {
             if (isMounted && payload.new) {
-              // Refresh the profile data
-              try {
-                const updatedProfile = await AuthService.getUserProfile(userId);
-                if (isMounted) {
-                  setProfile(updatedProfile);
-                }
-              } catch (error) {
-                console.error('Error refreshing profile after update:', error);
-              }
+              // Use the new payload directly instead of fetching which may return stale data
+              setProfile((prev) => {
+                if (!prev) return payload.new as AuthUser;
+                return { ...prev, ...(payload.new as Partial<AuthUser>) };
+              });
             }
           }
         )

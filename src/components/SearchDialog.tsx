@@ -287,7 +287,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                       style={{ background: CARD, border: '0.5px solid rgba(64,73,61,0.3)' }}
                     >
                       <div className="flex gap-4">
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2">
                             <Avatar className="w-5 h-5">
                               <AvatarImage src={p.author_image} />

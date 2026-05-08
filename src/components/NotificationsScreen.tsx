@@ -1,30 +1,45 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  Bell, 
-  UserPlus, 
-  MessageCircle, 
-  Heart, 
+import {
+  Bell,
+  UserPlus,
+  MessageCircle,
+  Heart,
   Calendar,
   ShoppingCart,
-  Settings,
   Check,
   X,
-  MoreHorizontal
+  ChevronLeft,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { formatDistanceToNowStrict } from 'date-fns';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { formatDistanceToNowStrict } from "date-fns";
 import { useRouter } from "next/navigation";
 import * as Sentry from "@sentry/nextjs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+const GREEN = "#388E3C";
+const GREEN_LIGHT = "#82DB7E";
+const CARD = "#1E2126";
+const SURFACE = "#1d2025";
+const BG = "#15181D";
+const FONT = "Raleway, sans-serif";
+const PACIFICO = "Pacifico, cursive";
 
 interface NotificationsScreenProps {
   className?: string;
@@ -45,26 +60,35 @@ interface Notification {
 }
 
 function NotificationIcon({ type }: { type: string }) {
+  const iconClass = "w-5 h-5";
   switch (type) {
-    case 'friend_request':
-      return <UserPlus className="w-5 h-5 text-blue-500" />;
-    case 'message':
-      return <MessageCircle className="w-5 h-5 text-green-500" />;
-    case 'post_like':
-      return <Heart className="w-5 h-5 text-red-500" />;
-    case 'post_comment':
-      return <MessageCircle className="w-5 h-5 text-purple-500" />;
-    case 'event_invite':
-      return <Calendar className="w-5 h-5 text-orange-500" />;
-    case 'system':
-      return <Bell className="w-5 h-5 text-gray-500" />;
+    case "friend_request":
+    case "friend_request_accepted":
+      return <UserPlus className={iconClass} style={{ color: GREEN_LIGHT }} />;
+    case "message":
+    case "message_reaction":
+      return <MessageCircle className={iconClass} style={{ color: "#60a5fa" }} />;
+    case "post_like":
+      return <Heart className={iconClass} style={{ color: "#f87171" }} />;
+    case "post_comment":
+      return <MessageCircle className={iconClass} style={{ color: "#c084fc" }} />;
+    case "event_invite":
+    case "event_reminder":
+      return <Calendar className={iconClass} style={{ color: "#fb923c" }} />;
+    case "marketplace_item_sold":
+    case "marketplace_item_interest":
+      return <ShoppingCart className={iconClass} style={{ color: GREEN_LIGHT }} />;
     default:
-      return <Bell className="w-5 h-5 text-gray-500" />;
+      return <Bell className={iconClass} style={{ color: "#899485" }} />;
   }
 }
 
-function NotificationCard({ notification, onMarkAsRead, onDelete }: { 
-  notification: Notification; 
+function NotificationCard({
+  notification,
+  onMarkAsRead,
+  onDelete,
+}: {
+  notification: Notification;
   onMarkAsRead: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
@@ -72,406 +96,278 @@ function NotificationCard({ notification, onMarkAsRead, onDelete }: {
   const router = useRouter();
   const { user: currentUser } = useAuth();
 
-  const handleAction = async (action: string) => {
-    if (action === 'accept_friend') {
-      try {
-        await Sentry.startSpan(
-          { op: "http.client", name: "NotificationsScreen: Accept Friend" },
-          async (span) => {
-            span.setAttribute("notificationId", notification.id);
-            const toUserId = currentUser?.id || "";
-            // Use sender_id from notification (primary source) or fallback to data field
-            let fromUserId = notification.from_user_id || "";
-            
-            // If still missing, try to find the pending friend request for this notification
-            if (!fromUserId && toUserId) {
-              // First, try to find any pending request to this user (most recent)
-              const { data: pending } = await supabase
-                .from('friend_requests')
-                .select('id, from_user_id')
-                .eq('to_user_id', toUserId)
-                .eq('status', 'pending')
-                .order('created_at', { ascending: false })
-                .limit(1);
-              if (pending && pending.length >= 1) {
-                fromUserId = pending[0].from_user_id;
-              }
-            }
-            span.setAttribute("fromUserId", fromUserId || "");
-            span.setAttribute("toUserId", toUserId);
+  const handleAcceptFriend = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const toUserId = currentUser?.id || "";
+      let fromUserId = notification.from_user_id || "";
 
-            if (!currentUser) {
-              throw new Error("You must be logged in to accept a friend request.");
-            }
-            if (!fromUserId || !toUserId) {
-              throw new Error("Invalid friend request. Missing sender information.");
-            }
-
-            // Check if already friends
-            const { data: me } = await supabase
-              .from('users')
-              .select('friends')
-              .eq('id', currentUser.id)
-              .single();
-
-            if (me?.friends?.includes(fromUserId)) {
-              toast({ title: "Already friends", description: "You are already friends with this user." });
-              return;
-            }
-
-            // Find friend request (check any status first, then specifically pending)
-            const { data: allRequests, error: allRequestsError } = await supabase
-              .from('friend_requests')
-              .select('*')
-              .eq('from_user_id', fromUserId)
-              .eq('to_user_id', toUserId)
-              .order('created_at', { ascending: false })
-              .limit(1);
-
-            if (allRequestsError) {
-              throw new Error("Failed to check friend request status.");
-            }
-
-            if (!allRequests || allRequests.length === 0) {
-              // No friend request exists - mark notification as read and inform user
-              onMarkAsRead(notification.id);
-              toast({ 
-                title: "Friend request not found", 
-                description: "This friend request may have been cancelled or already handled.",
-                variant: "destructive"
-              });
-              return;
-            }
-
-            const requestData = allRequests[0];
-
-            // If already accepted, just mark notification as read
-            if (requestData.status === 'accepted') {
-              onMarkAsRead(notification.id);
-              toast({ 
-                title: "Already accepted", 
-                description: "You are already friends with this user." 
-              });
-              return;
-            }
-
-            // If not pending, inform user
-            if (requestData.status !== 'pending') {
-              onMarkAsRead(notification.id);
-              toast({ 
-                title: "Request already handled", 
-                description: `This friend request was ${requestData.status}.`,
-                variant: "destructive"
-              });
-              return;
-            }
-
-            // Accept request via RPC to bypass RLS issues updating the other user
-            const { error: rpcError } = await supabase.rpc('accept_friend_request', { req_id: requestData.id });
-            if (rpcError) throw rpcError;
-
-
-            // Mark as read (best-effort)
-            onMarkAsRead(notification.id);
-
-            // Notify sender
-            try {
-              const { NotificationTriggers } = await import('@/lib/notification-triggers');
-              await NotificationTriggers.onFriendRequestAccepted(fromUserId, toUserId);
-            } catch (notifyErr) {
-              // non-fatal
-            }
-
-            toast({ title: "Friend request accepted", description: "You are now friends." });
-          }
-        );
-      } catch (error: any) {
-        Sentry.captureException(error);
-        toast({
-          variant: "destructive",
-          title: "Unable to accept request",
-          description: error?.message || "Please try again.",
-        });
+      if (!fromUserId && toUserId) {
+        const { data: pending } = await supabase
+          .from("friend_requests")
+          .select("id, from_user_id")
+          .eq("to_user_id", toUserId)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(1);
+        if (pending && pending.length >= 1) {
+          fromUserId = pending[0].from_user_id;
+        }
       }
-    } else if (action === 'decline_friend') {
-      try {
-        await Sentry.startSpan(
-          { op: "http.client", name: "NotificationsScreen: Decline Friend" },
-          async (span) => {
-            span.setAttribute("notificationId", notification.id);
-            span.setAttribute("fromUserId", notification.from_user_id || "");
-            span.setAttribute("toUserId", currentUser?.id || "");
 
-            if (!currentUser) {
-              throw new Error("You must be logged in to decline a friend request.");
-            }
-            if (!notification.from_user_id) {
-              throw new Error("Invalid friend request. Missing sender information.");
-            }
-
-            const { error } = await supabase
-              .from('friend_requests')
-              .delete()
-              .eq('from_user_id', notification.from_user_id)
-              .eq('to_user_id', currentUser.id)
-              .eq('status', 'pending');
-
-            if (error) throw error;
-
-            onMarkAsRead(notification.id);
-            toast({ title: "Friend request declined" });
-          }
-        );
-      } catch (error: any) {
-        Sentry.captureException(error);
-        toast({
-          variant: "destructive",
-          title: "Unable to decline request",
-          description: error?.message || "Please try again.",
-        });
+      if (!fromUserId) {
+        toast({ title: "Request not found", variant: "destructive" });
+        return;
       }
-    } else if (action === 'reply_message') {
-      // TODO: Navigate to messages
-      toast({ title: "Opening conversation..." });
+
+      const { error: rpcError } = await supabase.rpc("accept_friend_request_by_users", {
+        p_from_user_id: fromUserId,
+        p_to_user_id: toUserId,
+      });
+
+      // Fallback: direct update if RPC doesn't exist
+      if (rpcError) {
+        const { data: req } = await supabase
+          .from("friend_requests")
+          .select("id")
+          .eq("from_user_id", fromUserId)
+          .eq("to_user_id", toUserId)
+          .eq("status", "pending")
+          .single();
+
+        if (req) {
+          await supabase
+            .from("friend_requests")
+            .update({ status: "accepted" })
+            .eq("id", req.id);
+
+          // Update both users' friends arrays
+          const [{ data: meData }, { data: themData }] = await Promise.all([
+            supabase.from("users").select("friends").eq("id", toUserId).single(),
+            supabase.from("users").select("friends").eq("id", fromUserId).single(),
+          ]);
+          const myFriends = Array.from(new Set([...(meData?.friends || []), fromUserId]));
+          const theirFriends = Array.from(new Set([...(themData?.friends || []), toUserId]));
+          await Promise.all([
+            supabase.from("users").update({ friends: myFriends }).eq("id", toUserId),
+            supabase.from("users").update({ friends: theirFriends }).eq("id", fromUserId),
+          ]);
+        }
+      }
+
+      onMarkAsRead(notification.id);
+      toast({ title: "Friend request accepted", description: "You are now friends! 🎉" });
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Could not accept request." });
+    }
+  };
+
+  const handleDeclineFriend = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      if (!currentUser || !notification.from_user_id) return;
+      await supabase
+        .from("friend_requests")
+        .delete()
+        .eq("from_user_id", notification.from_user_id)
+        .eq("to_user_id", currentUser.id)
+        .eq("status", "pending");
+      onMarkAsRead(notification.id);
+      toast({ title: "Request declined" });
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Could not decline request." });
     }
   };
 
   const handleCardClick = () => {
-    Sentry.startSpan(
-      { op: "ui.click", name: "Notifications: Open From List" },
-      (span) => {
-        span.setAttribute("notificationId", notification.id);
-        span.setAttribute("notificationType", notification.type);
-        span.setAttribute("fromUserId", notification.from_user_id || "");
-
-        // Mark as read on click
-        if (!notification.is_read) {
-          onMarkAsRead(notification.id);
-        }
-
-        // Navigate based on type
-        switch (notification.type) {
-          case 'friend_request': 
-          case 'friend_request_accepted': 
-          case 'friend_request_declined': {
-            const targetUserId = notification.from_user_id || notification.related_id;
-            if (targetUserId) {
-              router.push(`/profile/${targetUserId}`);
-            } else {
-              router.push('/neighbors');
-            }
-            break;
-          }
-          case 'message':
-          case 'message_reaction': {
-            const conversationId = notification.related_id || notification.data?.conversation_id;
-            if (conversationId) {
-              router.push(`/messages/${conversationId}`);
-            } else {
-              router.push('/messages');
-            }
-            break;
-          }
-          case 'post_like':
-          case 'post_comment':
-          case 'post_share': {
-            const postId = notification.related_id || notification.data?.post_id || notification.data?.related_id;
-            if (postId) {
-              router.push(`/posts/${postId}`);
-            } else {
-              router.push('/home');
-            }
-            break;
-          }
-          case 'event_invite':
-          case 'event_reminder':
-          case 'event_cancelled':
-          case 'event_updated': {
-            const eventPostId = notification.related_id || notification.data?.post_id || notification.data?.related_id;
-            if (eventPostId) {
-              router.push(`/events/${eventPostId}`);
-            } else {
-              router.push('/events');
-            }
-            break;
-          }
-          case 'marketplace_item_sold':
-          case 'marketplace_item_interest':
-          case 'marketplace_message':
-          case 'catalog_item_inquiry':
-          case 'catalog_item_out_of_stock': {
-            const itemId = notification.related_id || notification.data?.item_id || notification.data?.related_id;
-            if (itemId) {
-              router.push(`/marketplace/${itemId}`);
-            } else {
-              router.push('/marketplace');
-            }
-            break;
-          }
-          case 'payment_successful':
-          case 'item_shipped':
-          case 'delivery_confirmed':
-          case 'funds_released': {
-            const transactionId = notification.related_id || notification.data?.transactionId || notification.data?.related_id;
-            if (transactionId) {
-              router.push(`/transactions/${transactionId}`);
-            } else {
-              router.push('/marketplace');
-            }
-            break;
-          }
-          case 'dispute_opened':
-          case 'dispute_resolved': {
-            const disputeId = notification.related_id || notification.data?.disputeId;
-            if (disputeId) {
-              router.push(`/admin/disputes/${disputeId}`);
-            } else {
-              router.push('/admin/disputes');
-            }
-            break;
-          }
-          case 'business_review_received': {
-            const businessId = notification.data?.businessId;
-            if (businessId) {
-              router.push(`/businesses/${businessId}`);
-            } else {
-              router.push('/businesses');
-            }
-            break;
-          }
-          case 'payout_processed':
-          case 'payout_failed': {
-             router.push('/profile/payout-settings');
-             break;
-          }
-          default: {
-            router.push('/home');
-          }
-        }
+    if (!notification.is_read) onMarkAsRead(notification.id);
+    switch (notification.type) {
+      case "friend_request":
+      case "friend_request_accepted":
+      case "friend_request_declined": {
+        const uid = notification.from_user_id || notification.related_id;
+        router.push(uid ? `/profile/${uid}` : "/neighbors");
+        break;
       }
-    );
+      case "message":
+      case "message_reaction": {
+        const cid = notification.related_id || notification.data?.conversation_id;
+        router.push(cid ? `/messages/${cid}` : "/messages");
+        break;
+      }
+      case "post_like":
+      case "post_comment":
+      case "post_share": {
+        const pid = notification.related_id || notification.data?.post_id;
+        router.push(pid ? `/posts/${pid}` : "/home");
+        break;
+      }
+      case "event_invite":
+      case "event_reminder": {
+        const eid = notification.related_id || notification.data?.post_id;
+        router.push(eid ? `/events/${eid}` : "/events");
+        break;
+      }
+      default:
+        router.push("/home");
+    }
   };
 
+  const isUnread = !notification.is_read;
+  const isFriendRequest = notification.type === "friend_request";
+
   return (
-    <Card 
-      className={`yrdly-shadow hover:shadow-lg transition-all cursor-pointer ${!notification.is_read ? 'border-primary/50 bg-primary/5' : ''}`}
+    <div
+      className="relative rounded-[11px] overflow-hidden cursor-pointer transition-all active:scale-[0.99]"
+      style={{
+        background: isUnread ? "#1a2820" : CARD,
+        border: isUnread
+          ? "0.5px solid rgba(130,219,126,0.3)"
+          : "0.5px solid rgba(255,255,255,0.06)",
+      }}
       onClick={handleCardClick}
-      role="button"
-      tabIndex={0}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          {/* Icon */}
-          <div className="flex-shrink-0 mt-1">
-            <NotificationIcon type={notification.type} />
-          </div>
+      {/* Unread indicator stripe */}
+      {isUnread && (
+        <div
+          className="absolute left-0 top-0 bottom-0 w-0.5"
+          style={{ background: GREEN_LIGHT }}
+        />
+      )}
 
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
-                <h4 className="font-semibold text-foreground">{notification.title}</h4>
-                <p className="text-sm text-muted-foreground mt-1">{notification.message}</p>
-                
-                {/* From User */}
-                {notification.from_user_name && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <Avatar className="w-6 h-6">
-                      <AvatarImage src={notification.from_user_avatar || "/placeholder.svg"} />
-                      <AvatarFallback className="text-xs">
-                        {notification.from_user_name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs text-muted-foreground">
-                      from {notification.from_user_name}
-                    </span>
-                  </div>
-                )}
-
-                {/* Time */}
-                <p className="text-xs text-muted-foreground mt-2">
-                  {formatDistanceToNowStrict(new Date(notification.created_at), { addSuffix: true })}
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                {!notification.is_read && (
-                  <Badge variant="destructive" className="text-xs">
-                    New
-                  </Badge>
-                )}
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {!notification.is_read && (
-                      <DropdownMenuItem onClick={() => onMarkAsRead(notification.id)}>
-                        <Check className="w-4 h-4 mr-2" />
-                        Mark as Read
-                      </DropdownMenuItem>
-                    )}
-                    {notification.type === 'friend_request' && (
-                      <>
-                        <DropdownMenuItem onClick={() => handleAction('accept_friend')}>
-                          <UserPlus className="w-4 h-4 mr-2" />
-                          Accept
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAction('decline_friend')}>
-                          <X className="w-4 h-4 mr-2" />
-                          Decline
-                        </DropdownMenuItem>
-                      </>
-                    )}
-                    {notification.type === 'message' && (
-                      <DropdownMenuItem onClick={() => handleAction('reply_message')}>
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        Reply
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem 
-                      onClick={() => onDelete(notification.id)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+      <div className="flex items-start gap-3 p-4">
+        {/* Avatar or icon */}
+        <div className="flex-shrink-0 relative">
+          {notification.from_user_avatar || notification.from_user_name ? (
+            <Avatar className="w-10 h-10">
+              <AvatarImage src={notification.from_user_avatar} />
+              <AvatarFallback
+                style={{ background: GREEN, color: "#fff", fontFamily: FONT, fontWeight: 700 }}
+              >
+                {notification.from_user_name?.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: "rgba(56,142,60,0.15)" }}
+            >
+              <NotificationIcon type={notification.type} />
             </div>
-          </div>
+          )}
+          {/* Type icon badge on avatar */}
+          {(notification.from_user_avatar || notification.from_user_name) && (
+            <div
+              className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center"
+              style={{ background: "#1E2126", border: "1px solid #15181D" }}
+            >
+              <NotificationIcon type={notification.type} />
+            </div>
+          )}
         </div>
-      </CardContent>
-    </Card>
-  );
-}
 
-function EmptyNotifications() {
-  return (
-    <div className="text-center py-16">
-      <div className="inline-block bg-muted p-4 rounded-full mb-4">
-        <Bell className="h-12 w-12 text-muted-foreground" />
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <p
+            className="text-[13px] text-white leading-snug"
+            style={{ fontFamily: FONT, fontWeight: isUnread ? 600 : 400 }}
+          >
+            <span style={{ fontWeight: 700 }}>
+              {notification.from_user_name || notification.title}
+            </span>{" "}
+            {notification.from_user_name ? notification.message : ""}
+          </p>
+          {!notification.from_user_name && (
+            <p className="text-[12px] mt-0.5" style={{ color: "#899485", fontFamily: FONT }}>
+              {notification.message}
+            </p>
+          )}
+          <p className="text-[11px] mt-1" style={{ color: "#566052", fontFamily: FONT }}>
+            {formatDistanceToNowStrict(new Date(notification.created_at), { addSuffix: true })}
+          </p>
+
+          {/* Friend request inline actions */}
+          {isFriendRequest && (
+            <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={handleAcceptFriend}
+                className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold text-white transition-all active:scale-95"
+                style={{ background: GREEN, fontFamily: FONT }}
+              >
+                <Check className="w-3.5 h-3.5" />
+                Accept
+              </button>
+              <button
+                onClick={handleDeclineFriend}
+                className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition-all active:scale-95"
+                style={{
+                  background: "rgba(229,57,53,0.12)",
+                  color: "#E53935",
+                  border: "0.5px solid rgba(229,57,53,0.3)",
+                  fontFamily: FONT,
+                }}
+              >
+                <X className="w-3.5 h-3.5" />
+                Decline
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Right side: unread dot + delete */}
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          {isUnread && (
+            <div className="w-2 h-2 rounded-full" style={{ background: GREEN_LIGHT }} />
+          )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                onClick={(e) => e.stopPropagation()}
+                className="p-1 rounded-full transition-colors hover:bg-white/10"
+                style={{ color: "#566052" }}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent
+              style={{ background: CARD, border: "0.5px solid rgba(255,255,255,0.1)" }}
+            >
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-white">Delete notification?</AlertDialogTitle>
+                <AlertDialogDescription style={{ color: "#899485" }}>
+                  This will permanently remove this notification.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: 0 }}
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  style={{ background: "#E53935" }}
+                  onClick={() => onDelete(notification.id)}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
-      <h2 className="text-2xl font-bold">No notifications yet</h2>
-      <p className="text-muted-foreground mt-2">You&apos;ll see notifications about your community activity here.</p>
     </div>
   );
 }
 
+const FILTER_TABS = ["All", "Unread", "Friend Requests", "Messages", "Activity"];
+
 export function NotificationsScreen({ className }: NotificationsScreenProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState("All");
 
   useEffect(() => {
     if (!user) return;
@@ -479,17 +375,14 @@ export function NotificationsScreen({ className }: NotificationsScreenProps) {
     const fetchNotifications = async () => {
       try {
         const { data, error } = await supabase
-          .from('notifications')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+          .from("notifications")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
 
-        if (error) {
-          console.error('Error fetching notifications:', error);
-          return;
-        }
+        if (error) return;
 
-        const formattedNotifications = (data || []).map(notif => ({
+        const formatted = (data || []).map((notif) => ({
           id: notif.id,
           type: notif.type,
           title: notif.title,
@@ -503,217 +396,201 @@ export function NotificationsScreen({ className }: NotificationsScreenProps) {
           related_id: notif.related_id,
         })) as Notification[];
 
-        setNotifications(formattedNotifications);
+        setNotifications(formatted);
         setLoading(false);
-
-        // Mark all notifications as read when the screen is opened
-        const unreadNotifications = formattedNotifications.filter(n => !n.is_read);
-        if (unreadNotifications.length > 0) {
-          const unreadIds = unreadNotifications.map(n => n.id);
-          await supabase
-            .from('notifications')
-            .update({ is_read: true })
-            .in('id', unreadIds);
-          
-          // Update local state
-          setNotifications(prev => 
-            prev.map(notif => 
-              unreadIds.includes(notif.id) ? { ...notif, is_read: true } : notif
-            )
-          );
-        }
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
+      } catch {
         setLoading(false);
       }
     };
 
     fetchNotifications();
 
-    // Set up real-time subscription
     const channel = supabase
-      .channel('notifications')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'notifications',
-        filter: `user_id=eq.${user.id}`
-      }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          const newNotification = payload.new as any;
-          setNotifications(prev => [{
-            id: newNotification.id,
-            type: newNotification.type,
-            title: newNotification.title,
-            message: newNotification.message,
-            data: newNotification.data,
-            is_read: newNotification.is_read,
-            created_at: newNotification.created_at,
-            from_user_id: newNotification.sender_id || newNotification.data?.from_user_id,
-            from_user_name: newNotification.data?.fromUserName || newNotification.data?.from_user_name,
-            from_user_avatar: newNotification.data?.from_user_avatar,
-            related_id: newNotification.related_id,
-          }, ...prev]);
-        } else if (payload.eventType === 'UPDATE') {
-          const updatedNotification = payload.new as any;
-          setNotifications(prev => 
-            prev.map(notif => 
-              notif.id === updatedNotification.id ? {
-                ...notif,
-                is_read: updatedNotification.is_read,
-              } : notif
-            )
-          );
-        } else if (payload.eventType === 'DELETE') {
-          const deletedId = payload.old.id;
-          setNotifications(prev => prev.filter(notif => notif.id !== deletedId));
+      .channel("notifications_screen")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const n = payload.new as any;
+            setNotifications((prev) => [
+              {
+                id: n.id,
+                type: n.type,
+                title: n.title,
+                message: n.message,
+                data: n.data,
+                is_read: n.is_read,
+                created_at: n.created_at,
+                from_user_id: n.sender_id || n.data?.from_user_id,
+                from_user_name: n.data?.fromUserName || n.data?.from_user_name,
+                from_user_avatar: n.data?.from_user_avatar,
+                related_id: n.related_id,
+              },
+              ...prev,
+            ]);
+          } else if (payload.eventType === "UPDATE") {
+            const u = payload.new as any;
+            setNotifications((prev) =>
+              prev.map((n) => (n.id === u.id ? { ...n, is_read: u.is_read } : n))
+            );
+          } else if (payload.eventType === "DELETE") {
+            setNotifications((prev) => prev.filter((n) => n.id !== payload.old.id));
+          }
         }
-      })
+      )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-
   const handleMarkAsRead = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', id);
+    await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
+  };
 
-      if (error) throw error;
-
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === id ? { ...notif, is_read: true } : notif
-        )
-      );
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      toast({
-        title: "Error",
-        description: "Failed to mark notification as read.",
-        variant: "destructive",
-      });
-    }
+  const handleMarkAllRead = async () => {
+    const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
+    if (unreadIds.length === 0) return;
+    await supabase.from("notifications").update({ is_read: true }).in("id", unreadIds);
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    toast({ title: "All marked as read" });
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      setNotifications(prev => prev.filter(notif => notif.id !== id));
-      toast({ title: "Notification deleted" });
-    } catch (error) {
-      console.error('Error deleting notification:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete notification.",
-        variant: "destructive",
-      });
-    }
+    await supabase.from("notifications").delete().eq("id", id);
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
-  const handleClearAllNotifications = async () => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('user_id', user?.id);
-
-      if (error) throw error;
-
-      setNotifications([]);
-      toast({ 
-        title: "Success", 
-        description: "All notifications cleared" 
-      });
-    } catch (error) {
-      console.error('Error clearing all notifications:', error);
-      toast({
-        title: "Error",
-        description: "Failed to clear all notifications.",
-        variant: "destructive",
-      });
+  const filteredNotifications = useMemo(() => {
+    switch (activeFilter) {
+      case "Unread":
+        return notifications.filter((n) => !n.is_read);
+      case "Friend Requests":
+        return notifications.filter((n) => n.type === "friend_request");
+      case "Messages":
+        return notifications.filter((n) => n.type === "message" || n.type === "message_reaction");
+      case "Activity":
+        return notifications.filter((n) =>
+          ["post_like", "post_comment", "post_share", "event_invite", "event_reminder"].includes(n.type)
+        );
+      default:
+        return notifications;
     }
-  };
+  }, [notifications, activeFilter]);
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <div className={`p-4 space-y-6 ${className}`}>
-      {/* Header */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
+    <div className="min-h-screen pb-32" style={{ background: BG }}>
+      <div className="max-w-2xl mx-auto px-4 pt-6 space-y-6">
+        {/* Header */}
+        <header className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-foreground">Notifications</h2>
-            <p className="text-muted-foreground">
-              {unreadCount > 0 ? `${unreadCount} unread notifications` : 'All caught up!'}
+            <h1 className="text-[20px] text-white" style={{ fontFamily: PACIFICO }}>
+              Notifications
+            </h1>
+            <p
+              className="text-[12px] mt-0.5"
+              style={{ color: "#899485", fontFamily: FONT, fontStyle: "italic", fontWeight: 300 }}
+            >
+              {unreadCount > 0 ? `${unreadCount} unread` : "All caught up!"}
             </p>
           </div>
           {unreadCount > 0 && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                // Mark all as read
-                notifications.forEach(notif => {
-                  if (!notif.is_read) {
-                    handleMarkAsRead(notif.id);
-                  }
-                });
+            <button
+              onClick={handleMarkAllRead}
+              className="flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-all active:scale-95"
+              style={{
+                background: "rgba(56,142,60,0.15)",
+                color: GREEN_LIGHT,
+                border: "0.5px solid rgba(130,219,126,0.3)",
+                fontFamily: FONT,
               }}
             >
-              <Check className="w-4 h-4 mr-2" />
-              Mark All Read
-            </Button>
+              <Check className="w-3.5 h-3.5" />
+              Mark all read
+            </button>
           )}
+        </header>
+
+        {/* Filter tabs */}
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+          {FILTER_TABS.map((tab) => {
+            const isActive = activeFilter === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveFilter(tab)}
+                className="flex-shrink-0 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all"
+                style={
+                  isActive
+                    ? { background: GREEN, color: "#fff", fontFamily: FONT }
+                    : {
+                        background: CARD,
+                        color: "#899485",
+                        border: "0.5px solid rgba(255,255,255,0.08)",
+                        fontFamily: FONT,
+                      }
+                }
+              >
+                {tab}
+                {tab === "Unread" && unreadCount > 0 && (
+                  <span
+                    className="ml-1.5 inline-flex items-center justify-center rounded-full min-w-[16px] h-4 px-1 text-[9px] font-bold"
+                    style={{ background: GREEN_LIGHT, color: "#003207" }}
+                  >
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Clear All Notifications */}
-        {notifications.length > 0 && (
-          <div className="flex justify-end">
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleClearAllNotifications}
+        {/* Notifications list */}
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-start gap-3 p-4 rounded-[11px]" style={{ background: CARD }}>
+                <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" style={{ background: "#272a2f" }} />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-3 w-3/4" style={{ background: "#272a2f" }} />
+                  <Skeleton className="h-3 w-1/2" style={{ background: "#272a2f" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredNotifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center mb-5"
+              style={{ background: "rgba(56,142,60,0.1)" }}
             >
-              <X className="w-4 h-4 mr-2" />
-              Clear All Notifications
-            </Button>
+              <Bell className="w-9 h-9" style={{ color: GREEN_LIGHT, opacity: 0.5 }} />
+            </div>
+            <h2 className="text-white text-lg mb-2" style={{ fontFamily: PACIFICO }}>
+              {activeFilter === "All" ? "No notifications yet" : `No ${activeFilter.toLowerCase()}`}
+            </h2>
+            <p className="text-[13px] text-center max-w-xs" style={{ color: "#899485", fontFamily: FONT }}>
+              {activeFilter === "All"
+                ? "You'll see your notifications here."
+                : `You have no ${activeFilter.toLowerCase()} notifications.`}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredNotifications.map((notification) => (
+              <NotificationCard
+                key={notification.id}
+                notification={notification}
+                onMarkAsRead={handleMarkAsRead}
+                onDelete={handleDelete}
+              />
+            ))}
           </div>
         )}
       </div>
-
-      {/* Notifications List */}
-      {loading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-24 w-full rounded-lg" />
-          <Skeleton className="h-24 w-full rounded-lg" />
-          <Skeleton className="h-24 w-full rounded-lg" />
-        </div>
-      ) : notifications.length > 0 ? (
-        <div className="space-y-4">
-          {notifications.map((notification) => (
-            <NotificationCard
-              key={notification.id}
-              notification={notification}
-              onMarkAsRead={handleMarkAsRead}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
-      ) : (
-        <EmptyNotifications />
-      )}
     </div>
   );
 }
