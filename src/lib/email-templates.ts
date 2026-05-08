@@ -326,5 +326,130 @@ export const emailTemplates = {
     `;
 
     return { subject, html };
+  },
+
+  /**
+   * Ticket Purchase Confirmation Email
+   */
+  ticketConfirmation: (
+    attendeeName: string,
+    email: string,
+    eventName: string,
+    tierName: string,
+    ticketId: string, // URL-safe version of ticket UUID
+    qrUrl: string, // Full URL to a viewable QR code
+    dateStr: string,
+    timeStr: string,
+    locationStr: string,
+    orderId: string
+  ) => {
+    const subject = `Your Ticket: ${eventName}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Your Ticket</title>
+        <style>
+          ${commonStyles}
+          .ticket-card {
+            background: #fff;
+            border-radius: 16px;
+            border: 2px dashed #E5E7EB;
+            padding: 32px;
+            margin: 32px 0;
+            text-align: center;
+          }
+          .qr-code {
+            max-width: 250px;
+            margin: 0 auto 24px auto;
+            display: block;
+            border-radius: 8px;
+            border: 4px solid #fff;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+          }
+          .ticket-meta {
+            text-align: left;
+            background: #F9FAFB;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 24px;
+          }
+          .meta-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #E5E7EB;
+            padding: 12px 0;
+          }
+          .meta-row:last-child { border-bottom: none; }
+          .meta-label { color: #6B7280; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+          .meta-value { color: ${BRAND_DARK}; font-weight: 600; font-size: 14px; text-align: right; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">🎟️ ${APP_NAME} Events</div>
+            <div class="tagline">Your digital ticket is ready!</div>
+          </div>
+          
+          <div class="content">
+            <h1 class="title">See you there, ${attendeeName}!</h1>
+            
+            <p class="message" style="text-align: center;">
+              Your purchase was successful. Have your ticket ready to be scanned at the entrance.
+            </p>
+            
+            <div class="ticket-card">
+              <h2 style="margin: 0 0 24px 0; font-size: 20px; color: ${BRAND_DARK};">${eventName}</h2>
+              
+              <img src="${qrUrl}" alt="Ticket QR Code" class="qr-code" />
+              <div style="font-family: monospace; font-size: 12px; color: #9CA3AF; margin-bottom: 24px;">ID: ${ticketId.split('-')[0].toUpperCase()}...</div>
+              
+              <div class="ticket-meta">
+                <div class="meta-row">
+                  <span class="meta-label">Ticket Type</span>
+                  <span class="meta-value">${tierName}</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Date</span>
+                  <span class="meta-value">${dateStr}</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Time</span>
+                  <span class="meta-value">${timeStr}</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Location</span>
+                  <span class="meta-value">${locationStr}</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">Order Ref</span>
+                  <span class="meta-value">${orderId}</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="button-container">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL}/tickets/${ticketId}" class="button">View Ticket Online</a>
+            </div>
+            
+            <p class="message" style="text-align: center; font-style: italic; color: #6B7280; font-size: 14px;">
+              Can't make it? Contact the organizer through the event page.
+            </p>
+          </div>
+          
+          <div class="footer">
+            <p>You're receiving this because you purchased a ticket on ${APP_NAME}.</p>
+            <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return { subject, html };
   }
 };

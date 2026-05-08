@@ -147,6 +147,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("posts");
   const [showFriendsList, setShowFriendsList] = useState(false);
+  const [showRemoveFriendDialog, setShowRemoveFriendDialog] = useState(false);
   const [isFriend, setIsFriend] = useState(false);
   const [isFriendRequestSent, setIsFriendRequestSent] = useState(false);
   const [stats, setStats] = useState({ friends: 0, events: 0 });
