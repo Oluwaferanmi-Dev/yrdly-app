@@ -45,20 +45,6 @@ function TicketGradient() {
   );
 }
 
-function PinGradient() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 42 42" fill="none">
-      <defs>
-        <linearGradient id="pg1" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#FFE100" />
-          <stop offset="100%" stopColor="#FFF2ED" />
-        </linearGradient>
-      </defs>
-      <path d="M21 4C15.477 4 11 8.477 11 14c0 8 10 24 10 24s10-16 10-24c0-5.523-4.477-10-10-10z" fill="url(#pg1)" />
-      <circle cx="21" cy="14" r="4" fill="#15181D" />
-    </svg>
-  );
-}
 
 const FONT_RALEWAY = "Raleway, sans-serif";
 const GREEN = "#388E3C";
@@ -124,15 +110,6 @@ export function HomeScreen({ onViewProfile }: HomeScreenProps) {
               </button>
             </CreateEventDialog>
 
-            <CreatePostDialog createPost={createPost}>
-              <button
-                className="flex items-center gap-1.5 rounded-[20.5px] px-3 py-1.5 text-white text-[12px] font-semibold hover:bg-white/10 transition-colors"
-                style={{ fontFamily: FONT_RALEWAY }}
-              >
-                <PinGradient />
-                Location
-              </button>
-            </CreatePostDialog>
           </div>
         </div>
       </div>
