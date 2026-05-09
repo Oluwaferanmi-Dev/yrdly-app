@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { ArrowLeft, Camera, Plus, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StorageService } from "@/lib/storage-service";
 
 const NIGERIAN_STATES = ["Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno","Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT - Abuja","Gombe","Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nassarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara"];
 
@@ -58,14 +59,12 @@ export default function EditProfilePage() {
       let finalAvatarUrl = avatarUrl;
 
       if (avatarFile) {
-        const ext = avatarFile.name.split(".").pop();
-        const path = `${user.id}/avatar-${Date.now()}.${ext}`;
-        const { error: uploadErr } = await supabase.storage.from("user-avatars").upload(path, avatarFile, { upsert: true });
-        if (!uploadErr) {
-          const { data } = supabase.storage.from("user-avatars").getPublicUrl(path);
-          finalAvatarUrl = data.publicUrl;
+        const { url, error: uploadErr } = await StorageService.uploadUserAvatar(user.id, avatarFile);
+        if (!uploadErr && url) {
+          finalAvatarUrl = url;
         } else {
           console.error("Avatar upload failed:", uploadErr);
+          throw new Error("Failed to upload profile picture. Please try again.");
         }
       }
 

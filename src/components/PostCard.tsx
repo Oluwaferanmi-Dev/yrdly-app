@@ -478,7 +478,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
                   </CreatePostDialog>
                 ) : null}
                 <AlertDialogTrigger asChild>
-                  <DropdownMenuItem className="text-red-400 focus:text-red-400 focus:bg-red-500/10">
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-400 focus:text-red-400 focus:bg-red-500/10">
                     <Trash2 className="mr-2 h-4 w-4" /> Delete
                   </DropdownMenuItem>
                 </AlertDialogTrigger>
