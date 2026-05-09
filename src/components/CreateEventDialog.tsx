@@ -414,9 +414,9 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
     return (
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetTrigger asChild>{children ? children : <Trigger />}</SheetTrigger>
-        <SheetContent side="bottom" className="p-0 flex flex-col h-[92vh] max-h-[92vh] rounded-t-[32px] border border-white/10 bg-[#1E2126] text-white overflow-hidden" hideClose>
+        <SheetContent side="bottom" className="p-0 flex flex-col max-h-[90dvh] rounded-t-[32px] border border-white/10 bg-[#1E2126] text-white overflow-hidden pb-safe" style={{ zIndex: 100 }} hideClose>
           {headerBlock}
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-24">
             {formContent}
           </div>
         </SheetContent>
@@ -429,9 +429,9 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
       {externalOpen === undefined && (
         <DialogTrigger asChild>{children ? children : <Trigger />}</DialogTrigger>
       )}
-      <DialogContent className={cn("sm:max-w-[626px] p-0 flex flex-col h-[90vh] max-h-[90vh] border border-white/10 rounded-[24px] bg-[#1E2126] text-white gap-0 overflow-hidden")} hideClose>
+      <DialogContent className={cn("sm:max-w-[626px] p-0 flex flex-col max-h-[90dvh] border border-white/10 rounded-[24px] bg-[#1E2126] text-white gap-0 overflow-hidden")} style={{ zIndex: 100 }} hideClose>
         {headerBlock}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
           {formContent}
         </div>
       </DialogContent>

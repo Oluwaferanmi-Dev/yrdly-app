@@ -511,8 +511,8 @@ const CreateItemDialogComponent = ({
         <SheetTrigger asChild>{children ?? <span />}</SheetTrigger>
         <SheetContent
           side="bottom"
-          className="p-4 border-0 rounded-t-2xl"
-          style={{ background: BG_DARK }}
+          className="p-4 border-0 rounded-t-2xl pb-24 overflow-y-auto max-h-[90dvh]"
+          style={{ background: BG_DARK, zIndex: 100 }}
           hideClose
         >
           <FormBody {...formBodyProps} />
@@ -528,8 +528,8 @@ const CreateItemDialogComponent = ({
         <DialogTrigger asChild>{children ?? <span />}</DialogTrigger>
       )}
       <DialogContent
-        className="p-4 border-0 shadow-2xl max-w-[626px]"
-        style={{ background: BG_DARK }}
+        className="p-4 border-0 shadow-2xl max-w-[626px] max-h-[90dvh] overflow-y-auto"
+        style={{ background: BG_DARK, zIndex: 100 }}
         hideClose
       >
         <FormBody {...formBodyProps} />
