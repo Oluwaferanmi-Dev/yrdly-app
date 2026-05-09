@@ -234,8 +234,17 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
         </h2>
         <p className="font-raleway font-light italic text-xs text-white/90 mt-0.5">{finalDescription}</p>
       </div>
-      <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(118.99deg, #FF0048 17.37%, #7D00D0 85.3%)" }}>
-        <Ticket className="w-5 h-5 text-white" />
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(118.99deg, #FF0048 17.37%, #7D00D0 85.3%)" }}>
+          <Ticket className="w-5 h-5 text-white" />
+        </div>
+        <button
+          type="button"
+          onClick={() => handleOpenChange(false)}
+          className="text-white/60 hover:text-white transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
     </div>
   );
@@ -405,7 +414,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
     return (
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetTrigger asChild>{children ? children : <Trigger />}</SheetTrigger>
-        <SheetContent side="bottom" className="p-0 flex flex-col h-[92vh] max-h-[92vh] rounded-t-[32px] border border-white/10 bg-[#1E2126] text-white overflow-hidden">
+        <SheetContent side="bottom" className="p-0 flex flex-col h-[92vh] max-h-[92vh] rounded-t-[32px] border border-white/10 bg-[#1E2126] text-white overflow-hidden" hideClose>
           {headerBlock}
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {formContent}
@@ -420,7 +429,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
       {externalOpen === undefined && (
         <DialogTrigger asChild>{children ? children : <Trigger />}</DialogTrigger>
       )}
-      <DialogContent className={cn("sm:max-w-[626px] p-0 flex flex-col h-[90vh] max-h-[90vh] border border-white/10 rounded-[24px] bg-[#1E2126] text-white gap-0 overflow-hidden")}>
+      <DialogContent className={cn("sm:max-w-[626px] p-0 flex flex-col h-[90vh] max-h-[90vh] border border-white/10 rounded-[24px] bg-[#1E2126] text-white gap-0 overflow-hidden")} hideClose>
         {headerBlock}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {formContent}

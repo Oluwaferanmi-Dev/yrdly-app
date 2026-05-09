@@ -357,6 +357,7 @@ const CreatePostDialogComponent = ({
             display: "flex",
             flexDirection: "column",
           }}
+          hideClose
         >
           <PostForm {...formProps} />
         </SheetContent>

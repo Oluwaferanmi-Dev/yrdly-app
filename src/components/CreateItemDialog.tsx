@@ -513,6 +513,7 @@ const CreateItemDialogComponent = ({
           side="bottom"
           className="p-4 border-0 rounded-t-2xl"
           style={{ background: BG_DARK }}
+          hideClose
         >
           <FormBody {...formBodyProps} />
         </SheetContent>
