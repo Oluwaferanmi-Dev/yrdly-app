@@ -102,9 +102,11 @@ export async function GET(request: NextRequest) {
       .eq('id', tier_id);
 
     // Increment event attendee_count
-    await supabaseAdmin.rpc('increment_attendee_count', { event_id_param: event_id }).catch(() => {
+    try {
+      await supabaseAdmin.rpc('increment_attendee_count', { event_id_param: event_id });
+    } catch (e) {
       // Non-critical — ignore if RPC doesn't exist
-    });
+    }
 
     // ── Send ticket confirmation email ───────────────────────────────────────
     try {
@@ -135,15 +137,19 @@ export async function GET(request: NextRequest) {
     }
 
     // ── In-app notification ──────────────────────────────────────────────────
-    await supabaseAdmin.from('notifications').insert({
-      user_id: buyer_id,
-      type: 'event_reminder',
-      title: `🎟️ Ticket Confirmed!`,
-      message: `Your ${tier.name} ticket for "${event.title}" is ready. Check My Tickets.`,
-      related_id: event_id,
-      related_type: 'event',
-      data: { ticket_id: ticket.id, event_id, ticket_code: ticketCode },
-    }).catch(() => {});
+    try {
+      await supabaseAdmin.from('notifications').insert({
+        user_id: buyer_id,
+        type: 'event_reminder',
+        title: `🎟️ Ticket Confirmed!`,
+        message: `Your ${tier.name} ticket for "${event.title}" is ready. Check My Tickets.`,
+        related_id: event_id,
+        related_type: 'event',
+        data: { ticket_id: ticket.id, event_id, ticket_code: ticketCode },
+      });
+    } catch (e) {
+      // Ignore notification failures
+    }
 
     return NextResponse.redirect(`${appUrl}/my-tickets?success=1&ticket_id=${ticket.id}`);
   } catch (error) {
