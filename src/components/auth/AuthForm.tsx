@@ -13,6 +13,7 @@ import { YrdlyLogo } from '@/components/ui/yrdly-logo';
 import { AUTH_CONSTANTS, ERROR_MESSAGES } from '@/lib/constants';
 import { ErrorMessageFormatter } from '@/lib/error-messages';
 import { PasswordStrength } from '@/components/ui/password-strength';
+import Image from 'next/image';
 
 interface AuthFormProps {
   mode: 'login' | 'signup';
@@ -157,7 +158,14 @@ export function AuthForm({ mode, onToggleMode, onSuccess }: AuthFormProps) {
       <Card className="w-full max-w-md border-0 shadow-lg">
         <CardHeader className="space-y-6 text-center pb-8">
           <div className="flex justify-center">
-            <YrdlyLogo />
+            <Image 
+              src="/yrdly-logo.png" 
+              alt="Yrdly Logo" 
+              width={128} 
+              height={128}
+              className="w-32 h-32"
+              priority
+            />
           </div>
           <div className="space-y-2">
             <CardTitle className="text-2xl font-bold text-center">

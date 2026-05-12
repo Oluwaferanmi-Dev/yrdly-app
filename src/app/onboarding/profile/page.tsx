@@ -338,10 +338,6 @@ export default function OnboardingProfilePage() {
             >
               {/* Card Holographic Pattern */}
               <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "32px 32px" }} />
-              
-              <div className="absolute top-6 right-6 sm:top-8 sm:right-8">
-                <YrdlyLogo />
-              </div>
 
               <div className="h-full flex flex-col justify-between relative z-10 gap-6">
                 <div className="flex items-start gap-4 sm:gap-6">
@@ -440,17 +436,17 @@ export default function OnboardingProfilePage() {
                     </div>
                     
                     <div className="relative group">
-                      <div className="absolute inset-0 bg-[#388E3C] rounded-[24px] opacity-0 group-focus-within:opacity-5 blur-xl transition-opacity" />
-                      <div className="absolute left-8 top-1/2 -translate-y-1/2 text-[#388E3C] font-black text-2xl">@</div>
+                      <div className="absolute inset-0 bg-[#388E3C] rounded-[24px] opacity-0 group-focus-within:opacity-5 blur-xl transition-opacity pointer-events-none" />
+                      <div className="absolute left-8 top-1/2 -translate-y-1/2 text-[#388E3C] font-black text-2xl pointer-events-none">@</div>
                       <Input
                         placeholder="username"
-                        className="h-18 pl-16 pr-16 rounded-[24px] bg-[#0d0f11]/60 border-white/10 focus:border-[#388E3C]/50 transition-all text-xl font-bold"
+                        className="h-16 pl-16 pr-16 rounded-[24px] bg-[#0d0f11]/60 border-white/10 focus:border-[#388E3C]/50 transition-all text-xl font-bold"
                         {...form.register('username')}
                         onFocus={() => setShowSuggestions(usernameSuggestions.length > 0)}
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                         maxLength={20}
                       />
-                      <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                      <div className="absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-3 pointer-events-none">
                          {checkingUsername && <div className="w-6 h-6 border-3 border-[#388E3C] border-t-transparent rounded-full animate-spin" />}
                          {!checkingUsername && usernameAvailable === true && (
                            <div className="w-8 h-8 rounded-full bg-[#388E3C]/10 flex items-center justify-center border border-[#388E3C]/20">
