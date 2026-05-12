@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 import { getEventById } from "@/lib/event-service";
 import type { Event, TicketTier } from "@/types/events";
 
@@ -38,7 +39,7 @@ interface PurchaseState {
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const [event, setEvent] = useState<Event | null>(null);
@@ -56,14 +57,14 @@ export default function EventDetailPage() {
 
   // Pre-fill form with auth user data
   useEffect(() => {
-    if (user && session) {
+    if (user) {
       setForm((f) => ({
         ...f,
         name: user.user_metadata?.name || f.name,
         email: user.email || f.email,
       }));
     }
-  }, [user, session]);
+  }, [user]);
 
   const handleSelectTier = (tier: TicketTier) => {
     if (!user) { router.push("/login"); return; }
@@ -71,7 +72,14 @@ export default function EventDetailPage() {
   };
 
   const handlePurchase = async () => {
-    if (!purchase.tier || !session?.access_token) return;
+    if (!purchase.tier) return;
+    
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      setPurchase((s) => ({ ...s, errorMsg: "You must be logged in." }));
+      return;
+    }
+
     if (!form.name.trim() || !form.email.trim()) {
       setPurchase((s) => ({ ...s, errorMsg: "Name and email are required." }));
       return;
