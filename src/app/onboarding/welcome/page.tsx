@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, Sparkles, ArrowRight, Users, MapPin, Calendar, ShoppingBag } from 'lucide-react';
 import { YrdlyLogo } from '@/components/ui/yrdly-logo';
 import { useToast } from '@/hooks/use-toast';
-import { BrevoEmailService } from '@/lib/brevo-service';
+import { ResendEmailService } from '@/lib/resend-service';
 import { onboardingAnalytics } from '@/lib/onboarding-analytics';
 import { OnboardingProgress } from '@/components/onboarding/OnboardingProgress';
 import { LoadingState } from '@/components/onboarding/LoadingState';
@@ -159,7 +159,7 @@ export default function OnboardingWelcomePage() {
         // Send welcome email only if not sent before
         if (profile.email) {
           try {
-            await BrevoEmailService.sendWelcomeEmail(
+            await ResendEmailService.sendWelcomeEmail(
               profile.email,
               profile.name || 'User',
               {
@@ -170,7 +170,7 @@ export default function OnboardingWelcomePage() {
             onboardingAnalytics.trackWelcomeMessageSent(profile.email);
           } catch (emailError: any) {
             // Only log if it's not a configuration error
-            if (emailError.message !== 'BREVO_NOT_CONFIGURED') {
+            if (emailError.message !== 'RESEND_NOT_CONFIGURED') {
               console.error('Error sending welcome email:', emailError);
             }
             // Continue without showing error to user

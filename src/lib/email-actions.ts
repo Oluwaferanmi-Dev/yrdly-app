@@ -1,6 +1,6 @@
 'use server';
 
-import { BrevoEmailService } from './brevo-service';
+import { ResendEmailService } from './resend-service';
 
 export async function sendEventConfirmationEmail(data: {
   attendeeEmail: string;
@@ -13,7 +13,7 @@ export async function sendEventConfirmationEmail(data: {
   eventLink?: string;
 }) {
   try {
-    await BrevoEmailService.sendEventConfirmationEmail(data);
+    await ResendEmailService.sendEventConfirmationEmail(data);
     return { success: true };
   } catch (error) {
     console.error('Failed to send event confirmation email:', error);

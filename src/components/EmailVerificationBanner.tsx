@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { MailWarning, X, RefreshCw, CheckCircle } from 'lucide-react';
 // Removed Firebase import - using Supabase auth
 import { useToast } from '@/hooks/use-toast';
-import { BrevoEmailService } from '@/lib/brevo-service';
+import { ResendEmailService } from '@/lib/resend-service';
 
 export function EmailVerificationBanner() {
     const { user } = useAuth();
@@ -47,16 +47,16 @@ export function EmailVerificationBanner() {
         if (!user || cooldownTime > 0) return;
         setIsSending(true);
         try {
-            // Try to send verification email via Brevo, fallback to Firebase
+            // Try to send verification email via Resend
             try {
                 // Create verification link with user ID as token
                 const verificationLink = `${window.location.origin}/verify-email?token=${user.id}&email=${encodeURIComponent(user.email || '')}`;
                 
-                // Send verification email via Brevo
-                await BrevoEmailService.sendVerificationEmail(user.email || '', verificationLink, user.user_metadata?.full_name || undefined);
+                // Send verification email via Resend
+                await ResendEmailService.sendVerificationEmail(user.email || '', verificationLink, user.user_metadata?.full_name || undefined);
                 
             } catch (error: any) {
-                if (error.message === 'BREVO_NOT_CONFIGURED' || error.message === 'BREVO_SEND_FAILED') {
+                if (error.message === 'RESEND_NOT_CONFIGURED' || error.message === 'RESEND_SEND_FAILED') {
                     throw new Error('Email service not configured. Please contact support.');
                 } else {
                     throw error; // Re-throw other errors

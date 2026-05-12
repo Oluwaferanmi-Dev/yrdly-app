@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, RefreshCw, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react';
 import { YrdlyLogo } from '@/components/ui/yrdly-logo';
 import { useToast } from '@/hooks/use-toast';
-import { BrevoEmailService } from '@/lib/brevo-service';
+import { ResendEmailService } from '@/lib/resend-service';
 // Removed Firebase import - using Supabase auth
 import { onboardingAnalytics } from '@/lib/onboarding-analytics';
 import { supabase } from '@/lib/supabase';
@@ -125,7 +125,7 @@ function VerifyEmailContent() {
   // Handle email verification from link
   useEffect(() => {
     if (token && user) {
-      // Token-based verification (from Brevo)
+      // Token-based verification (from email link)
       handleTokenVerification();
     }
   }, [token, user, handleTokenVerification]);
@@ -251,26 +251,22 @@ function VerifyEmailContent() {
     setError(null);
     
     try {
-      // Try to send verification email via Brevo, fallback to manual message
+      // Try to send verification email via Resend
       try {
         // Create verification link with user ID as token
-        const verificationLink = BrevoEmailService.generateManualVerificationLink(user.id, email);
+        const verificationLink = ResendEmailService.generateManualVerificationLink(user.id, email);
         
-        // Send verification email via Brevo
-        await BrevoEmailService.sendVerificationEmail(email, verificationLink, user.user_metadata?.name || user.email?.split('@')[0]);
+        // Send verification email via Resend
+        await ResendEmailService.sendVerificationEmail(email, verificationLink, user.user_metadata?.name || user.email?.split('@')[0]);
         
         onboardingAnalytics.trackEmailVerificationSent(email);
       } catch (error: unknown) {
-        // Handle different types of Brevo errors
+        // Handle different types of Resend errors
         const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage === 'BREVO_NOT_CONFIGURED') {
+        if (errorMessage === 'RESEND_NOT_CONFIGURED') {
           setError('Email service is not configured. Please contact support or use the manual verification link below.');
-        } else if (errorMessage === 'BREVO_AUTH_FAILED') {
-          setError('Email service authentication failed. Please contact support.');
-        } else if (errorMessage === 'BREVO_RATE_LIMITED') {
-          setError('Too many emails sent. Please wait a few minutes before trying again.');
-        } else if (errorMessage === 'BREVO_SERVER_ERROR') {
-          setError('Email service is temporarily unavailable. Please try again later or contact support.');
+        } else if (errorMessage === 'RESEND_SEND_FAILED') {
+          setError('Email service failed to send. Please try again or contact support.');
         } else {
           setError('Failed to send verification email. Please try again or contact support.');
         }
