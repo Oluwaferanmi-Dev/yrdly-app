@@ -577,23 +577,6 @@ export default function OnboardingProfilePage() {
                       )}
                     </span>
                   </button>
-
-                  <div className="flex items-center justify-center gap-6">
-                    <button 
-                      type="button"
-                      onClick={handleBackToVerification}
-                      className="text-sm font-black text-[#899485] hover:text-white transition-all uppercase tracking-widest border-b border-transparent hover:border-[#388E3C] pb-1"
-                    >
-                      Security Settings
-                    </button>
-                    <div className="w-1 h-1 rounded-full bg-white/10" />
-                    <button 
-                      type="button"
-                      className="text-sm font-black text-[#899485]/40 cursor-not-allowed uppercase tracking-widest"
-                    >
-                      Cancel Setup
-                    </button>
-                  </div>
                 </div>
               </form>
             </div>

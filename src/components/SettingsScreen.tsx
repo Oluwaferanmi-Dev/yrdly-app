@@ -281,11 +281,6 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
               setPrivacy((prev) => ({ ...prev, privateAccount: v }))
             }
           />
-          <NavRow
-            icon={ShieldCheck}
-            label="Security Checkup"
-            onClick={() => router.push("/settings/security")}
-          />
         </div>
 
         {/* ── Appearance ── */}
@@ -318,14 +313,9 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
         <div className="space-y-3">
           <SectionLabel>Support</SectionLabel>
           <NavRow
-            icon={HelpCircle}
-            label="Help Center"
-            onClick={() => router.push("/help")}
-          />
-          <NavRow
             icon={FileText}
             label="Privacy Policy"
-            onClick={() => router.push("/settings/privacy")}
+            onClick={() => router.push("/legal/privacy")}
           />
         </div>
 
