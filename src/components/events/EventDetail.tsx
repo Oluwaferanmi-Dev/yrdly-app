@@ -107,7 +107,7 @@ export function EventDetail({
             eventTime: event.event_time,
             eventLocation: event.event_location?.address,
             eventDescription: event.text,
-            eventLink: event.event_link,
+            eventLink: event.event_link || `${window.location.origin}/posts/${event.id}`,
           });
 
           toast({

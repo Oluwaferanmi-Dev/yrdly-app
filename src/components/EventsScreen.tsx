@@ -56,12 +56,7 @@ function formatEventDateTime(d: string | null | undefined, t?: string | null): s
   }
 }
 
-function getLocation(event: PostType): string {
-  const loc = event.event_location;
-  if (!loc || typeof loc !== "object") return "";
-  const o = loc as { address?: string };
-  return o.address || "";
-}
+
 
 export function EventsScreen({ className }: EventsScreenProps) {
   const { user } = useAuth();
