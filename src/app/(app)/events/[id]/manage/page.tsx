@@ -1,21 +1,22 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Users, TicketCheck, DollarSign, QrCode, Search, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-supabase-auth";
+import { supabase } from "@/lib/supabase";
 import { getEventById, getEventTickets } from "@/lib/event-service";
 import type { Event, Ticket } from "@/types/events";
 import { EVENT_CONSTANTS } from "@/lib/constants";
+
+"use client";
 
 type CheckInResult = { valid: boolean; message: string; attendee_name?: string; tier_name?: string } | null;
 
 export default function ManageEventPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { user, session } = useAuth();
+  const { user } = useAuth();
   const [event, setEvent] = useState<Event | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,8 +35,10 @@ export default function ManageEventPage() {
   }, [id, user, router]);
 
   const handleCheckIn = async () => {
-    if (!ticketCode.trim() || !session?.access_token) return;
+    if (!ticketCode.trim()) return;
     setCheckInLoading(true); setCheckInResult(null);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) { setCheckInLoading(false); return; }
     const res = await fetch("/api/events/checkin", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
