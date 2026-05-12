@@ -77,15 +77,19 @@ export async function POST(request: NextRequest) {
       .eq('id', ticket_id);
 
     // ── Notify buyer ─────────────────────────────────────────────────────────
-    await supabaseAdmin.from('notifications').insert({
-      user_id: ticket.buyer_id,
-      type: 'event_cancelled',
-      title: '💰 Refund Issued',
-      message: `Your ticket for "${event.title}" has been refunded. ₦${Number(ticket.amount_paid).toLocaleString()} will appear within 3–5 business days.`,
-      related_id: event.id,
-      related_type: 'event',
-      data: { ticket_id, event_id: event.id, amount: ticket.amount_paid },
-    }).catch(() => {});
+    try {
+      await supabaseAdmin.from('notifications').insert({
+        user_id: ticket.buyer_id,
+        type: 'event_cancelled',
+        title: '💰 Refund Issued',
+        message: `Your ticket for "${event.title}" has been refunded. ₦${Number(ticket.amount_paid).toLocaleString()} will appear within 3–5 business days.`,
+        related_id: event.id,
+        related_type: 'event',
+        data: { ticket_id, event_id: event.id, amount: ticket.amount_paid },
+      });
+    } catch (e) {
+      console.error('Failed to send refund notification:', e);
+    }
 
     return NextResponse.json({ success: true, message: 'Refund processed successfully' });
   } catch (error) {
