@@ -14,8 +14,8 @@ import { useAuth } from "@/hooks/use-supabase-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import type { Post as PostType } from "@/types";
-import { CreateEventDialog } from "@/components/CreateEventDialog";
+import type { Event } from "@/types/events";
+import { getPublishedEvents } from "@/lib/event-service";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -68,9 +68,8 @@ export function EventsScreen({ className }: EventsScreenProps) {
   const { toast } = useToast();
   const router = useRouter();
   const { filterState, filterLga } = useLocation();
-  const [events, setEvents] = useState<PostType[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [rsvpLoading, setRsvpLoading] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<"date" | "price" | "all">("date");
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
@@ -85,103 +84,37 @@ export function EventsScreen({ className }: EventsScreenProps) {
   }, [carouselApi]);
 
   const handleRSVP = async (eventId: string) => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    setRsvpLoading((prev) => new Set(prev).add(eventId));
-    try {
-      const { data: eventData, error: fetchError } = await supabase
-        .from("posts")
-        .select("attendees")
-        .eq("id", eventId)
-        .single();
-      if (fetchError) throw fetchError;
-      const currentAttendees = eventData?.attendees || [];
-      const userHasRSVPed = currentAttendees.includes(user.id);
-      const newAttendees = userHasRSVPed
-        ? currentAttendees.filter((id: string) => id !== user.id)
-        : [...currentAttendees, user.id];
-      const { error: updateError } = await supabase
-        .from("posts")
-        .update({ attendees: newAttendees })
-        .eq("id", eventId);
-      if (updateError) throw updateError;
-      if (!userHasRSVPed && user.email) {
-        const { data: fullEvent } = await supabase.from("posts").select("*").eq("id", eventId).single();
-        if (fullEvent) {
-          await sendEventConfirmationEmail({
-            attendeeEmail: user.email,
-            attendeeName: user.user_metadata?.name || user.email?.split("@")[0] || "User",
-            eventName: fullEvent.title || "Event",
-            eventDate: fullEvent.event_date,
-            eventTime: fullEvent.event_time,
-            eventLocation: getLocation(fullEvent as PostType),
-            eventDescription: fullEvent.text,
-            eventLink: fullEvent.event_link,
-          });
-        }
-      }
-      toast({
-        title: userHasRSVPed ? "RSVP Cancelled" : "RSVP Confirmed",
-        description: userHasRSVPed ? "You're no longer attending." : "You're attending this event!",
-      });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Error", description: "Could not update RSVP." });
-    } finally {
-      setRsvpLoading((prev) => {
-        const next = new Set(prev);
-        next.delete(eventId);
-        return next;
-      });
-    }
+    router.push(`/events/${eventId}`);
   };
 
   useEffect(() => {
     const fetchEvents = async () => {
-      let query = supabase
-        .from("posts")
-        .select(`
-          *,
-          user:users!posts_user_id_fkey(id, name, avatar_url)
-        `)
-        .eq("category", "Event");
-
-      // Apply location filters
-      if (filterState) {
-        query = query.eq('state', filterState);
+      try {
+        const data = await getPublishedEvents({
+          state: filterState || undefined,
+          lga: filterLga || undefined,
+        });
+        setEvents(data);
+      } catch (err) {
+        console.error("Failed to fetch events", err);
+      } finally {
+        setLoading(false);
       }
-      if (filterLga) {
-        query = query.eq('lga', filterLga);
-      }
-
-      const { data, error } = await query.order("timestamp", { ascending: false });
-      if (!error)
-        setEvents(
-          (data || []).map((e: any) => ({
-            ...e,
-            author_name: e.user?.name || "Anonymous",
-            author_image: e.user?.avatar_url || "/placeholder.svg",
-          }))
-        );
-      setLoading(false);
     };
     fetchEvents();
-    const ch = supabase
-      .channel("events-page")
-      .on("postgres_changes", { event: "*", schema: "public", table: "posts" }, () => fetchEvents())
-      .subscribe();
-    return () => {
-      supabase.removeChannel(ch);
-    };
   }, [filterState, filterLga]);
 
   const filteredAndSorted = useMemo(() => {
     let list = [...events];
-    if (sortBy === "price")
-      list.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
-    else if (sortBy === "date")
-      list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    if (sortBy === "price") {
+      list.sort((a, b) => {
+        const aMin = Math.min(...(a.ticket_tiers?.map(t => t.price) || [0]));
+        const bMin = Math.min(...(b.ticket_tiers?.map(t => t.price) || [0]));
+        return aMin - bMin;
+      });
+    } else if (sortBy === "date") {
+      list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
     return list;
   }, [events, sortBy]);
 
@@ -251,10 +184,10 @@ export function EventsScreen({ className }: EventsScreenProps) {
                   >
                     <div
                       className="relative w-full rounded-[28px] overflow-hidden aspect-[820/330] max-h-[280px] sm:max-h-[330px] bg-[#1E2126]"
-                      onClick={() => router.push(`/posts/${event.id}`)}
+                      onClick={() => router.push(`/events/${event.id}`)}
                     >
                       <Image
-                        src={event.image_urls?.[0] || event.image_url || "/placeholder.svg"}
+                        src={event.cover_image_url || "/placeholder.svg"}
                         alt={event.title || "Event"}
                         fill
                         className="object-cover"
@@ -274,11 +207,11 @@ export function EventsScreen({ className }: EventsScreenProps) {
                         <div className="flex flex-wrap items-center gap-3 text-white/90 text-xs sm:text-[13px] font-raleway">
                           <span className="flex items-center gap-1">
                             <CalendarDays className="w-4 h-4" />
-                            {formatEventDateTime(event.event_date, event.event_time)}
+                            {formatEventDateTime(event.start_time)}
                           </span>
                           <span className="flex items-center gap-1 truncate">
                             <MapPin className="w-4 h-4 flex-shrink-0" />
-                            {getLocation(event) || "TBD"}
+                            {event.location_address || "Online"}
                           </span>
                         </div>
                         <Button
@@ -286,9 +219,8 @@ export function EventsScreen({ className }: EventsScreenProps) {
                           style={{ background: "#388E3C" }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleRSVP(event.id);
+                            router.push(`/events/${event.id}`);
                           }}
-                          disabled={rsvpLoading.has(event.id)}
                         >
                           Get Ticket
                         </Button>
@@ -339,12 +271,12 @@ export function EventsScreen({ className }: EventsScreenProps) {
               key={event.id}
               className="rounded overflow-hidden cursor-pointer transition hover:opacity-95"
               style={{ background: "#1E2126" }}
-              onClick={() => router.push(`/posts/${event.id}`)}
+              onClick={() => router.push(`/events/${event.id}`)}
             >
               <div className="p-3 flex gap-2">
                 <div className="w-14 h-14 rounded flex-shrink-0 bg-[#15181D] overflow-hidden">
                   <Image
-                    src={event.image_urls?.[0] || event.image_url || "/placeholder.svg"}
+                    src={event.cover_image_url || "/placeholder.svg"}
                     alt=""
                     width={56}
                     height={56}
@@ -356,12 +288,12 @@ export function EventsScreen({ className }: EventsScreenProps) {
                     {event.title || "Event"}
                   </p>
                   <p className="font-raleway text-[9px] sm:text-[9px] text-white/80 mt-0.5">
-                    {formatEventDate(event.event_date)}
+                    {formatEventDate(event.start_time)}
                   </p>
                   <div className="flex items-center gap-1 mt-1 text-white/70">
                     <MapPin className="w-3 h-3 flex-shrink-0" />
                     <span className="font-raleway text-[9px] sm:text-[11px] truncate">
-                      {getLocation(event) || event.text?.slice(0, 30) || "—"}
+                      {event.location_address || event.description?.slice(0, 30) || "—"}
                     </span>
                   </div>
                 </div>
@@ -446,23 +378,23 @@ export function EventsScreen({ className }: EventsScreenProps) {
                 key={event.id}
                 className="rounded-[11px] overflow-hidden cursor-pointer transition hover:opacity-95"
                 style={{ background: "#1E2126" }}
-                onClick={() => router.push(`/posts/${event.id}`)}
+                onClick={() => router.push(`/events/${event.id}`)}
               >
                 <div className="p-4 sm:p-5">
-                  {event.author_name && (
+                  {event.organizer && (
                     <div className="flex items-center gap-2 mb-3">
                       <Avatar className="w-8 h-8">
-                        <AvatarImage src={event.author_image} />
+                        <AvatarImage src={(event.organizer as any)?.avatar_url} />
                         <AvatarFallback className="bg-[#388E3C] text-white text-xs">
-                          {event.author_name?.slice(0, 1)}
+                          {(event.organizer as any)?.name?.slice(0, 1) || "U"}
                         </AvatarFallback>
                       </Avatar>
                       <div>
                         <p className="font-raleway font-bold text-sm text-white">
-                          {event.author_name}
+                          {(event.organizer as any)?.name}
                         </p>
                         <p className="font-raleway text-[11px] text-white/60">
-                          {timeAgo(event.timestamp ? new Date(event.timestamp) : null)}
+                          {timeAgo(event.created_at ? new Date(event.created_at) : null)}
                         </p>
                       </div>
                     </div>
@@ -472,7 +404,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
                   </h3>
                   <div className="relative w-full aspect-[434/262] rounded-[15px] overflow-hidden bg-[#15181D] mb-4">
                     <Image
-                      src={event.image_urls?.[0] || event.image_url || "/placeholder.svg"}
+                      src={event.cover_image_url || "/placeholder.svg"}
                       alt={event.title || "Event"}
                       fill
                       className="object-cover"
@@ -482,16 +414,18 @@ export function EventsScreen({ className }: EventsScreenProps) {
                   <div className="space-y-2 text-white/90 font-raleway text-[13px]">
                     <div className="flex items-center gap-2">
                       <CalendarDays className="w-4 h-4 flex-shrink-0" />
-                      {formatEventDateTime(event.event_date, event.event_time)}
+                      {formatEventDateTime(event.start_time)}
                     </div>
                     <div className="flex items-center gap-2 truncate">
                       <MapPin className="w-4 h-4 flex-shrink-0" />
-                      {getLocation(event) || "TBD"}
+                      {event.location_address || "Online"}
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-4">
                     <span className="font-raleway font-bold text-xl sm:text-2xl text-[#388E3C]">
-                      {formatPrice(event.price)}
+                      {event.ticket_tiers && event.ticket_tiers.length > 0
+                        ? `From ₦${Math.min(...event.ticket_tiers.map(t => t.price)).toLocaleString()}`
+                        : "Free"}
                     </span>
                     <button
                       className="p-2 text-white hover:bg-white/10 rounded-full"
@@ -500,10 +434,10 @@ export function EventsScreen({ className }: EventsScreenProps) {
                         if (navigator.share) {
                           navigator.share({
                             title: event.title || "Event",
-                            url: window.location.origin + `/posts/${event.id}`,
+                            url: window.location.origin + `/events/${event.id}`,
                           });
                         } else {
-                          navigator.clipboard.writeText(window.location.origin + `/posts/${event.id}`);
+                          navigator.clipboard.writeText(window.location.origin + `/events/${event.id}`);
                           toast({ title: "Link copied" });
                         }
                       }}
@@ -520,7 +454,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
 
       {/* Floating Create - mobile friendly */}
       <div className="fixed bottom-20 right-4 z-40 lg:bottom-6">
-        <CreateEventDialog>
+        <Link href="/events/create">
           <Button
             size="lg"
             className="rounded-full h-12 w-12 sm:h-14 sm:w-14 shadow-lg p-0"
@@ -528,7 +462,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
           >
             <Plus className="h-6 w-6 text-white" />
           </Button>
-        </CreateEventDialog>
+        </Link>
       </div>
     </div>
   );

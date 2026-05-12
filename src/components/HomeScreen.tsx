@@ -7,7 +7,7 @@ import { useLocation } from "@/contexts/LocationContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyFeed } from "@/components/EmptyFeed";
 import { CreatePostDialog } from "@/components/CreatePostDialog";
-import { CreateEventDialog } from "@/components/CreateEventDialog";
+import Link from "next/link";
 import { CreateItemDialog } from "@/components/CreateItemDialog";
 import { PostCard } from "@/components/PostCard";
 import { LocationChip } from "@/components/LocationChip";
@@ -100,7 +100,7 @@ export function HomeScreen({ onViewProfile }: HomeScreenProps) {
               </button>
             </CreateItemDialog>
 
-            <CreateEventDialog>
+            <Link href="/events/create">
               <button
                 className="flex items-center gap-1.5 rounded-[20.5px] px-3 py-1.5 text-white text-[12px] font-semibold hover:bg-white/10 transition-colors"
                 style={{ fontFamily: FONT_RALEWAY }}
@@ -108,7 +108,7 @@ export function HomeScreen({ onViewProfile }: HomeScreenProps) {
                 <TicketGradient />
                 Event
               </button>
-            </CreateEventDialog>
+            </Link>
 
           </div>
         </div>

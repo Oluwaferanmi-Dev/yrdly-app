@@ -163,7 +163,7 @@ export function AuthForm({ mode, onToggleMode, onSuccess }: AuthFormProps) {
               alt="Yrdly Logo" 
               width={128} 
               height={128}
-              className="w-32 h-32"
+              className="w-32 h-32 object-cover object-left"
               priority
             />
           </div>
