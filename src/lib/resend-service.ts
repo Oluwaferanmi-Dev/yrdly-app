@@ -1,8 +1,8 @@
 import { Resend } from 'resend';
 import { emailTemplates } from './email-templates';
 
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend client with a fallback to prevent build-time crashes
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_build');
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@yrdly.ng';
 const REPLY_TO  = 'support@yrdly.ng';
