@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Users, TicketCheck, DollarSign, QrCode, Search, Loader2, CheckCircle2, XCircle } from "lucide-react";
@@ -8,8 +10,6 @@ import { supabase } from "@/lib/supabase";
 import { getEventById, getEventTickets } from "@/lib/event-service";
 import type { Event, Ticket } from "@/types/events";
 import { EVENT_CONSTANTS } from "@/lib/constants";
-
-"use client";
 
 type CheckInResult = { valid: boolean; message: string; attendee_name?: string; tier_name?: string } | null;
 
