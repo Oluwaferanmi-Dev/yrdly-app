@@ -8,9 +8,9 @@ export function YrdlyLogo() {
       <Image 
         src="/yrdly-logo.png" 
         alt="Yrdly Logo" 
-        width={40} 
-        height={40}
-        className="w-10 h-10"
+        width={64} 
+        height={64}
+        className="w-16 h-16"
         priority
       />
     </div>

@@ -474,12 +474,7 @@ export function CommentSection({
                                 <p className="text-[11px] text-white/80 mb-2" style={{ fontFamily: FONT_RALEWAY }}>{timeAgoStr(post.timestamp)}</p>
                                 <p className="text-[13px] font-light text-white leading-[15px]" style={{ fontFamily: FONT_RALEWAY }}>{post.text}</p>
                             </div>
-                            {/* Close */}
-                            {onClose && (
-                                <button onClick={onClose} className="text-white/60 hover:text-white flex-shrink-0">
-                                    <span className="text-lg leading-none">×</span>
-                                </button>
-                            )}
+                            {/* Close is handled by Sheet component */}
                         </div>
                     </div>
                 )}
