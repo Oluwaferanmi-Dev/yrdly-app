@@ -1,0 +1,77 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+
+/**
+ * POST /api/events/checkin
+ * Validates a ticket_code and marks the ticket as USED. Organizer-only.
+ * Body: { ticket_code: string, event_id: string }
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { autoRefreshToken: false, persistSession: false } }
+    );
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
+    const { ticket_code, event_id } = await request.json();
+    if (!ticket_code || !event_id) {
+      return NextResponse.json({ error: 'ticket_code and event_id are required' }, { status: 400 });
+    }
+
+    // Verify organizer
+    const { data: event } = await supabaseAdmin
+      .from('events')
+      .select('id, organizer_id, status')
+      .eq('id', event_id)
+      .single();
+
+    if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    if (event.organizer_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (event.status === 'CANCELLED') return NextResponse.json({ error: 'Event is cancelled' }, { status: 400 });
+
+    // Find ticket
+    const { data: ticket } = await supabaseAdmin
+      .from('tickets')
+      .select('id, status, attendee_name, attendee_email, tier:ticket_tiers!tickets_tier_id_fkey(name)')
+      .eq('ticket_code', ticket_code.trim().toUpperCase())
+      .eq('event_id', event_id)
+      .single();
+
+    if (!ticket) {
+      return NextResponse.json({ valid: false, error: 'INVALID_TICKET', message: 'Ticket not found for this event' }, { status: 404 });
+    }
+    if (ticket.status === 'USED') {
+      return NextResponse.json({ valid: false, error: 'ALREADY_SCANNED', message: 'Ticket already used', attendee_name: ticket.attendee_name }, { status: 409 });
+    }
+    if (ticket.status !== 'PAID') {
+      return NextResponse.json({ valid: false, error: 'TICKET_INVALID', message: `Ticket is ${ticket.status.toLowerCase()}` }, { status: 400 });
+    }
+
+    // Mark as USED
+    const now = new Date().toISOString();
+    await supabaseAdmin
+      .from('tickets')
+      .update({ status: 'USED', scanned_at: now, scanned_by: user.id, updated_at: now })
+      .eq('id', ticket.id);
+
+    return NextResponse.json({
+      valid: true,
+      message: 'Check-in successful!',
+      attendee_name: ticket.attendee_name,
+      attendee_email: ticket.attendee_email,
+      tier_name: (ticket.tier as any)?.name,
+    });
+  } catch (error) {
+    console.error('Check-in error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

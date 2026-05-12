@@ -1,36 +1,39 @@
-// Events & Ticketing — TypeScript types
+/**
+ * TypeScript types for the Yrdly Event Ticketing System
+ * Reflects the actual Supabase schema
+ */
 
 export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED' | 'COMPLETED';
 export type EventVisibility = 'PUBLIC' | 'WARD_ONLY' | 'LGA_ONLY' | 'UNLISTED';
-export type PayoutMode = 'INSTANT' | 'POST_EVENT';
+export type EventPayoutMode = 'INSTANT' | 'POST_EVENT';
 export type TicketStatus = 'PAID' | 'USED' | 'REFUNDED' | 'CANCELLED';
-export type PayoutStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+export type EventPayoutStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 export interface Event {
   id: string;
   organizer_id: string;
   title: string;
-  description?: string;
+  description: string | null;
   category: string;
-  cover_image_url?: string;
-  location_address?: string;
+  cover_image_url: string | null;
+  location_address: string | null;
   location_online: boolean;
-  online_link?: string;
-  lat?: number;
-  lng?: number;
-  ward?: string;
-  lga?: string;
-  state?: string;
+  online_link: string | null;
+  lat: number | null;
+  lng: number | null;
+  ward: string | null;
+  lga: string | null;
+  state: string | null;
   start_time: string;
-  end_time?: string;
+  end_time: string | null;
   timezone: string;
   status: EventStatus;
   visibility: EventVisibility;
-  payout_mode: PayoutMode;
-  payout_released_at?: string;
-  flutterwave_subaccount_id?: string;
-  published_at?: string;
-  scheduled_publish_at?: string;
+  payout_mode: EventPayoutMode;
+  payout_released_at: string | null;
+  flutterwave_subaccount_id: string | null;
+  published_at: string | null;
+  scheduled_publish_at: string | null;
   attendee_count: number;
   created_at: string;
   updated_at: string;
@@ -47,38 +50,41 @@ export interface TicketTier {
   id: string;
   event_id: string;
   name: string;
-  description?: string;
-  price: number;
-  capacity?: number;   // null = unlimited
+  description: string | null;
+  price: number; // In Naira (not kobo - matches DB numeric type)
+  capacity: number | null;
   sold: number;
   is_visible: boolean;
-  sale_ends_at?: string;
+  sale_ends_at: string | null;
   created_at: string;
   updated_at: string;
   // Computed
   available?: number;
   is_sold_out?: boolean;
+  is_free?: boolean;
 }
 
 export interface Ticket {
-  id: string;           // UUID = QR token
+  id: string;
   buyer_id: string;
   event_id: string;
   tier_id: string;
   attendee_name: string;
   attendee_email: string;
-  attendee_phone?: string;
+  attendee_phone: string | null;
+  ticket_code: string;
+  qr_data: string | null;
   status: TicketStatus;
-  flutterwave_tx_ref?: string;
-  flutterwave_flw_ref?: string;
+  flutterwave_tx_ref: string | null;
+  flutterwave_flw_ref: string | null;
   amount_paid: number;
-  scanned_at?: string;
-  scanned_by?: string;
+  scanned_at: string | null;
+  scanned_by: string | null;
   created_at: string;
   updated_at: string;
   // Joined fields
-  event?: Event;
-  tier?: TicketTier;
+  event?: Pick<Event, 'id' | 'title' | 'cover_image_url' | 'start_time' | 'location_address' | 'state'>;
+  tier?: Pick<TicketTier, 'id' | 'name' | 'price'>;
 }
 
 export interface EventPayout {
@@ -88,32 +94,54 @@ export interface EventPayout {
   gross_amount: number;
   commission_amount: number;
   net_amount: number;
-  flutterwave_transfer_id?: string;
-  status: PayoutStatus;
-  failure_reason?: string;
-  paid_at?: string;
+  flutterwave_transfer_id: string | null;
+  status: EventPayoutStatus;
+  failure_reason: string | null;
+  paid_at: string | null;
   created_at: string;
   updated_at: string;
 }
 
-// For ticket checkout initialization
-export interface TicketCheckoutRequest {
-  eventId: string;
-  tierId: string;
-  quantity: number;
-  attendees: {
-    name: string;
-    email: string;
-    phone?: string;
-  }[];
+// ── API Payload Types ────────────────────────────────────────────────────────
+
+export interface CreateEventPayload {
+  title: string;
+  description?: string;
+  category?: string;
+  cover_image_url?: string;
+  location_address?: string;
+  location_online?: boolean;
+  online_link?: string;
+  lat?: number;
+  lng?: number;
+  ward?: string;
+  lga?: string;
+  state?: string;
+  start_time: string;
+  end_time?: string;
+  visibility?: EventVisibility;
+  payout_mode?: EventPayoutMode;
+  ticket_tiers: CreateTicketTierPayload[];
 }
 
-// Scan result returned from /api/tickets/scan
-export interface ScanResult {
-  success: boolean;
-  reason?: 'UNAUTHORIZED' | 'INVALID_TICKET' | 'WRONG_EVENT' | 'ALREADY_USED' | 'INVALID_STATUS';
-  attendee_name?: string;
-  tier_id?: string;
-  scanned_at?: string;
-  status?: string;
+export interface CreateTicketTierPayload {
+  name: string;
+  description?: string;
+  price: number; // 0 for free
+  capacity?: number;
+  is_visible?: boolean;
+  sale_ends_at?: string;
+}
+
+export interface PurchaseTicketPayload {
+  event_id: string;
+  tier_id: string;
+  attendee_name: string;
+  attendee_email: string;
+  attendee_phone?: string;
+}
+
+export interface CheckInPayload {
+  ticket_code: string;
+  event_id: string;
 }

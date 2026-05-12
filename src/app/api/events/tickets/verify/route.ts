@@ -1,0 +1,153 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { ResendEmailService } from '@/lib/resend-service';
+import { emailTemplates } from '@/lib/email-templates';
+import QRCode from 'qrcode';
+import { EVENT_CONSTANTS } from '@/lib/constants';
+
+/**
+ * GET /api/events/tickets/verify?tx_ref=...
+ * Flutterwave redirects here after payment.
+ * Verifies the transaction, creates the ticket, generates QR, fires confirmation email.
+ */
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const txRef = searchParams.get('tx_ref');
+  const status = searchParams.get('status');
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yrdly-app.vercel.app';
+
+  if (!txRef) {
+    return NextResponse.redirect(`${appUrl}/events?error=invalid_ref`);
+  }
+
+  // Payment was cancelled by user
+  if (status === 'cancelled') {
+    return NextResponse.redirect(`${appUrl}/events?error=payment_cancelled`);
+  }
+
+  try {
+    // ── Verify with Flutterwave ──────────────────────────────────────────────
+    const flwRes = await fetch(
+      `https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=${txRef}`,
+      { headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` } }
+    );
+    const flwData = await flwRes.json();
+
+    if (flwData.status !== 'success' || flwData.data?.status !== 'successful') {
+      return NextResponse.redirect(`${appUrl}/events?error=payment_failed`);
+    }
+
+    const { tx_ref, flw_ref, amount, meta } = flwData.data;
+    const { event_id, tier_id, buyer_id, attendee_name, attendee_email, attendee_phone } = meta;
+
+    // ── Idempotency check — don't create duplicate tickets ───────────────────
+    const { data: existing } = await supabaseAdmin
+      .from('tickets')
+      .select('id')
+      .eq('flutterwave_tx_ref', tx_ref)
+      .single();
+
+    if (existing) {
+      return NextResponse.redirect(`${appUrl}/my-tickets?success=1&ticket_id=${existing.id}`);
+    }
+
+    // ── Fetch tier & event ───────────────────────────────────────────────────
+    const { data: tier } = await supabaseAdmin
+      .from('ticket_tiers')
+      .select('id, name, price, sold, capacity')
+      .eq('id', tier_id)
+      .single();
+
+    const { data: event } = await supabaseAdmin
+      .from('events')
+      .select('id, title, start_time, end_time, location_address, organizer_id, state')
+      .eq('id', event_id)
+      .single();
+
+    if (!tier || !event) {
+      return NextResponse.redirect(`${appUrl}/events?error=event_not_found`);
+    }
+
+    // ── Generate ticket code & QR ────────────────────────────────────────────
+    const ticketCode = `${EVENT_CONSTANTS.TICKET_CODE_PREFIX}-${tx_ref.substring(tx_ref.length - 8).toUpperCase()}`;
+    const qrPayload = JSON.stringify({ ticket_code: ticketCode, event_id, tier_id, tx_ref });
+    const qrDataUrl = await QRCode.toDataURL(qrPayload, { width: 300, margin: 2 });
+
+    // ── Insert ticket ────────────────────────────────────────────────────────
+    const { data: ticket, error: ticketError } = await supabaseAdmin
+      .from('tickets')
+      .insert({
+        buyer_id,
+        event_id,
+        tier_id,
+        attendee_name,
+        attendee_email,
+        attendee_phone: attendee_phone || null,
+        ticket_code: ticketCode,
+        qr_data: qrPayload,
+        status: 'PAID',
+        flutterwave_tx_ref: tx_ref,
+        flutterwave_flw_ref: flw_ref,
+        amount_paid: amount,
+      })
+      .select('id')
+      .single();
+
+    if (ticketError) throw ticketError;
+
+    // ── Increment sold count atomically ──────────────────────────────────────
+    await supabaseAdmin
+      .from('ticket_tiers')
+      .update({ sold: (tier.sold || 0) + 1 })
+      .eq('id', tier_id);
+
+    // Increment event attendee_count
+    await supabaseAdmin.rpc('increment_attendee_count', { event_id_param: event_id }).catch(() => {
+      // Non-critical — ignore if RPC doesn't exist
+    });
+
+    // ── Send ticket confirmation email ───────────────────────────────────────
+    try {
+      const startDate = new Date(event.start_time);
+      const { subject, html } = emailTemplates.ticketConfirmation(
+        attendee_name,
+        attendee_email,
+        event.title,
+        tier.name,
+        ticket.id,
+        qrDataUrl,
+        startDate.toLocaleDateString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+        startDate.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+        event.location_address || event.state || 'See event details',
+        tx_ref
+      );
+
+      await ResendEmailService.sendTicketConfirmationEmail(
+        attendee_name, attendee_email, event.title, tier.name,
+        ticket.id, qrDataUrl,
+        startDate.toLocaleDateString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+        startDate.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+        event.location_address || event.state || 'See event details',
+        tx_ref
+      );
+    } catch (emailErr) {
+      console.error('Ticket email failed (non-critical):', emailErr);
+    }
+
+    // ── In-app notification ──────────────────────────────────────────────────
+    await supabaseAdmin.from('notifications').insert({
+      user_id: buyer_id,
+      type: 'event_reminder',
+      title: `🎟️ Ticket Confirmed!`,
+      message: `Your ${tier.name} ticket for "${event.title}" is ready. Check My Tickets.`,
+      related_id: event_id,
+      related_type: 'event',
+      data: { ticket_id: ticket.id, event_id, ticket_code: ticketCode },
+    }).catch(() => {});
+
+    return NextResponse.redirect(`${appUrl}/my-tickets?success=1&ticket_id=${ticket.id}`);
+  } catch (error) {
+    console.error('Ticket verify error:', error);
+    return NextResponse.redirect(`${appUrl}/events?error=verification_failed`);
+  }
+}

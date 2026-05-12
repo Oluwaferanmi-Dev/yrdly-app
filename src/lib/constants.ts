@@ -76,6 +76,16 @@ export const MARKETPLACE_CONSTANTS = {
   MIN_PRICE: 100, // Minimum item price in NGN
 };
 
+// Events & Ticketing
+export const EVENT_CONSTANTS = {
+  COMMISSION_RATE: 0.02,  // 2% platform commission on ticket sales
+  AUTO_RELEASE_HOURS: 24, // Hours after event ends before payout is released
+  CURRENCY: 'NGN',
+  MIN_TICKET_PRICE: 100,  // Minimum paid ticket price in NGN
+  MAX_TICKET_TIERS: 5,    // Maximum number of ticket tiers per event
+  TICKET_CODE_PREFIX: 'YRD',
+};
+
 // Success Messages
 export const SUCCESS_MESSAGES = {
   LOGIN: 'Welcome back!',
