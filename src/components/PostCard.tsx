@@ -459,7 +459,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
           <AlertDialog>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-1 rounded hover:bg-white/10 text-white/70 hover:text-white">
+                <button className="p-2 -m-2 rounded hover:bg-white/10 text-white/70 hover:text-white">
                   <MoreHorizontal className="w-5 h-5" />
                 </button>
               </DropdownMenuTrigger>

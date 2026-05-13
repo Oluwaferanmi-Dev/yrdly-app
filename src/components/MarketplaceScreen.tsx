@@ -137,7 +137,7 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
             placeholder="Search for events, items"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-2.5 bg-transparent text-white text-sm italic font-light rounded-full outline-none placeholder:text-[#BBBBBB]"
+            className="w-full pl-12 pr-4 py-2.5 bg-transparent text-white text-base italic font-light rounded-full outline-none placeholder:text-[#BBBBBB]"
             style={{
               border: "0.5px solid #388E3C",
               fontFamily: "Raleway, sans-serif",

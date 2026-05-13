@@ -155,7 +155,7 @@ export function SearchDialog({ open, onOpenChange }: { open: boolean; onOpenChan
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   placeholder="Search for anything..."
-                  className="w-full rounded-full py-3.5 pl-11 pr-5 text-sm outline-none transition-all"
+                  className="w-full rounded-full py-3.5 pl-11 pr-5 text-base outline-none transition-all"
                   style={{
                     background: CARD_HIGH,
                     border: `0.5px solid ${GREEN}`,

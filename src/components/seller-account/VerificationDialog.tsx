@@ -210,7 +210,7 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
                         <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Enter Amount (₦)</label>
                         <input
                           type="number"
-                          className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                          className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
                           placeholder="e.g. 3"
                           value={enteredAmount}
                           onChange={(e) => setEnteredAmount(e.target.value)}

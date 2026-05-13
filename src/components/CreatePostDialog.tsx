@@ -161,7 +161,7 @@ function PostForm({
           rows={4}
           className={cn(
             "w-full bg-transparent resize-none outline-none border-none flex-shrink-0",
-            "text-white placeholder:text-white/90 text-[14px] leading-[16px]",
+            "text-white placeholder:text-white/90 text-[16px] leading-[18px]",
           )}
           style={{ fontFamily: FONT_RL, fontWeight: 400 }}
           autoFocus
@@ -352,7 +352,7 @@ const CreatePostDialogComponent = ({
             borderTopLeftRadius: "11px",
             borderTopRightRadius: "11px",
             minHeight: "300px",
-            maxHeight: "92dvh",
+            maxHeight: "85vh",
             overflowY: "auto",
             display: "flex",
             flexDirection: "column",

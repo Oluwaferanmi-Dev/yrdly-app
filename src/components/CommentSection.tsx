@@ -314,7 +314,7 @@ export function CommentSection({
                                 if (!currentUser || !editText.trim()) return;
                                 try { await supabase.from('comments').update({ text: editText.trim() }).eq('id', comment.id); setEditingComment(null); } catch { }
                             }} className="flex gap-2 mt-1">
-                                <input value={editText} onChange={e => setEditText(e.target.value)} className="flex-1 bg-transparent text-white text-[12px] outline-none border-b border-white/30" style={{ fontFamily: FONT_RALEWAY }} />
+                                <input value={editText} onChange={e => setEditText(e.target.value)} className="flex-1 bg-transparent text-white text-base outline-none border-b border-white/30" style={{ fontFamily: FONT_RALEWAY }} />
                                 <button type="submit" className="text-[10px] text-[#388E3C]">Save</button>
                                 <button type="button" onClick={() => setEditingComment(null)} className="text-[10px] text-white/50">Cancel</button>
                             </form>
@@ -440,7 +440,7 @@ export function CommentSection({
                         value={newComment}
                         onChange={e => setNewComment(e.target.value)}
                         placeholder={replyingTo ? 'Add a reply…' : 'Leave a comment'}
-                        className="flex-1 h-[39px] bg-transparent px-4 text-[13px] font-light text-white outline-none placeholder:text-white/60"
+                        className="flex-1 h-[39px] bg-transparent px-4 text-base font-light text-white outline-none placeholder:text-white/60"
                         style={{ fontFamily: FONT_RALEWAY }}
                     />
                 </div>

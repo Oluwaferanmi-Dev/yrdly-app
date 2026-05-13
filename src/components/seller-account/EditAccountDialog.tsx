@@ -179,7 +179,7 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Bank</label>
                       <select 
-                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
                         value={form.watch('bankCode')}
                         onChange={(e) => form.setValue('bankCode', e.target.value)}
                       >
@@ -192,7 +192,7 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Type</label>
                       <select 
-                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
                         value={form.watch('accountTypeBank')}
                         onChange={(e) => form.setValue('accountTypeBank', e.target.value as any)}
                       >
@@ -204,7 +204,7 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
                   <div className="space-y-2">
                     <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Account Number</label>
                     <input
-                      className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                      className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
                       placeholder="0123456789"
                       {...form.register('accountNumber')}
                     />
@@ -218,7 +218,7 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Provider</label>
                       <select 
-                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
                         value={form.watch('provider')}
                         onChange={(e) => form.setValue('provider', e.target.value as any)}
                       >
@@ -231,7 +231,7 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Phone</label>
                       <input
-                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
                         placeholder="08012345678"
                         {...form.register('phoneNumber')}
                       />
@@ -243,7 +243,7 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
               <div className="space-y-2">
                 <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Account Holder Name</label>
                 <input
-                  className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-sm text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                  className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
                   placeholder="e.g. John Doe"
                   {...form.register('accountName')}
                 />
