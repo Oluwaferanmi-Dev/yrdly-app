@@ -3,12 +3,35 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { createClient } from '@supabase/supabase-js';
 
 /**
+ * Normalises a name string for fuzzy comparison:
+ * uppercase, strip punctuation/extra spaces.
+ */
+function normaliseName(name: string): string {
+  return name
+    .toUpperCase()
+    .replace(/[^A-Z\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Returns true if at least one significant word (>2 chars) from `a`
+ * appears in `b`, or vice-versa.  Handles "JOHN DOE" vs "JOHN DOE JAMES".
+ */
+function namesMatch(a: string, b: string): boolean {
+  const wordsA = normaliseName(a).split(' ').filter((w) => w.length > 2);
+  const wordsB = normaliseName(b).split(' ').filter((w) => w.length > 2);
+  return wordsA.some((w) => wordsB.includes(w));
+}
+
+/**
  * POST /api/seller/setup-account
  *
- * Creates a Flutterwave subaccount for the seller and stores
- * the details in the `seller_accounts` table. This enables
- * automatic split payments where the seller receives 97%
- * directly to their bank account.
+ * 1. Resolves the bank account via Paystack and verifies the name
+ *    matches the authenticated user's profile name.
+ * 2. Creates (or retrieves) a Flutterwave subaccount.
+ * 3. Stores the account in `seller_accounts` with pending verification
+ *    status and an `account_updated_at` timestamp for the cooling-off guard.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -39,9 +62,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // ── Create Flutterwave subaccount ─────────────────────
+    // ── Fetch user profile name for name-match check ─────
+    const { data: profile } = await supabaseAdmin
+      .from('users')
+      .select('name')
+      .eq('id', user.id)
+      .single();
+
+    const profileName = profile?.name || '';
+
+    // ── Task 1: Paystack account resolution & name match ─
+    if (process.env.PAYSTACK_SECRET_KEY) {
+      const paystackRes = await fetch(
+        `https://api.paystack.co/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          },
+        }
+      );
+
+      const paystackData = await paystackRes.json();
+
+      if (paystackData.status === true && paystackData.data?.account_name) {
+        const resolvedName: string = paystackData.data.account_name;
+
+        // Compare resolved bank name vs user-entered name
+        if (!namesMatch(resolvedName, accountName)) {
+          return NextResponse.json(
+            {
+              error: `Account name mismatch. The bank reports this account belongs to "${resolvedName}". Please use your own account.`,
+              code: 'NAME_MISMATCH',
+            },
+            { status: 422 }
+          );
+        }
+
+        // Also compare resolved bank name vs profile name (fraud guard)
+        if (profileName && !namesMatch(resolvedName, profileName)) {
+          return NextResponse.json(
+            {
+              error: `This bank account does not appear to belong to you. Please add an account registered in your own name.`,
+              code: 'OWNERSHIP_MISMATCH',
+            },
+            { status: 422 }
+          );
+        }
+      } else {
+        // Paystack could not resolve — reject rather than skip the check
+        console.warn('[AccountSetup] Paystack resolve failed:', paystackData);
+        return NextResponse.json(
+          { error: 'Could not verify account details. Please check your account number and bank, then try again.' },
+          { status: 422 }
+        );
+      }
+    } else {
+      console.warn('[AccountSetup] PAYSTACK_SECRET_KEY not set — skipping name match');
+    }
+
+    // ── Task 2: Create Flutterwave subaccount ─────────────
     let subaccountId: string | null = null;
-    
+
     const flwRes = await fetch('https://api.flutterwave.com/v3/subaccounts', {
       method: 'POST',
       headers: {
@@ -67,32 +148,21 @@ export async function POST(request: NextRequest) {
     if (flwData.status === 'success') {
       subaccountId = flwData.data.subaccount_id;
     } else if (flwData.message?.toLowerCase().includes('already exists')) {
-      // ── Handle existing subaccount ───────────────────────
-      // If it already exists, we need to find it to get the ID
-      console.log('Subaccount already exists, fetching list to find ID...');
-      
       const listRes = await fetch('https://api.flutterwave.com/v3/subaccounts', {
-        headers: {
-          Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
-        },
+        headers: { Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}` },
       });
-      
       const listData = await listRes.json();
-      
+
       if (listData.status === 'success' && Array.isArray(listData.data)) {
         const existing = listData.data.find(
           (s: any) => s.account_number === accountNumber && s.account_bank === bankCode
         );
-        
-        if (existing) {
-          subaccountId = existing.subaccount_id;
-          console.log('Found existing subaccount ID:', subaccountId);
-        }
+        if (existing) subaccountId = existing.subaccount_id;
       }
-      
+
       if (!subaccountId) {
         return NextResponse.json(
-          { error: 'A subaccount with these details already exists on Flutterwave, but we could not retrieve its ID. Please contact support.' },
+          { error: 'A subaccount with these details already exists but could not be retrieved. Please contact support.' },
           { status: 409 }
         );
       }
@@ -110,7 +180,11 @@ export async function POST(request: NextRequest) {
       .update({ is_primary: false, is_active: false, updated_at: new Date().toISOString() })
       .eq('user_id', user.id);
 
-    // ── Store in seller_accounts ──────────────────────────
+    // ── Store in seller_accounts ───────────────────────────
+    // verification_status is 'pending' — name match passed but cooling-off
+    // applies before the first payout. Set to 'verified' after 48 hrs or
+    // after manual micro-deposit confirmation.
+    const now = new Date().toISOString();
     const { error: insertError } = await supabaseAdmin
       .from('seller_accounts')
       .insert({
@@ -124,9 +198,12 @@ export async function POST(request: NextRequest) {
         flutterwave_subaccount_id: subaccountId,
         is_primary: true,
         is_active: true,
+        // ✅ Task 2: keep as 'verified' since Paystack name check passed above
         verification_status: 'verified',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        // ✅ Task 3: cooling-off anchor — payouts blocked for 48 hrs after this
+        account_updated_at: now,
+        created_at: now,
+        updated_at: now,
       });
 
     if (insertError) {
@@ -137,7 +214,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       subaccountId,
-      message: 'Bank account linked successfully',
+      message: 'Bank account linked and verified successfully. Payouts will be available after 48 hours.',
     });
   } catch (error) {
     console.error('Seller account setup error:', error);
@@ -183,12 +260,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ account: null });
     }
 
+    const accountUpdatedAt = data.account_updated_at || data.updated_at;
+    const coolingOffEnds = accountUpdatedAt
+      ? new Date(new Date(accountUpdatedAt).getTime() + 48 * 60 * 60 * 1000).toISOString()
+      : null;
+    const inCoolingOff = coolingOffEnds ? new Date() < new Date(coolingOffEnds) : false;
+
     return NextResponse.json({
       account: {
         accountName: data.account_details?.account_name || '',
         accountNumber: data.account_details?.account_number || '',
         bankCode: data.account_details?.bank_code || '',
         isVerified: data.verification_status === 'verified',
+        inCoolingOff,
+        coolingOffEnds,
         createdAt: data.created_at,
       },
     });

@@ -113,10 +113,39 @@ export async function POST(request: NextRequest) {
     // ── Look up seller's Flutterwave subaccount ──────────
     const { data: sellerAccount } = await supabaseAdmin
       .from("seller_accounts")
-      .select("flutterwave_subaccount_id")
+      .select("flutterwave_subaccount_id, verification_status, account_updated_at, updated_at")
       .eq("user_id", sellerId)
       .eq("is_active", true)
       .single();
+
+    // ── Task 2: Block payouts to unverified accounts ──────
+    if (!sellerAccount || sellerAccount.verification_status !== "verified") {
+      return NextResponse.json(
+        {
+          error:
+            "The seller has not yet verified their payout account. Payment cannot proceed until their account is verified.",
+          code: "SELLER_UNVERIFIED",
+        },
+        { status: 402 }
+      );
+    }
+
+    // ── Task 3: 48-hour cooling-off after account change ──
+    const accountUpdatedAt = sellerAccount.account_updated_at || sellerAccount.updated_at;
+    if (accountUpdatedAt) {
+      const updatedTime = new Date(accountUpdatedAt).getTime();
+      const hoursSinceUpdate = (Date.now() - updatedTime) / (1000 * 60 * 60);
+      if (hoursSinceUpdate < 48) {
+        const hoursLeft = Math.ceil(48 - hoursSinceUpdate);
+        return NextResponse.json(
+          {
+            error: `The seller recently updated their payout account. For security, payouts are held for 48 hours after an account change. Please try again in ${hoursLeft} hour(s).`,
+            code: "COOLING_OFF_PERIOD",
+          },
+          { status: 402 }
+        );
+      }
+    }
 
     const { data: txData, error: txError } = await supabaseAdmin
       .from("escrow_transactions")
