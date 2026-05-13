@@ -186,15 +186,14 @@ export default function LoginPage() {
         </div>
 
         {/* Logo */}
-        <div className="flex items-center gap-2 mb-4 sm:mb-6">
+        <div className="flex items-center justify-center mb-4 sm:mb-6">
           <Image
             src="/yrdly-logo.png"
             alt="Yrdly"
-            width={40}
-            height={40}
-            className="h-8 w-8 sm:h-9 sm:w-9 object-contain flex-shrink-0"
+            width={72}
+            height={72}
+            className="h-16 w-16 sm:h-20 sm:w-20 object-contain"
           />
-          <span className="font-jersey25 text-xl sm:text-2xl leading-6 text-white">rdly</span>
         </div>
 
         {/* Sign in / Sign up toggle - selected tab has background card #1B2B3A */}
