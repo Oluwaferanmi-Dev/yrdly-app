@@ -253,18 +253,7 @@ export default function MarketplaceItemPage() {
             >
               Directions
             </p>
-            {item.event_location?.geopoint ? (
-              /* Embed a static map via Google Maps if coordinates exist */
-              <div className="w-full rounded-xl overflow-hidden" style={{ height: "135px" }}>
-                <Image
-                  src={`https://maps.googleapis.com/maps/api/staticmap?center=${item.event_location.geopoint.latitude},${item.event_location.geopoint.longitude}&zoom=15&size=600x200&markers=${item.event_location.geopoint.latitude},${item.event_location.geopoint.longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
-                  alt="Map"
-                  width={600}
-                  height={135}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (item.lga || item.state) ? (
+            {item.lga || item.state ? (
               <div
                 className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm"
                 style={{ background: "#252B35", color: FADED, fontFamily: FONT_RALEWAY }}
@@ -272,22 +261,12 @@ export default function MarketplaceItemPage() {
                 <MapPin className="w-4 h-4" style={{ color: GREEN }} />
                 <span>{[item.lga, item.state].filter(Boolean).join(", ")}</span>
               </div>
-            ) : item.event_location?.address ? (
-              <div
-                className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm"
-                style={{ background: "#252B35", color: FADED, fontFamily: FONT_RALEWAY }}
-              >
-                <MapPin className="w-4 h-4 flex-shrink-0" style={{ color: GREEN }} />
-                <span>{item.event_location.address}</span>
-              </div>
             ) : (
               <div
                 className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm"
                 style={{ background: "#252B35", color: FADED, fontFamily: FONT_RALEWAY }}
               >
                 <MapPin className="w-4 h-4" style={{ color: GREEN }} />
-                <span>Location not specified</span>
-              </div>
             )}
           </div>
         </div>
