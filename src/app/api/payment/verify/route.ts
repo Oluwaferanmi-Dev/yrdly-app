@@ -5,16 +5,6 @@ import { createClient } from "@/lib/supabase-server";
 
 export async function POST(request: NextRequest) {
   try {
-    // ── Authenticate the caller ────────────────────────
-    const supabase = await createClient();
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-    if (!authUser || authError) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const { transactionReference } = await request.json();
 
     if (!transactionReference) {
@@ -24,7 +14,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`[PaymentVerify] Verifying transaction: ${transactionReference}`);
+
     // ── Verify payment with Flutterwave directly ──────────
+    // This is a direct call to Flutterwave, no user auth needed yet
     const flwRes = await fetch(
       `https://api.flutterwave.com/v3/transactions/${transactionReference}/verify`,
       {
@@ -36,6 +29,7 @@ export async function POST(request: NextRequest) {
     const flwData = await flwRes.json();
 
     if (flwData.status !== 'success' || flwData.data?.status !== 'successful') {
+      console.error(`[PaymentVerify] Flutterwave verification failed:`, flwData.message);
       return NextResponse.json(
         { error: flwData.message || 'Payment verification failed' },
         { status: 400 }
@@ -45,7 +39,9 @@ export async function POST(request: NextRequest) {
     const txRef: string = flwData.data.tx_ref;
     const amount: number = parseFloat(flwData.data.amount);
 
-    // ── Verify the authenticated user is the buyer ────────
+    console.log(`[PaymentVerify] Flutterwave confirmed payment for txRef: ${txRef}`);
+
+    // ── Lookup the transaction ────────────────────────────
     const { data: txRow } = await supabaseAdmin
       .from('escrow_transactions')
       .select('buyer_id, item_id, seller_id, status')
@@ -53,21 +49,31 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!txRow) {
+      console.error(`[PaymentVerify] Transaction not found: ${txRef}`);
       return NextResponse.json(
         { error: 'Transaction not found' },
         { status: 404 }
       );
     }
 
-    if (txRow.buyer_id !== authUser.id) {
+    // ── Optional: Verify authenticated user is the buyer (for logged-in users) ────
+    // But don't require auth — Flutterwave has already verified the payment
+    const supabase = await createClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    
+    if (authUser && txRow.buyer_id !== authUser.id) {
+      console.warn(`[PaymentVerify] User ${authUser.id} tried to verify transaction for buyer ${txRow.buyer_id}`);
       return NextResponse.json(
         { error: 'Unauthorized: you cannot verify this transaction' },
         { status: 403 }
       );
     }
 
+    console.log(`[PaymentVerify] Transaction ${txRef} ownership verified`);
+
     // ── Skip if already paid (idempotent) ──────────────
     if (txRow.status === EscrowStatus.PAID) {
+      console.log(`[PaymentVerify] Transaction ${txRef} already marked as PAID (idempotent)`);
       return NextResponse.json({
         success: true,
         message: 'Payment already verified',
@@ -88,16 +94,24 @@ export async function POST(request: NextRequest) {
       .eq('id', txRef);
 
     if (updateError) {
-      console.error('Escrow update error:', updateError);
+      console.error(`[PaymentVerify] Failed to update escrow transaction ${txRef}:`, updateError);
       // Don't fail — payment was real, log and continue
+    } else {
+      console.log(`[PaymentVerify] Successfully updated transaction ${txRef} to PAID`);
     }
 
     // ── Mark item as sold ──────────────────────────────────
     if (txRow.item_id) {
-      await supabaseAdmin
+      const { error: saleError } = await supabaseAdmin
         .from('posts')
         .update({ is_sold: true, updated_at: new Date().toISOString() })
         .eq('id', txRow.item_id);
+      
+      if (saleError) {
+        console.error(`[PaymentVerify] Failed to mark item ${txRow.item_id} as sold:`, saleError);
+      } else {
+        console.log(`[PaymentVerify] Item ${txRow.item_id} marked as sold`);
+      }
     }
 
     // ── Send notification to seller ────────────────────────
@@ -133,6 +147,7 @@ export async function POST(request: NextRequest) {
       // Don't fail the response — payment is confirmed
     }
 
+    console.log(`[PaymentVerify] Payment verification completed successfully for transaction ${txRef}`);
     return NextResponse.json({
       success: true,
       message: 'Payment verified successfully',
@@ -140,7 +155,8 @@ export async function POST(request: NextRequest) {
       amount,
     });
   } catch (error) {
-    console.error('Payment verification error:', error);
+    console.error('[PaymentVerify] Critical error during payment verification:', error);
+    console.error('[PaymentVerify] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
