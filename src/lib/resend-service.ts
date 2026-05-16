@@ -190,4 +190,38 @@ export class ResendEmailService {
       throw new Error('Failed to send ticket confirmation.');
     }
   }
+
+  /**
+   * Send ticket sale notification email to organizer
+   */
+  static async sendTicketSaleNotificationEmail(
+    organizerEmail: string,
+    organizerName:  string,
+    eventName:      string,
+    attendeeName:   string,
+    attendeeEmail:  string,
+    tierName:       string,
+    amount:         number,
+    ticketId:       string
+  ) {
+    if (!this.isConfigured()) {
+      throw new Error('RESEND_NOT_CONFIGURED');
+    }
+
+    const { subject, html } = emailTemplates.ticketSaleNotification(
+      organizerName, eventName, attendeeName, attendeeEmail, tierName, amount, ticketId
+    );
+
+    const { error } = await resend.emails.send({
+      from:    `Yrdly Events <${FROM_EMAIL}>`,
+      to:      [organizerEmail],
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error('Error sending organizer ticket sale notification via Resend:', error);
+      throw new Error('Failed to send organizer notification.');
+    }
+  }
 }

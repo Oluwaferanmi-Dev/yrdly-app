@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
       // Non-critical — ignore if RPC doesn't exist
     }
 
-    // ── Send ticket confirmation email ───────────────────────────────────────
+    // ── Send ticket confirmation email to buyer ────────────────────────────
     try {
       const startDate = new Date(event.start_time);
       const { subject, html } = emailTemplates.ticketConfirmation(
@@ -133,7 +133,31 @@ export async function GET(request: NextRequest) {
         tx_ref
       );
     } catch (emailErr) {
-      console.error('Ticket email failed (non-critical):', emailErr);
+      console.error('Ticket email to buyer failed (non-critical):', emailErr);
+    }
+
+    // ── Send organizer notification email ────────────────────────────────────
+    try {
+      const { data: organizer } = await supabaseAdmin
+        .from('users')
+        .select('email, username')
+        .eq('id', event.organizer_id)
+        .single();
+
+      if (organizer?.email) {
+        await ResendEmailService.sendTicketSaleNotificationEmail(
+          organizer.email,
+          organizer.username || 'Event Organizer',
+          event.title,
+          attendee_name,
+          attendee_email,
+          tier.name,
+          amount,
+          ticket.id
+        );
+      }
+    } catch (emailErr) {
+      console.error('Organizer notification email failed (non-critical):', emailErr);
     }
 
     // ── In-app notification ──────────────────────────────────────────────────

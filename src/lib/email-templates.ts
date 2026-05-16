@@ -451,5 +451,87 @@ export const emailTemplates = {
     `;
 
     return { subject, html };
+  },
+
+  /**
+   * Organizer Ticket Sale Notification Email
+   */
+  ticketSaleNotification: (
+    organizerName: string,
+    eventName: string,
+    attendeeName: string,
+    attendeeEmail: string,
+    tierName: string,
+    amount: number,
+    ticketId: string
+  ) => {
+    const subject = `🎟️ New Ticket Sale: ${eventName}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Ticket Sale Notification</title>
+        <style>${commonStyles}</style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">🎉 ${APP_NAME} Events</div>
+            <div class="tagline">You have a new ticket sale!</div>
+          </div>
+          
+          <div class="content">
+            <h1 class="title">Ticket Sold! 🎊</h1>
+            
+            <p class="message">
+              Hi ${organizerName},<br><br>
+              Great news! Someone just purchased a ticket to your event.
+            </p>
+            
+            <div style="background: #F9FAFB; border-radius: 12px; padding: 24px; margin: 32px 0; border-left: 4px solid ${BRAND_GREEN};">
+              <h2 style="margin: 0 0 16px 0; color: ${BRAND_DARK}; font-size: 18px;">${eventName}</h2>
+              
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px;">
+                <div>
+                  <p style="margin: 0 0 4px 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Ticket Type</p>
+                  <p style="margin: 0; font-size: 16px; color: ${BRAND_DARK}; font-weight: 600;">${tierName}</p>
+                </div>
+                <div>
+                  <p style="margin: 0 0 4px 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Amount Paid</p>
+                  <p style="margin: 0; font-size: 16px; color: ${BRAND_GREEN}; font-weight: 700;">₦${amount.toLocaleString('en-NG')}</p>
+                </div>
+              </div>
+              
+              <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 16px 0;" />
+              
+              <div style="margin-top: 16px;">
+                <p style="margin: 0 0 4px 0; font-size: 12px; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Attendee</p>
+                <p style="margin: 0; font-size: 15px; color: ${BRAND_DARK}; font-weight: 500;">${attendeeName}</p>
+                <p style="margin: 4px 0 0 0; font-size: 14px; color: #6B7280;">${attendeeEmail}</p>
+              </div>
+            </div>
+            
+            <div class="button-container">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL}/events/manage" style="display: inline-block; background: linear-gradient(135deg, ${BRAND_GREEN} 0%, ${BRAND_GREEN_LIGHT} 160%); color: white !important; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 15px rgba(56, 142, 60, 0.25);">View All Attendees</a>
+            </div>
+            
+            <p class="message" style="text-align: center; font-style: italic; color: #6B7280; font-size: 14px;">
+              Keep track of your ticket sales and manage attendees from your event dashboard.
+            </p>
+          </div>
+          
+          <div class="footer">
+            <p>You're receiving this because you're an event organizer on ${APP_NAME}.</p>
+            <p>&copy; ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return { subject, html };
   }
 };
