@@ -3,7 +3,6 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 import { ItemTrackingService } from "@/lib/item-tracking-service";
 import { DeliveryOption, PaymentMethod, EscrowStatus } from "@/types/escrow";
 import { MARKETPLACE_CONSTANTS } from "@/lib/constants";
-import { createClient } from "@/lib/supabase-server";
 
 
 /**
@@ -17,9 +16,18 @@ import { createClient } from "@/lib/supabase-server";
  */
 export async function POST(request: NextRequest) {
   try {
-    // ── Authenticate the caller ────────────────────────
-    const supabase = await createClient();
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    // ── Authenticate the caller ───────────────────────────────────────────────
+    // BuyButton sends the session JWT as "Authorization: Bearer <token>".
+    // We verify it with the admin client (which accepts any valid JWT) rather
+    // than the SSR cookie-based client, which would return null for API calls.
+    const authHeader = request.headers.get("authorization") ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (!authUser || authError) {
       return NextResponse.json(
         { error: "Unauthorized" },

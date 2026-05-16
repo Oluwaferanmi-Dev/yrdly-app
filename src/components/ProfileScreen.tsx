@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, MapPin, Calendar, Users, MessageCircle, ShoppingBag,
   Briefcase, CalendarDays, Clock, Heart, MoreHorizontal, UserMinus,
+  Ticket, Package, ChevronRight,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
@@ -503,6 +504,47 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
           </div>
         </div>
       </div>
+
+      {/* ── Quick Actions (own profile only) ── */}
+      {actualIsOwnProfile && (
+        <section className="rounded-[11px] overflow-hidden" style={{ background: SURFACE }}>
+          {[
+            {
+              icon: <Ticket className="w-5 h-5" style={{ color: GREEN_LIGHT }} />,
+              label: "My Tickets",
+              sub: "View event tickets you've purchased",
+              href: "/my-tickets",
+            },
+            {
+              icon: <Package className="w-5 h-5" style={{ color: GREEN_LIGHT }} />,
+              label: "My Purchases",
+              sub: "Track marketplace orders",
+              href: "/profile/purchases",
+            },
+          ].map(({ icon, label, sub, href }, i, arr) => (
+            <button
+              key={href}
+              onClick={() => router.push(href)}
+              className="w-full flex items-center gap-4 px-5 py-4 text-left transition-colors hover:bg-white/5 active:bg-white/10"
+              style={{
+                borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(56,142,60,0.15)" }}
+              >
+                {icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white" style={{ fontFamily: RALEWAY }}>{label}</p>
+                <p className="text-xs mt-0.5" style={{ color: "#899485", fontFamily: FONT }}>{sub}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "#899485" }} />
+            </button>
+          ))}
+        </section>
+      )}
 
       {/* ── Interests ── */}
       {interests && interests.length > 0 && (
