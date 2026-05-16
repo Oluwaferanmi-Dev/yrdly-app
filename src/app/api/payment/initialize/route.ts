@@ -187,8 +187,15 @@ export async function POST(request: NextRequest) {
     const transactionId = txData.id;
 
     // ── Build Flutterwave Standard payment payload ────────
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:9002";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+    if (!appUrl) {
+      console.error("[PaymentInit] CRITICAL: NEXT_PUBLIC_APP_URL is not set in environment variables");
+      return NextResponse.json(
+        { error: "Server configuration error - payment redirect URL not configured" },
+        { status: 500 }
+      );
+    }
 
     const flwPayload: Record<string, any> = {
       tx_ref: transactionId,
