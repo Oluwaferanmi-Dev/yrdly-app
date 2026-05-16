@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { EVENT_CONSTANTS } from '@/lib/constants';
+import { ResendEmailService } from '@/lib/resend-service';
+import QRCode from 'qrcode';
 
 /**
  * POST /api/events/tickets/purchase
@@ -63,6 +65,7 @@ export async function POST(request: NextRequest) {
     if (tier.price === 0) {
       const ticketCode = `${EVENT_CONSTANTS.TICKET_CODE_PREFIX}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       const qrData = JSON.stringify({ ticket_code: ticketCode, event_id, tier_id });
+      const qrDataUrl = await QRCode.toDataURL(qrData, { width: 300, margin: 2 });
 
       const { data: ticket, error: ticketError } = await supabaseAdmin
         .from('tickets')
@@ -88,6 +91,70 @@ export async function POST(request: NextRequest) {
         .from('ticket_tiers')
         .update({ sold: tier.sold + 1 })
         .eq('id', tier_id);
+
+      // ── Send confirmation email to buyer ────────────────────────────────
+      try {
+        const resendStatus = ResendEmailService.getConfigurationStatus();
+        console.log('[v0] Resend config status for free ticket:', resendStatus);
+        
+        if (!ResendEmailService.isConfigured()) {
+          console.warn('[v0] Resend is not configured. Skipping free ticket emails.');
+        } else {
+          const { data: fullEvent } = await supabaseAdmin
+            .from('events')
+            .select('id, title, start_time, location_address, state, organizer_id')
+            .eq('id', event_id)
+            .single();
+
+          if (fullEvent) {
+            const startDate = new Date(fullEvent.start_time);
+            console.log('[v0] Sending free ticket confirmation to:', attendee_email);
+            await ResendEmailService.sendTicketConfirmationEmail(
+              attendee_name,
+              attendee_email,
+              event.title,
+              tier.name,
+              ticket.id,
+              qrDataUrl,
+              startDate.toLocaleDateString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+              startDate.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+              fullEvent.location_address || fullEvent.state || 'See event details',
+              `FREE-${ticketCode}`
+            );
+            console.log('[v0] Free ticket confirmation email sent successfully');
+
+            // ── Send organizer notification ─────────────────────────────────
+            try {
+              const { data: organizer } = await supabaseAdmin
+                .from('users')
+                .select('email, username')
+                .eq('id', fullEvent.organizer_id)
+                .single();
+
+              if (organizer?.email) {
+                console.log('[v0] Sending free ticket organizer notification to:', organizer.email);
+                await ResendEmailService.sendTicketSaleNotificationEmail(
+                  organizer.email,
+                  organizer.username || 'Event Organizer',
+                  fullEvent.title,
+                  attendee_name,
+                  attendee_email,
+                  tier.name,
+                  0,
+                  ticket.id
+                );
+                console.log('[v0] Free ticket organizer notification sent successfully');
+              } else {
+                console.log('[v0] No organizer email found');
+              }
+            } catch (orgErr) {
+              console.error('[v0] Organizer notification failed (non-critical):', orgErr);
+            }
+          }
+        }
+      } catch (emailErr) {
+        console.error('[v0] Free ticket email failed (non-critical):', emailErr);
+      }
 
       return NextResponse.json({ success: true, free: true, ticket_id: ticket.id });
     }
