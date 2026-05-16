@@ -84,12 +84,16 @@ export function MarketplaceCreatorOnboarding({ isOpen, onClose, onContinue }: Ma
       >
         {/* Sheet */}
         <div
-          className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden"
-          style={{ background: CARD, border: `1px solid ${BORDER}` }}
+          className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl flex flex-col"
+          style={{
+            background: CARD,
+            border: `1px solid ${BORDER}`,
+            maxHeight: "92dvh",
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Progress bar */}
-          <div className="h-1 w-full" style={{ background: "rgba(255,255,255,0.05)" }}>
+          <div className="h-1 w-full flex-shrink-0" style={{ background: "rgba(255,255,255,0.05)" }}>
             <div
               className="h-full transition-all duration-500"
               style={{ background: GREEN, width: step === 1 ? "33%" : step === 2 ? "66%" : "100%" }}
@@ -105,7 +109,10 @@ export function MarketplaceCreatorOnboarding({ isOpen, onClose, onContinue }: Ma
             <X className="w-4 h-4 text-white/70" />
           </button>
 
-          <div className="p-6 pb-8">
+          <div
+            className="overflow-y-auto flex-1 p-6"
+            style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
+          >
             {/* ── Step 1: Choose item type ── */}
             {step === 1 && (
               <div className="space-y-6">
