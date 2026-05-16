@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       customer: { 
         email: attendee_email, 
         name: attendee_name, 
-        phone_number: attendee_phone || '' 
+        phonenumber: attendee_phone || '' 
       },
       customizations: {
         title: event.title,
