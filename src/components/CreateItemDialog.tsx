@@ -317,8 +317,8 @@ const CreateItemDialogComponent = ({
         <SheetTrigger asChild>{children ?? <span />}</SheetTrigger>
         <SheetContent
           side="bottom"
-          className="p-0 border-0 rounded-t-2xl pb-24 overflow-y-auto max-h-[90dvh]"
-          style={{ background: BG_DARK, zIndex: 100 }}
+          className="p-0 border-0 rounded-t-2xl overflow-y-auto max-h-[92dvh]"
+          style={{ background: BG_DARK, zIndex: 100, paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))" }}
           hideClose
         >
           <FormBody {...formBodyProps} />
