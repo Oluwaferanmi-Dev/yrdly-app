@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { ItemTrackingService } from "@/lib/item-tracking-service";
 import { DeliveryOption, PaymentMethod, EscrowStatus } from "@/types/escrow";
 import { MARKETPLACE_CONSTANTS } from "@/lib/constants";
 import { createClient } from "@/lib/supabase-server";
@@ -107,8 +106,11 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Create escrow transaction (admin client bypasses RLS) ──
-    const commission = Math.round(price * MARKETPLACE_CONSTANTS.COMMISSION_RATE);
-    const totalAmount = price + commission;
+    // Always use the price from the database — never trust the client-supplied value
+    const authorizedPrice = itemData.price;
+    // Buyer pays item price only; platform takes commission from seller's share at payout
+    const commission = Math.round(authorizedPrice * MARKETPLACE_CONSTANTS.COMMISSION_RATE);
+    const totalAmount = authorizedPrice;
 
     // ── Look up seller's Flutterwave subaccount ──────────
     const { data: sellerAccount } = await supabaseAdmin
@@ -153,10 +155,10 @@ export async function POST(request: NextRequest) {
         item_id: itemId,
         buyer_id: buyerId,
         seller_id: sellerId,
-        amount: price,
+        amount: authorizedPrice,
         commission,
         total_amount: totalAmount,
-        seller_amount: price - commission,
+        seller_amount: authorizedPrice - commission, // seller receives price minus platform fee
         status: EscrowStatus.PENDING,
         payment_method: PaymentMethod.CARD,
         delivery_details: { option: DeliveryOption.FACE_TO_FACE },
@@ -200,22 +202,13 @@ export async function POST(request: NextRequest) {
         item_title: itemTitle,
         seller_name: sellerName,
         commission,
-        item_price: price,
+        item_price: authorizedPrice,
       },
     };
 
-    // ── Add split payment if seller has a subaccount ──────
-    if (sellerAccount?.flutterwave_subaccount_id) {
-      flwPayload.subaccounts = [
-        {
-          id: sellerAccount.flutterwave_subaccount_id,
-          transaction_charge_type: "percentage",
-          transaction_charge: MARKETPLACE_CONSTANTS.COMMISSION_RATE * 100, // 3
-        },
-      ];
-    }
-
     // ── Call Flutterwave Standard API ─────────────────────
+    // Note: no split payment — full amount is collected to the platform account
+    // and held in escrow. Seller payout is triggered manually after buyer confirms receipt.
     const flwRes = await fetch(
       "https://api.flutterwave.com/v3/payments",
       {

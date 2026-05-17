@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type React from "react";
 import { useState, useEffect } from "react";
@@ -151,13 +151,12 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <>
-      <div className="min-h-screen bg-[#15181D] dark" role="application">
+      <div className="min-h-screen bg-[#F2F2F2]" role="application">
         {/* ── Top Header ── */}
         {!isChatPage && !isSubPage && (
           <Suspense fallback={null}>
             <header
-              className="fixed top-0 left-0 right-0 z-50 h-16 md:h-[84px] flex items-center px-4 md:px-6"
-              style={{ background: "#1B2B3A" }}
+              className="fixed top-0 left-0 right-0 z-50 h-16 md:h-[84px] flex items-center px-4 md:px-6 bg-white border-b border-[#E0E0E0] shadow-sm"
             >
               <div className="w-full max-w-7xl mx-auto flex items-center gap-4">
                 <Link href="/home" className="flex items-center gap-1.5 flex-shrink-0">
@@ -174,13 +173,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <button
                     type="button"
                     onClick={() => setShowSearch(true)}
-                    className="w-full max-w-md h-10 rounded-full border flex items-center gap-3 px-4 text-left"
-                    style={{ borderColor: "#388E3C" }}
+                    className="w-full max-w-md h-10 rounded-full bg-[#F2F2F2] border border-[#E0E0E0] flex items-center gap-3 px-4 text-left hover:border-[#388E3C] transition-colors"
                   >
-                    <Search className="h-5 w-5 flex-shrink-0 text-[#BBBBBB]" />
+                    <Search className="h-5 w-5 flex-shrink-0 text-[#767676]" />
                     <span
-                      className="font-light italic text-xs text-white/70 truncate"
-                      style={{ fontFamily: '"Raleway", sans-serif' }}
+                      className="font-light italic text-xs text-[#767676] truncate"
+                      style={{ fontFamily: '"Inter", sans-serif' }}
                     >
                       Search for events, items
                     </span>
@@ -191,23 +189,24 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="md:hidden text-white hover:bg-white/10 rounded-full"
+                    className="md:hidden text-[#555555] hover:bg-[#F2F2F2] rounded-full"
                     onClick={() => setShowSearch(true)}
                   >
                     <Search className="w-5 h-5" />
                   </Button>
+
                   <Link href="/map">
-                    <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 rounded-full">
+                    <Button variant="ghost" size="icon" className="text-[#555555] hover:bg-[#F2F2F2] rounded-full">
                       <MapPin className="w-5 h-5" />
                     </Button>
                   </Link>
                   <Link href="/messages">
-                    <Button variant="ghost" size="icon" className="relative text-white hover:bg-white/10 rounded-full">
+                    <Button variant="ghost" size="icon" className="relative text-[#555555] hover:bg-[#F2F2F2] rounded-full">
                       <MessageCircle className="w-5 h-5" />
                       {unreadMessagesCount > 0 && (
                         <span
                           className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold px-1"
-                          style={{ background: "#388E3C", color: "#fff", border: "1.5px solid #1B2B3A" }}
+                          style={{ background: "#388E3C", color: "#fff", border: "1.5px solid #fff" }}
                         >
                           {unreadMessagesCount > 9 ? "9+" : unreadMessagesCount}
                         </span>
@@ -217,14 +216,14 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative text-[#899485] hover:text-white hover:bg-[#1B2B3A] rounded-full transition-colors"
+                    className="relative text-[#555555] hover:bg-[#F2F2F2] rounded-full transition-colors"
                     onClick={() => setShowNotifications(!showNotifications)}
                   >
                     <Bell className="w-5 h-5" />
                     {unreadCount > 0 && (
                       <span
                         className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[9px] font-bold px-1"
-                        style={{ background: "#6edf51", color: "#003207", border: "1.5px solid #1B2B3A" }}
+                        style={{ background: "#388E3C", color: "#fff", border: "1.5px solid #fff" }}
                       >
                         {unreadCount > 9 ? "9+" : unreadCount}
                       </span>
@@ -239,7 +238,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                     <Avatar className="w-8 h-8 md:w-9 md:h-9 rounded-full">
                       <AvatarImage src={profile?.avatar_url || "/diverse-user-avatars.png"} />
                       <AvatarFallback
-                        style={{ background: "#388E3C", color: "#fff", fontFamily: "Raleway, sans-serif", fontWeight: 700 }}
+                        style={{ background: "#388E3C", color: "#fff", fontFamily: "Inter, sans-serif", fontWeight: 700 }}
                       >
                         {profile?.name?.charAt(0).toUpperCase() || "U"}
                       </AvatarFallback>
@@ -260,36 +259,33 @@ export function MainLayout({ children }: MainLayoutProps) {
         >
           {/* ── Desktop Left Nav ── */}
           <nav
-            className="hidden lg:flex lg:flex-col lg:w-[184px] lg:flex-shrink-0 lg:fixed lg:left-0 lg:top-[84px] lg:bottom-0 lg:pt-6 lg:px-4 lg:pb-6"
-            style={{ background: "#15181D" }}
+            className="hidden lg:flex lg:flex-col lg:w-[200px] lg:flex-shrink-0 lg:fixed lg:left-0 lg:top-[84px] lg:bottom-0 lg:pt-3 lg:px-3 lg:pb-6 bg-white border-r border-[#E0E0E0]"
           >
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-0">
               {navItems.map(({ href, label, icon: Icon }) => {
                 const isActive = pathname === href || (href !== "/home" && pathname.startsWith(href));
                 return (
                   <Link key={href} href={href}>
                     <div
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-[21.5px] transition",
-                        isActive && "bg-[#181F30]"
+                        "flex items-center gap-3 px-3 py-2 rounded-xl transition-colors",
+                        isActive ? "bg-[#EBF5EB]" : "hover:bg-[#F2F2F2]"
                       )}
                     >
-                      <span
-                        className={cn(
-                          "w-1 h-6 rounded-sm flex-shrink-0",
-                          isActive ? "bg-[#388E3C]" : "bg-transparent"
-                        )}
-                      />
                       <Icon
                         className={cn(
-                          "w-6 h-6 flex-shrink-0",
-                          isActive ? "text-white fill-[#388E3C] stroke-white" : "text-white fill-none"
+                          "w-5 h-5 flex-shrink-0",
+                          isActive ? "text-[#388E3C]" : "text-[#555555]"
                         )}
                         strokeWidth={2}
+                        fill={isActive ? "#388E3C" : "none"}
                       />
                       <span
-                        className="text-white text-xl leading-[35px]"
-                        style={{ fontFamily: '"Pacifico", cursive' }}
+                        className={cn(
+                          "text-[14px] leading-snug",
+                          isActive ? "text-[#388E3C] font-semibold" : "text-[#252629] font-normal"
+                        )}
+                        style={{ fontFamily: "Inter, sans-serif" }}
                       >
                         {label}
                       </span>
@@ -299,22 +295,22 @@ export function MainLayout({ children }: MainLayoutProps) {
               })}
             </div>
 
-            <CreatePostDialog
-              createPost={createPost}
-              open={postDialogOpen}
-              onOpenChange={setPostDialogOpen}
-            >
-              <Button
-                className="w-full h-11 rounded-full text-white font-medium text-sm"
-                style={{ background: "#388E3C", fontFamily: "Raleway, sans-serif" }}
-                onClick={() => setPostDialogOpen(true)}
+            <div className="mt-4 px-1">
+              <CreatePostDialog
+                createPost={createPost}
+                open={postDialogOpen}
+                onOpenChange={setPostDialogOpen}
               >
-                <Plus className="w-4 h-4 mr-2" />
-                Post
-              </Button>
-            </CreatePostDialog>
-
-
+                <Button
+                  className="w-full h-10 rounded-full text-white font-semibold text-[14px]"
+                  style={{ background: "#388E3C", fontFamily: "Inter, sans-serif" }}
+                  onClick={() => setPostDialogOpen(true)}
+                >
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  Post
+                </Button>
+              </CreatePostDialog>
+            </div>
           </nav>
 
           {/* ── Main Content ── */}
@@ -322,14 +318,14 @@ export function MainLayout({ children }: MainLayoutProps) {
             className={cn(
               "flex-1 w-full min-w-0",
               !isChatPage && "px-3 sm:px-4 md:px-6 py-4",
-              !isChatPage && "lg:pl-[200px]"
+              !isChatPage && "lg:pl-[216px]"
             )}
           >
             <ErrorBoundary>
               {isChatPage ? (
                 <div className="w-full h-full">{children}</div>
               ) : (
-                <div className="w-full max-w-[680px] mx-auto lg:max-w-none">
+                <div className="w-full max-w-[680px] mx-auto lg:max-w-[660px]">
                   {children}
                 </div>
               )}
@@ -344,9 +340,8 @@ export function MainLayout({ children }: MainLayoutProps) {
       {!isChatPage && (
         <Suspense fallback={null}>
           <nav
-            className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] flex items-center justify-around px-2 border-t border-white/5 shadow-[0_-4px_12px_rgba(0,0,0,0.5)]"
+            className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] flex items-center justify-around px-2 bg-white border-t border-[#E0E0E0] shadow-[0_-2px_8px_rgba(0,0,0,0.08)]"
             style={{
-              background: "#1B2B3A",
               height: "64px",
               paddingBottom: "env(safe-area-inset-bottom)",
             }}
@@ -361,12 +356,12 @@ export function MainLayout({ children }: MainLayoutProps) {
                 >
                   <div className={cn(
                     "p-2 rounded-xl transition-all duration-300",
-                    isActive ? "bg-[#388E3C] scale-110 shadow-[0_0_15px_rgba(56,142,60,0.3)]" : "bg-transparent"
+                    isActive ? "bg-[#EBF5EB]" : "bg-transparent"
                   )}>
                     <Icon
                       className={cn(
                         "w-5 h-5",
-                        isActive ? "text-white fill-white" : "text-[#899485] fill-none"
+                        isActive ? "text-[#388E3C] fill-[#388E3C]" : "text-[#767676] fill-none"
                       )}
                       strokeWidth={2.5}
                     />
@@ -374,9 +369,9 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <span
                     className={cn(
                       "text-[9px] font-bold tracking-tight mt-1 transition-colors",
-                      isActive ? "text-white" : "text-[#899485]"
+                      isActive ? "text-[#388E3C]" : "text-[#767676]"
                     )}
-                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                    style={{ fontFamily: '"Inter", sans-serif' }}
                   >
                     {label}
                   </span>

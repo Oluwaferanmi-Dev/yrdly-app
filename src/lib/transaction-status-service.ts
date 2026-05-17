@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { EscrowStatus } from '@/types/escrow';
 import { NotificationService } from './notification-service';
+import { PayoutService } from './payout-service';
 
 export class TransactionStatusService {
   /**
@@ -251,9 +252,13 @@ export class TransactionStatusService {
         throw updateError;
       }
 
-      // TODO: Initiate payout to seller
-      // This would integrate with Flutterwave payout service
-      // await PayoutService.initiateAutoPayout(transactionId);
+      // Initiate payout to seller now that buyer has confirmed receipt
+      try {
+        await PayoutService.initiateAutoPayout(transactionId);
+      } catch (payoutError) {
+        console.error('Payout initiation failed after buyer confirmation:', payoutError);
+        // Don't throw — transaction is still completed even if payout initiation fails
+      }
       
       // Send notification to seller about funds release
       try {

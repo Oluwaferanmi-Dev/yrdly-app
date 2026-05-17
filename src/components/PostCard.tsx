@@ -1,4 +1,4 @@
-
+﻿
 "use client";
 
 import type { User, Post } from "@/types";
@@ -50,10 +50,10 @@ import { useRouter } from "next/navigation";
 import { ImageSwiper } from "./ImageSwiper";
 
 /* ─── design tokens ─────────────────────────────────────────────── */
-const CARD_BG = "#1E2126";
-const BG = "#15181D";
+const CARD_BG = "var(--c-card)";
+const BG = "var(--c-bg)";
 const GREEN = "#388E3C";
-const FONT_RALEWAY = "Raleway, sans-serif";
+const FONT_RALEWAY = "Inter, sans-serif";
 const FONT_PACIFICO = "Pacifico, cursive";
 
 function fmt(n: number) {
@@ -67,8 +67,8 @@ function CategoryTag({ category }: { category: string }) {
   if (category === "Event") {
     return (
       <span
-        className="px-3 py-1 rounded-[12.5px] font-raleway font-medium text-[12px] leading-[14px]"
-        style={{ background: "#1B0F16", border: "1px solid #983412", color: "#EBD598" }}
+        className="px-3 py-1 rounded-[12.5px] font-sans font-medium text-[12px] leading-[14px]"
+        style={{ background: "var(--c-bg)", border: "1px solid #983412", color: "#EBD598" }}
       >
         Event
       </span>
@@ -77,8 +77,8 @@ function CategoryTag({ category }: { category: string }) {
   if (category === "For Sale") {
     return (
       <span
-        className="px-3 py-1 rounded-[12.5px] font-raleway font-medium text-[12px] leading-[14px]"
-        style={{ background: "#06171B", border: `1px solid ${GREEN}`, color: "#BBF7D0" }}
+        className="px-3 py-1 rounded-[12.5px] font-sans font-medium text-[12px] leading-[14px]"
+        style={{ background: "var(--c-bg)", border: `1px solid ${GREEN}`, color: "#BBF7D0" }}
       >
         For Sale
       </span>
@@ -87,8 +87,8 @@ function CategoryTag({ category }: { category: string }) {
   // General / default
   return (
     <span
-      className="px-3 py-1 rounded-[12.5px] font-raleway font-medium text-[12px] leading-[14px] text-white"
-      style={{ background: "#1E293B" }}
+      className="px-3 py-1 rounded-[12.5px] font-sans font-medium text-[12px] leading-[14px] text-foreground"
+      style={{ background: "var(--c-card2)" }}
     >
       {category || "General"}
     </span>
@@ -104,11 +104,12 @@ function ImageCollage({
   onImageClick: (i: number) => void;
 }) {
   if (urls.length === 0) return null;
+
   if (urls.length === 1) {
     return (
       <div
         className="relative w-full cursor-pointer overflow-hidden"
-        style={{ borderRadius: 15, aspectRatio: '16/9' }}
+        style={{ borderRadius: 12, height: 320, maxHeight: 320 }}
         onClick={() => onImageClick(0)}
       >
         <Image
@@ -121,33 +122,34 @@ function ImageCollage({
       </div>
     );
   }
+
+  // 2 images: equal side-by-side at fixed height
   if (urls.length === 2) {
     return (
-      <div className="grid grid-cols-2 gap-1 overflow-hidden" style={{ borderRadius: 15 }}>
+      <div className="grid grid-cols-2 gap-0.5 overflow-hidden" style={{ borderRadius: 12, height: 240 }}>
         {urls.map((u, i) => (
-          <div key={i} className="relative aspect-square cursor-pointer" onClick={() => onImageClick(i)}>
+          <div key={i} className="relative cursor-pointer h-full" onClick={() => onImageClick(i)}>
             <Image src={u} alt="" fill className="object-cover" />
           </div>
         ))}
       </div>
     );
   }
-  // 3+: 1 tall left + 2 right
+
+  // 3+: 1 tall left + 2 right stacked (Nextdoor style)
   return (
-    <div className="grid grid-cols-2 gap-1 overflow-hidden" style={{ borderRadius: 15 }}>
-      <div className="row-span-2 relative" style={{ aspectRatio: '1/1.38' }}>
-        <div className="absolute inset-0 cursor-pointer" onClick={() => onImageClick(0)}>
-          <Image src={urls[0]} alt="" fill className="object-cover" />
-        </div>
+    <div className="grid grid-cols-2 gap-0.5 overflow-hidden" style={{ borderRadius: 12, height: 260 }}>
+      <div className="relative row-span-2 cursor-pointer h-full" onClick={() => onImageClick(0)}>
+        <Image src={urls[0]} alt="" fill className="object-cover" />
       </div>
-      <div className="relative aspect-[276/150] cursor-pointer" onClick={() => onImageClick(1)}>
+      <div className="relative cursor-pointer" onClick={() => onImageClick(1)}>
         <Image src={urls[1]} alt="" fill className="object-cover" />
       </div>
-      <div className="relative aspect-[276/150] cursor-pointer" onClick={() => onImageClick(2)}>
+      <div className="relative cursor-pointer" onClick={() => onImageClick(2)}>
         <Image src={urls[2]} alt="" fill className="object-cover" />
         {urls.length > 3 && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <span className="text-white font-semibold text-sm font-raleway">+{urls.length - 3}</span>
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+            <span className="text-white font-semibold text-base font-sans">+{urls.length - 3}</span>
           </div>
         )}
       </div>
@@ -185,26 +187,26 @@ function EngagementRow({
               }}
             />
           </button>
-          <span className="text-[12px] font-light text-white" style={{ fontFamily: FONT_RALEWAY }}>
+          <span className="text-[12px] font-light text-muted-foreground" style={{ fontFamily: FONT_RALEWAY }}>
             {fmt(likes)}
           </span>
         </div>
         {/* dot */}
-        <div className="w-[2px] h-[2px] rounded-full bg-white" />
+        <div className="w-[2px] h-[2px] rounded-full bg-muted-foreground" />
         {/* Comments */}
         <div className="flex items-center gap-1.5">
           <button onClick={onComment}>
-            <MessageCircle className="w-5 h-5 text-white" />
+            <MessageCircle className="w-5 h-5 text-muted-foreground" />
           </button>
-          <span className="text-[12px] font-light text-white" style={{ fontFamily: FONT_RALEWAY }}>
+          <span className="text-[12px] font-light text-muted-foreground" style={{ fontFamily: FONT_RALEWAY }}>
             {fmt(commentCount)}
           </span>
         </div>
         {/* dot */}
-        <div className="w-[2px] h-[2px] rounded-full bg-white" />
+        <div className="w-[2px] h-[2px] rounded-full bg-muted-foreground" />
         {/* Share */}
         <button onClick={onShare}>
-          <Share2 className="w-5 h-5 text-white" />
+          <Share2 className="w-5 h-5 text-muted-foreground" />
         </button>
       </div>
     </div>
@@ -430,26 +432,26 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
     <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-3">
       <div className="flex items-center gap-3 min-w-0">
         {loadingAuthor ? (
-          <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" style={{ background: "#2a2f38" }} />
+          <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" style={{ background: "var(--c-card2)" }} />
         ) : (
           <button onClick={openProfile} className="flex-shrink-0">
             <Avatar className="h-10 w-10">
               <AvatarImage src={author?.avatar_url} />
-              <AvatarFallback className="text-xs text-white" style={{ background: GREEN }}>{author?.name?.charAt(0) || "?"}</AvatarFallback>
+              <AvatarFallback className="text-xs text-foreground" style={{ background: GREEN }}>{author?.name?.charAt(0) || "?"}</AvatarFallback>
             </Avatar>
           </button>
         )}
         {loadingAuthor ? (
           <div className="space-y-1">
-            <Skeleton className="h-3 w-24" style={{ background: "#2a2f38" }} />
-            <Skeleton className="h-2 w-16" style={{ background: "#2a2f38" }} />
+            <Skeleton className="h-3 w-24" style={{ background: "var(--c-card2)" }} />
+            <Skeleton className="h-2 w-16" style={{ background: "var(--c-card2)" }} />
           </div>
         ) : (
           <div className="min-w-0">
             <button onClick={openProfile}>
-              <p className="font-raleway font-bold text-[14px] text-white truncate hover:underline">{author?.name || "Anonymous"}</p>
+              <p className="font-sans font-bold text-[14px] text-foreground truncate hover:underline">{author?.name || "Anonymous"}</p>
             </button>
-            <p className="font-raleway font-normal text-[11px] text-white/80">{timeAgo(post.timestamp ? new Date(post.timestamp) : null)}</p>
+            <p className="font-sans font-normal text-[11px] text-muted-foreground">{timeAgo(post.timestamp ? new Date(post.timestamp) : null)}</p>
           </div>
         )}
       </div>
@@ -459,20 +461,20 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
           <AlertDialog>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-2 -m-2 rounded hover:bg-white/10 text-white/70 hover:text-white">
+                <button className="p-2 -m-2 rounded hover:bg-accent text-muted-foreground hover:text-foreground">
                   <MoreHorizontal className="w-5 h-5" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-[#1E2126] border-white/10">
+              <DropdownMenuContent align="end" className="bg-card border-border">
                 {post.category === "Event" ? (
                   <CreateEventDialog postToEdit={post} open={isEventEditDialogOpen} onOpenChange={setIsEventEditDialogOpen}>
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-white focus:bg-white/10">
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="focus:bg-accent">
                       <Edit className="mr-2 h-4 w-4" /> Edit
                     </DropdownMenuItem>
                   </CreateEventDialog>
                 ) : onCreatePost ? (
                   <CreatePostDialog postToEdit={post} createPost={onCreatePost}>
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-white focus:bg-white/10">
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="focus:bg-accent">
                       <Edit className="mr-2 h-4 w-4" /> Edit
                     </DropdownMenuItem>
                   </CreatePostDialog>
@@ -484,13 +486,13 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
                 </AlertDialogTrigger>
               </DropdownMenuContent>
             </DropdownMenu>
-            <AlertDialogContent className="bg-[#1E2126] border-white/10 text-white">
+            <AlertDialogContent className="bg-card border-border">
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete post?</AlertDialogTitle>
                 <AlertDialogDescription>This will permanently delete your post and all its comments.</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="bg-white/10 text-white border-0">Cancel</AlertDialogCancel>
+                <AlertDialogCancel className="bg-muted border-0">Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -509,7 +511,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
         {PostHeader}
         {/* Title above image */}
         {(post.title || post.text) && (
-          <p className="px-4 pb-2 font-raleway font-bold text-[18px] text-white leading-[21px]">
+          <p className="px-4 pb-2 font-sans font-bold text-[18px] text-foreground leading-[21px]">
             {post.title || post.text?.split("\n")[0]}
           </p>
         )}
@@ -521,30 +523,30 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
         )}
         {/* Description text */}
         {post.text && post.title && (
-          <p className="px-4 pb-2 font-raleway font-normal text-[13px] text-white/80 leading-[15px]">{post.text}</p>
+          <p className="px-4 pb-2 font-sans font-normal text-[13px] text-muted-foreground leading-[15px]">{post.text}</p>
         )}
         {/* Event meta */}
         <div className="px-4 pb-3 space-y-2">
           {post.event_date && (
-            <div className="flex items-center gap-2 text-white">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="w-5 h-5 flex-shrink-0" />
-              <span className="font-raleway font-normal text-[13px]">{getEventDate()}</span>
+              <span className="font-sans font-normal text-[13px]">{getEventDate()}</span>
             </div>
           )}
           {post.event_location && (
-            <div className="flex items-center gap-2 text-white">
+            <div className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="w-5 h-5 flex-shrink-0" />
-              <span className="font-raleway font-normal text-[13px]">{getLocation(post.event_location)}</span>
+              <span className="font-sans font-normal text-[13px]">{getLocation(post.event_location)}</span>
             </div>
           )}
         </div>
         {/* Price + share */}
         {post.price != null && post.price > 0 && (
           <div className="flex items-center justify-between px-4 pb-3">
-            <span className="font-raleway font-bold text-[24px] leading-[28px]" style={{ color: GREEN }}>
+            <span className="font-sans font-bold text-[24px] leading-[28px]" style={{ color: GREEN }}>
               {formatPrice(post.price)}
             </span>
-            <button onClick={handleShare} className="text-white hover:text-white/70">
+            <button onClick={handleShare} className="text-muted-foreground hover:text-foreground">
               <Share2 className="w-5 h-5" />
             </button>
           </div>
@@ -553,7 +555,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
         <div className="flex items-center justify-end px-4 pb-4">
           <button
             onClick={handleLike}
-            className="px-5 py-2 rounded-full text-white text-[13px] font-light transition-opacity hover:opacity-90"
+            className="px-5 py-2 rounded-full text-foreground text-[13px] font-light transition-opacity hover:opacity-90"
             style={{ background: GREEN, fontFamily: FONT_RALEWAY }}
           >
             {isLiked ? "Interested ✓" : "I'm Interested"}
@@ -568,25 +570,25 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
       <>
         {PostHeader}
         {/* Item name */}
-        <p className="px-4 pb-2 font-raleway font-semibold text-[18px] text-white leading-[21px]">{itemTitle}</p>
+        <p className="px-4 pb-2 font-sans font-semibold text-[18px] text-foreground leading-[21px]">{itemTitle}</p>
         {/* image */}
         {urls.length > 0 && (
           <div className="px-3 pb-3">
-            <div className="relative w-full overflow-hidden" style={{ borderRadius: 15, aspectRatio: '16/9' }}>
+            <div className="relative w-full overflow-hidden" style={{ borderRadius: 12, height: 320, maxHeight: 320 }}>
               <Image src={urls[0]} alt="" fill className="object-cover" />
             </div>
           </div>
         )}
         {/* Price */}
-        <p className="px-4 pb-1 font-raleway font-bold text-[24px] leading-[28px]" style={{ color: GREEN }}>
+        <p className="px-4 pb-1 font-sans font-bold text-[24px] leading-[28px]" style={{ color: GREEN }}>
           {post.price ? formatPrice(post.price) : "Free"}
         </p>
         {/* Description / subtitle */}
         {desc && (
-          <p className="px-4 pb-3 font-raleway font-normal text-[13px] text-white leading-[15px]">{desc}</p>
+          <p className="px-4 pb-3 font-sans font-normal text-[13px] text-muted-foreground leading-[15px]">{desc}</p>
         )}
         {/* Divider */}
-        <div className="mx-4 mb-2" style={{ borderTop: "0.2px solid rgba(255,255,255,0.2)" }} />
+        <div className="mx-4 mb-2" style={{ borderTop: "0.2px solid rgba(0,0,0,0.08)" }} />
         {/* Message seller */}
         <div className="flex items-center justify-between px-4 pb-3 gap-2">
           <div
@@ -595,22 +597,22 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
           >
             <Avatar className="h-6 w-6 flex-shrink-0">
               <AvatarImage src={author?.avatar_url} />
-              <AvatarFallback className="text-[9px] text-white" style={{ background: GREEN }}>{author?.name?.charAt(0)}</AvatarFallback>
+              <AvatarFallback className="text-[9px] text-foreground" style={{ background: GREEN }}>{author?.name?.charAt(0)}</AvatarFallback>
             </Avatar>
             <button
               onClick={handleMessageSeller}
-              className="flex-1 text-left font-raleway italic font-extralight text-[10px] text-white/80"
+              className="flex-1 text-left font-sans italic font-extralight text-[10px] text-muted-foreground"
             >
               {currentUser?.id === author?.id ? "Your listing" : "Send seller a message"}
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={handleShare} className="text-white hover:text-white/70">
+            <button onClick={handleShare} className="text-muted-foreground hover:text-foreground">
               <Share2 className="w-5 h-5" />
             </button>
             <button
               onClick={handleLike}
-              className="px-4 py-2 rounded-full text-white text-[13px] font-light transition-opacity hover:opacity-90"
+              className="px-4 py-2 rounded-full text-foreground text-[13px] font-light transition-opacity hover:opacity-90"
               style={{ background: GREEN, fontFamily: FONT_RALEWAY }}
             >
               {isLiked ? "Saved ✓" : "I'm interested"}
@@ -632,12 +634,12 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
         {/* Body text */}
         {text && (
           <div className="px-4 pb-3">
-            <p className="font-raleway font-normal text-[13px] leading-[15px] text-white whitespace-pre-wrap">
+            <p className="font-sans font-normal text-[13px] leading-[15px] text-foreground whitespace-pre-wrap">
               {displayText}
               {shouldTruncate && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setIsTextExpanded(!isTextExpanded); }}
-                  className="ml-1 font-raleway font-medium text-[12px] text-white/60 hover:text-white"
+                  className="ml-1 font-sans font-medium text-[12px] text-muted-foreground hover:text-primary"
                 >
                   {isTextExpanded ? "see less" : "see more"}
                 </button>
@@ -652,7 +654,7 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
           </div>
         )}
         {/* Engagement */}
-        <div className="px-4 pb-4 border-t border-white/10 pt-3">
+        <div className="px-4 pb-4 border-t border-border pt-3">
           <EngagementRow
             likes={likes}
             commentCount={commentCount}
@@ -679,8 +681,8 @@ export function PostCard({ post, onDelete, onCreatePost }: PostCardProps) {
       {/* Comments Sheet */}
       <Sheet open={isCommentsOpen} onOpenChange={setIsCommentsOpen}>
         <SheetContent side="bottom" className="p-0 flex flex-col rounded-t-2xl border-0" style={{ background: BG, maxHeight: "90vh" }}>
-          <SheetHeader className="px-4 py-3 border-b border-white/10 flex-shrink-0">
-            <SheetTitle className="text-center text-white font-raleway">Comments</SheetTitle>
+          <SheetHeader className="px-4 py-3 border-b border-border flex-shrink-0">
+            <SheetTitle className="text-center text-foreground font-sans">Comments</SheetTitle>
           </SheetHeader>
           <CommentSection
             postId={post.id}

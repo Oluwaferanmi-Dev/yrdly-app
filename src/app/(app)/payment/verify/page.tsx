@@ -46,7 +46,10 @@ export default function PaymentVerificationPage() {
           'Content-Type': 'application/json',
           ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ transactionReference: reference }),
+        body: JSON.stringify({
+          transactionReference: transactionRef || null,  // FLW numeric ID
+          txRef: txRef || null,                          // our UUID
+        }),
       });
 
       const result = await response.json();

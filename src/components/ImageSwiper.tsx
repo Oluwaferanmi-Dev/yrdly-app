@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Image from 'next/image';
@@ -84,7 +84,7 @@ export function ImageSwiper({ images, isOpen, onClose, initialIndex = 0 }: Image
         variant="ghost"
         size="icon"
         onClick={onClose}
-        className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
+        className="absolute top-4 right-4 z-10 text-foreground hover:bg-white/20"
       >
         <X className="h-6 w-6" />
       </Button>
@@ -96,7 +96,7 @@ export function ImageSwiper({ images, isOpen, onClose, initialIndex = 0 }: Image
             variant="ghost"
             size="icon"
             onClick={goToPrevious}
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20"
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-foreground hover:bg-white/20"
           >
             <ChevronLeft className="h-8 w-8" />
           </Button>
@@ -104,7 +104,7 @@ export function ImageSwiper({ images, isOpen, onClose, initialIndex = 0 }: Image
             variant="ghost"
             size="icon"
             onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20"
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-foreground hover:bg-white/20"
           >
             <ChevronRight className="h-8 w-8" />
           </Button>
@@ -114,25 +114,31 @@ export function ImageSwiper({ images, isOpen, onClose, initialIndex = 0 }: Image
       {/* Image container */}
       <div
         ref={containerRef}
-        className="relative w-full h-full max-w-4xl max-h-[90vh] flex items-center justify-center p-4"
+        className="flex items-center justify-center w-full h-full px-10"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <div className="relative w-full h-full">
-          <Image
-            src={images[currentIndex]}
-            alt={`Image ${currentIndex + 1}`}
-            fill
-            className="object-contain"
-            priority
-          />
-        </div>
+        <Image
+          src={images[currentIndex]}
+          alt={`Image ${currentIndex + 1}`}
+          width={0}
+          height={0}
+          sizes="100vw"
+          priority
+          style={{
+            width: 'auto',
+            height: 'auto',
+            maxWidth: '100%',
+            maxHeight: '90vh',
+            objectFit: 'contain',
+          }}
+        />
       </div>
 
       {/* Image counter */}
       {images.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-foreground px-3 py-1 rounded-full text-sm">
           {currentIndex + 1} / {images.length}
         </div>
       )}

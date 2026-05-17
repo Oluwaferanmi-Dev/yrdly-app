@@ -1,16 +1,17 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabase';
-import { MapPin, Calendar } from 'lucide-react';
+import { MapPin, ChevronRight } from 'lucide-react';
 import type { Post } from '@/types';
+import { useAuth } from '@/hooks/use-supabase-auth';
 
 /* ─── design tokens ─────────────────────────────────────────────── */
-const CARD_BG = '#1E2126';
+const CARD_BG = 'var(--c-card)';
 const GREEN = '#388E3C';
-const FONT_RALEWAY = 'Raleway, sans-serif';
+const FONT_RALEWAY = 'Inter, sans-serif';
 const FONT_PACIFICO = 'Pacifico, cursive';
 
 type EventPost = Post & { user?: { name?: string; avatar_url?: string } };
@@ -39,7 +40,7 @@ function InterestedBubbles({ count, colors }: { count: number; colors: string[] 
         ))}
       </div>
       {count > 0 && (
-        <span className="font-raleway font-light text-[7px] text-white" style={{ fontFamily: FONT_RALEWAY }}>
+        <span className="font-sans font-light text-[7px] text-foreground" style={{ fontFamily: FONT_RALEWAY }}>
           {count} are interested
         </span>
       )}
@@ -53,16 +54,16 @@ function EventCard({ event }: { event: EventPost }) {
   const colors = AVATAR_COLORS;
 
   return (
-    <Link href={`/posts/${event.id}`} className="block p-3 hover:bg-white/5 transition-colors">
+    <Link href={`/posts/${event.id}`} className="block p-3 hover:bg-accent transition-colors">
       {/* Top label */}
-      <p className="font-pacifico text-[15px] leading-[26px] text-white mb-1" style={{ fontFamily: FONT_PACIFICO }}>
+      <p className="font-pacifico text-[15px] leading-[26px] text-foreground mb-1" style={{ fontFamily: FONT_PACIFICO }}>
         In your area
       </p>
 
       {/* Image + info row */}
       <div
         className="rounded-[4px] overflow-hidden"
-        style={{ background: '#15181D' }}
+        style={{ background: 'var(--c-bg)' }}
       >
         {/* Mini header row */}
         <div className="flex items-center gap-2 p-2">
@@ -74,20 +75,20 @@ function EventCard({ event }: { event: EventPost }) {
           </div>
           {/* title + date */}
           <div className="min-w-0 flex-1">
-            <p className="font-raleway italic font-medium text-[11px] text-white truncate" style={{ fontFamily: FONT_RALEWAY }}>
+            <p className="font-sans italic font-medium text-[11px] text-foreground truncate" style={{ fontFamily: FONT_RALEWAY }}>
               {event.title || event.text?.split('\n')[0] || 'Event'}
             </p>
-            <p className="font-raleway font-normal text-[6px] text-white/80" style={{ fontFamily: FONT_RALEWAY }}>
+            <p className="font-sans font-normal text-[6px] text-muted-foreground" style={{ fontFamily: FONT_RALEWAY }}>
               {formatDate(event.event_date ?? null)}
             </p>
           </div>
           {/* map pin */}
-          <MapPin className="w-4 h-4 text-white flex-shrink-0" />
+          <MapPin className="w-4 h-4 text-foreground flex-shrink-0" />
         </div>
 
         {/* description (location) */}
         {(getLocation(event.event_location) || event.text) && (
-          <p className="font-raleway font-light text-[9px] text-white px-2 pb-2 leading-[11px]" style={{ fontFamily: FONT_RALEWAY }}>
+          <p className="font-sans font-light text-[9px] text-foreground px-2 pb-2 leading-[11px]" style={{ fontFamily: FONT_RALEWAY }}>
             {getLocation(event.event_location) || event.text?.slice(0, 80)}
           </p>
         )}
@@ -99,7 +100,7 @@ function EventCard({ event }: { event: EventPost }) {
         <div className="flex items-center justify-between px-2 py-2">
           <InterestedBubbles count={attendeeCount} colors={colors} />
           <button
-            className="px-2 py-1 text-white font-raleway font-light text-[9px] rounded-[11.5px]"
+            className="px-2 py-1 text-foreground font-sans font-light text-[9px] rounded-[11.5px]"
             style={{ background: GREEN, fontFamily: FONT_RALEWAY }}
             onClick={(e) => e.preventDefault()}
           >
@@ -117,17 +118,17 @@ type SalePost = Post & { user?: { name?: string; avatar_url?: string } };
 function QuickSaleCard({ item }: { item: SalePost }) {
   const price = item.price ? `₦${item.price.toLocaleString()}` : 'Free';
   return (
-    <Link href={`/posts/${item.id}`} className="flex gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors">
-      <div className="w-12 h-12 rounded-lg bg-[#15181D] overflow-hidden flex-shrink-0">
+    <Link href={`/posts/${item.id}`} className="flex gap-2 p-2 rounded-lg hover:bg-accent transition-colors">
+      <div className="w-12 h-12 rounded-lg bg-background overflow-hidden flex-shrink-0">
         {item.image_urls?.[0] && (
           <Image src={item.image_urls[0]} alt="" width={48} height={48} className="w-full h-full object-cover" />
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="font-raleway font-semibold text-[12px] text-white truncate" style={{ fontFamily: FONT_RALEWAY }}>
+        <p className="font-sans font-semibold text-[12px] text-foreground truncate" style={{ fontFamily: FONT_RALEWAY }}>
           {item.title || item.text?.split('\n')[0] || 'Item'}
         </p>
-        <p className="font-raleway font-bold text-[14px]" style={{ color: GREEN, fontFamily: FONT_RALEWAY }}>{price}</p>
+        <p className="font-sans font-bold text-[14px]" style={{ color: GREEN, fontFamily: FONT_RALEWAY }}>{price}</p>
       </div>
     </Link>
   );
@@ -135,6 +136,7 @@ function QuickSaleCard({ item }: { item: SalePost }) {
 
 /* ─── main sidebar ───────────────────────────────────────────── */
 export function HomeRightSidebar() {
+  const { profile } = useAuth();
   const [events, setEvents] = useState<EventPost[]>([]);
   const [sales, setSales] = useState<SalePost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,47 +165,84 @@ export function HomeRightSidebar() {
     fetchData();
   }, []);
 
-  return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-[313px] lg:flex-shrink-0 lg:overflow-y-auto gap-4 pt-1">
-      {/* ── Latest Events ── */}
-      <div>
-        <div className="flex items-center justify-between mb-2 px-1">
-          <h2 className="text-[18px] leading-8 text-white" style={{ fontFamily: FONT_PACIFICO }}>
-            Latest Events
-          </h2>
-          <Link href="/events" className="font-raleway font-medium text-[12px] text-[#1976D2] hover:underline" style={{ fontFamily: FONT_RALEWAY }}>
-            See all
-          </Link>
-        </div>
-        <div className="rounded-[5px] overflow-hidden" style={{ background: CARD_BG }}>
-          {loading ? (
-            <div className="p-3 space-y-3">
-              {[1, 2].map((i) => <div key={i} className="h-[120px] rounded bg-[#15181D] animate-pulse" />)}
-            </div>
-          ) : events.length > 0 ? (
-            events.slice(0, 2).map((event) => <EventCard key={event.id} event={event} />)
-          ) : (
-            <p className="p-4 font-raleway text-xs text-white/50">No upcoming events.</p>
-          )}
-        </div>
-      </div>
+  const lga = profile?.location?.lga;
+  const state = profile?.location?.state;
+  const ward = profile?.location?.ward;
 
-      {/* ── Quick Sales ── */}
-      <div>
-        <h2 className="text-[18px] leading-8 text-white mb-2 px-1" style={{ fontFamily: FONT_PACIFICO }}>
-          Quick Sales
-        </h2>
-        <div className="rounded-[5px] overflow-hidden" style={{ background: CARD_BG }}>
-          {loading ? (
-            <div className="p-3 space-y-2">
-              {[1, 2, 3].map((i) => <div key={i} className="h-14 rounded bg-[#15181D] animate-pulse" />)}
+  return (
+    <aside className="hidden lg:flex lg:flex-col lg:w-[380px] lg:flex-shrink-0 lg:overflow-y-auto gap-4 pt-1">
+      <div className="flex gap-3 items-start">
+
+        {/* ── Neighborhood widget ── */}
+        <div className="w-[140px] flex-shrink-0 rounded-[10px] overflow-hidden border border-[#E0E0E0] flex flex-col" style={{ background: CARD_BG }}>
+          <div className="px-4 pt-4 pb-3 flex-1">
+            <div className="relative mb-3 w-fit">
+              <div className="w-9 h-9 rounded-full bg-[#EBF5EB] flex items-center justify-center">
+                <MapPin className="w-4.5 h-4.5 text-[#388E3C]" />
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#388E3C] border-2 border-white" />
             </div>
-          ) : sales.length > 0 ? (
-            sales.map((item) => <QuickSaleCard key={item.id} item={item} />)
-          ) : (
-            <p className="p-4 font-raleway text-xs text-white/50">No quick sales yet.</p>
-          )}
+            <p className="text-[13px] font-bold text-foreground leading-snug" style={{ fontFamily: 'Inter, sans-serif' }}>
+              {lga || state || 'My Area'}
+            </p>
+            {state && lga && (
+              <p className="text-[11px] text-muted-foreground leading-snug mt-1" style={{ fontFamily: 'Inter, sans-serif' }}>
+                {state}
+              </p>
+            )}
+          </div>
+          <div className="border-t border-[#F2F2F2]">
+            <Link href="/map" className="flex items-center justify-between px-4 py-2.5 hover:bg-[#F2F2F2] transition-colors">
+              <span className="text-[11px] font-semibold text-[#388E3C]" style={{ fontFamily: 'Inter, sans-serif' }}>
+                See map
+              </span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#388E3C]" />
+            </Link>
+          </div>
         </div>
+
+        {/* ── Latest Events + Quick Sales ── */}
+        <div className="flex-1 flex flex-col gap-4 min-w-0">
+          <div>
+            <div className="flex items-center justify-between mb-2 px-1">
+              <h2 className="text-[18px] leading-8 text-foreground" style={{ fontFamily: FONT_PACIFICO }}>
+                Latest Events
+              </h2>
+              <Link href="/events" className="font-sans font-medium text-[12px] text-[#1976D2] hover:underline" style={{ fontFamily: FONT_RALEWAY }}>
+                See all
+              </Link>
+            </div>
+            <div className="rounded-[5px] overflow-hidden" style={{ background: CARD_BG }}>
+              {loading ? (
+                <div className="p-3 space-y-3">
+                  {[1, 2].map((i) => <div key={i} className="h-[120px] rounded bg-background animate-pulse" />)}
+                </div>
+              ) : events.length > 0 ? (
+                events.slice(0, 2).map((event) => <EventCard key={event.id} event={event} />)
+              ) : (
+                <p className="p-4 font-sans text-xs text-muted-foreground">No upcoming events.</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-[18px] leading-8 text-foreground mb-2 px-1" style={{ fontFamily: FONT_PACIFICO }}>
+              Quick Sales
+            </h2>
+            <div className="rounded-[5px] overflow-hidden" style={{ background: CARD_BG }}>
+              {loading ? (
+                <div className="p-3 space-y-2">
+                  {[1, 2, 3].map((i) => <div key={i} className="h-14 rounded bg-background animate-pulse" />)}
+                </div>
+              ) : sales.length > 0 ? (
+                sales.map((item) => <QuickSaleCard key={item.id} item={item} />)
+              ) : (
+                <p className="p-4 font-sans text-xs text-muted-foreground">No quick sales yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
       </div>
     </aside>
   );

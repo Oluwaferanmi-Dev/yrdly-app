@@ -17,7 +17,7 @@ import { PayoutService } from '@/lib/payout-service';
  * Call via Vercel Cron (vercel.json) or Supabase pg_cron.
  * Secured by CRON_SECRET header.
  */
-export async function POST(request: NextRequest) {
+async function handler(request: NextRequest) {
   try {
     // ── Verify cron secret ────────────────────────────────
     const authHeader = request.headers.get('authorization');
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     for (const tx of staleTransactions) {
       try {
         // ── Auto-complete: SHIPPED → DELIVERED → COMPLETED ──
-        const { error: updateError } = await supabaseAdmin
+        const { data: updated, error: updateError } = await supabaseAdmin
           .from('escrow_transactions')
           .update({
             status: EscrowStatus.COMPLETED,
@@ -63,10 +63,17 @@ export async function POST(request: NextRequest) {
             updated_at: now.toISOString(),
           })
           .eq('id', tx.id)
-          .eq('status', EscrowStatus.SHIPPED); // CAS guard — only if still SHIPPED
+          .eq('status', EscrowStatus.SHIPPED) // CAS guard — only if still SHIPPED
+          .select('id');
 
         if (updateError) {
           errors.push(`${tx.id}: ${updateError.message}`);
+          continue;
+        }
+
+        // CAS guard check — if 0 rows updated another process already completed this tx
+        if (!updated?.length) {
+          console.log(`Auto-release: transaction ${tx.id} already completed by another process, skipping payout`);
           continue;
         }
 
@@ -129,3 +136,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Vercel Cron sends GET — expose both so manual POST calls also work
+export { handler as GET, handler as POST };

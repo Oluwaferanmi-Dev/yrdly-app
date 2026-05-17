@@ -44,13 +44,19 @@ export async function POST(request: NextRequest) {
       // ── Check current transaction state (idempotent) ────
       const { data: txRow, error: fetchError } = await supabaseAdmin
         .from('escrow_transactions')
-        .select('id, status, item_id, buyer_id, seller_id')
+        .select('id, status, item_id, buyer_id, seller_id, total_amount')
         .eq('id', txRef)
         .single();
 
       if (fetchError || !txRow) {
         console.error('Webhook: transaction not found:', txRef);
         return NextResponse.json({ status: 'ok' }); // Ack anyway
+      }
+
+      // Verify the webhook amount matches what we stored — prevents crafted payloads
+      if (Math.abs(amount - txRow.total_amount) > 1) {
+        console.error(`Webhook: amount mismatch for ${txRef}. Expected ${txRow.total_amount}, got ${amount}`);
+        return NextResponse.json({ status: 'ok' }); // Ack to prevent retries
       }
 
       // Already paid or beyond — skip

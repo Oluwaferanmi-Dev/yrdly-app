@@ -6,6 +6,7 @@ let flw: any = null;
 // Initialize Flutterwave only on server side
 if (typeof window === 'undefined') {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Flutterwave = require('flutterwave-node-v3');
     flw = new Flutterwave(
       process.env.FLUTTERWAVE_PUBLIC_KEY!,
@@ -16,7 +17,6 @@ if (typeof window === 'undefined') {
   }
 }
 
-import { supabase } from './supabase';
 
 export interface PaymentInitiationData {
   transactionId: string;
@@ -114,66 +114,6 @@ export class FlutterwaveService {
   }
 
   /**
-   * Handle Flutterwave webhook
-   */
-  static async handleWebhook(payload: any, signature: string): Promise<boolean> {
-    try {
-      // Verify webhook signature
-      const hash = require('crypto')
-        .createHmac('sha256', process.env.FLUTTERWAVE_SECRET_HASH!)
-        .update(JSON.stringify(payload))
-        .digest('hex');
-
-      if (hash !== signature) {
-        console.error('Invalid webhook signature');
-        return false;
-      }
-
-      const { event, data } = payload;
-
-      if (event === 'charge.completed' && data.status === 'successful') {
-        // Update escrow transaction status
-        await this.updateEscrowTransaction(data.tx_ref, 'paid', data.flw_ref);
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error('Webhook handling error:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Update escrow transaction status
-   */
-  private static async updateEscrowTransaction(
-    transactionId: string,
-    status: string,
-    paymentReference: string
-  ): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('escrow_transactions')
-        .update({
-          status: status,
-          payment_reference: paymentReference,
-          paid_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', transactionId);
-
-      if (error) {
-        console.error('Error updating escrow transaction:', error);
-        throw error;
-      }
-    } catch (error) {
-      console.error('Failed to update escrow transaction:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Create seller subaccount for direct payouts (optional)
    */
   static async createSubaccount(sellerData: {
@@ -231,28 +171,32 @@ export class FlutterwaveService {
   }
 
   /**
-   * Transfer funds to seller
+   * Transfer funds to seller's bank account via Flutterwave Transfer API.
+   * Requires the seller's actual bank_code and account_number — NOT a subaccount ID.
    */
-  static async transferToSeller(
-    sellerSubaccountId: string,
-    amount: number,
-    reference: string,
-    reason: string
-  ): Promise<boolean> {
+  static async transferToSeller(params: {
+    bankCode: string;
+    accountNumber: string;
+    amount: number;
+    reference: string;
+    narration: string;
+  }): Promise<boolean> {
+    if (!flw) {
+      throw new Error('Flutterwave service not available — call server-side only');
+    }
     try {
       const payload = {
-        account_bank: 'flutterwave', // For subaccount transfers
-        account_number: sellerSubaccountId,
-        amount: amount,
-        narration: reason,
+        account_bank: params.bankCode,
+        account_number: params.accountNumber,
+        amount: params.amount,
+        narration: params.narration,
         currency: 'NGN',
-        reference: reference,
+        reference: params.reference,
         callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/transfer-callback`,
         debit_currency: 'NGN',
       };
 
       const response = await flw.Transfer.initiate(payload);
-      
       return response.status === 'success';
     } catch (error) {
       console.error('Transfer to seller error:', error);

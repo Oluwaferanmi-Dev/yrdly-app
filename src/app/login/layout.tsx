@@ -1,8 +1,8 @@
-import { AuthProvider } from '@/hooks/use-supabase-auth';
-import { Pacifico, Raleway } from 'next/font/google';
+﻿import { AuthProvider } from '@/hooks/use-supabase-auth';
+import { Pacifico, Inter } from 'next/font/google';
 
 const pacifico = Pacifico({ weight: '400', subsets: ['latin'], variable: '--font-pacifico' });
-const raleway = Raleway({ weight: ['300', '400', '500'], subsets: ['latin'], variable: '--font-raleway' });
+const inter = Inter({ weight: ['300', '400', '500'], subsets: ['latin'], variable: '--font-sans' });
 
 export default function LoginLayout({
   children,
@@ -11,7 +11,7 @@ export default function LoginLayout({
 }) {
   return (
     <AuthProvider>
-      <div className={`${pacifico.variable} ${raleway.variable} font-sans`}>
+      <div className={`${pacifico.variable} ${inter.variable} font-sans`}>
         {children}
       </div>
     </AuthProvider>

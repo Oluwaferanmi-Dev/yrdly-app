@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabaseAdmin } from './supabase-admin';
 import { FlutterwaveService } from './flutterwave-service';
 import { NotificationService } from './notification-service';
 
@@ -28,7 +28,7 @@ export class PayoutService {
   static async getSellerBalance(sellerId: string): Promise<SellerBalance> {
     try {
       // Get completed transactions for this seller
-      const { data: transactions, error } = await supabase
+      const { data: transactions, error } = await supabaseAdmin
         .from('escrow_transactions')
         .select('seller_amount, status')
         .eq('seller_id', sellerId);
@@ -42,7 +42,7 @@ export class PayoutService {
       const totalEarnings = completedTransactions.reduce((sum, t) => sum + t.seller_amount, 0);
 
       // Get payout requests
-      const { data: payouts, error: payoutError } = await supabase
+      const { data: payouts, error: payoutError } = await supabaseAdmin
         .from('payout_requests')
         .select('amount, status')
         .eq('seller_id', sellerId);
@@ -73,7 +73,7 @@ export class PayoutService {
   static async initiateAutoPayout(transactionId: string): Promise<void> {
     try {
       // Get transaction details
-      const { data: transaction, error: fetchError } = await supabase
+      const { data: transaction, error: fetchError } = await supabaseAdmin
         .from('escrow_transactions')
         .select('seller_id, seller_amount, status')
         .eq('id', transactionId)
@@ -89,7 +89,7 @@ export class PayoutService {
       }
 
       // Get seller's primary account
-      const { data: sellerAccount, error: accountError } = await supabase
+      const { data: sellerAccount, error: accountError } = await supabaseAdmin
         .from('seller_accounts')
         .select('*')
         .eq('user_id', transaction.seller_id)
@@ -116,7 +116,7 @@ export class PayoutService {
         requested_at: new Date().toISOString(),
       };
 
-      const { data: payoutRequest, error: payoutError } = await supabase
+      const { data: payoutRequest, error: payoutError } = await supabaseAdmin
         .from('payout_requests')
         .insert(payoutData)
         .select('id')
@@ -142,7 +142,7 @@ export class PayoutService {
   static async processPayout(payoutRequestId: string): Promise<void> {
     try {
       // Get payout request details
-      const { data: payoutRequest, error: fetchError } = await supabase
+      const { data: payoutRequest, error: fetchError } = await supabaseAdmin
         .from('payout_requests')
         .select(`
           *,
@@ -161,7 +161,7 @@ export class PayoutService {
       }
 
       // Update status to processing
-      await supabase
+      await supabaseAdmin
         .from('payout_requests')
         .update({
           status: 'processing',
@@ -170,7 +170,7 @@ export class PayoutService {
         .eq('id', payoutRequestId);
 
       // Get seller account details
-      const accountDetails = payoutRequest.seller_account.account_details;
+      const accountDetails = payoutRequest.seller_account.account_details as Record<string, string> | null;
       const accountType = payoutRequest.seller_account.account_type;
 
       let transferSuccess = false;
@@ -178,22 +178,28 @@ export class PayoutService {
 
       try {
         if (accountType === 'bank_account') {
-          // Transfer to bank account using Flutterwave
-          transferSuccess = await FlutterwaveService.transferToSeller(
-            payoutRequest.seller_account.flutterwave_subaccount_id || '',
-            payoutRequest.amount,
-            `payout-${payoutRequestId}`,
-            `Payout for transaction ${payoutRequestId}`
-          );
+          const bankCode = accountDetails?.bank_code || accountDetails?.bankCode;
+          const accountNumber = accountDetails?.account_number || accountDetails?.accountNumber;
+
+          if (!bankCode || !accountNumber) {
+            throw new Error('Missing bank details for payout. Seller must re-add their bank account.');
+          }
+
+          transferSuccess = await FlutterwaveService.transferToSeller({
+            bankCode,
+            accountNumber,
+            amount: payoutRequest.amount,
+            reference: `payout-${payoutRequestId}`,
+            narration: `Yrdly payout for transaction ${payoutRequestId}`,
+          });
           transactionReference = `payout-${payoutRequestId}`;
         } else if (accountType === 'mobile_money' || accountType === 'digital_wallet') {
-          // Transfer to mobile money / digital wallet not supported
           throw new Error("Mobile money payouts are not yet supported. Please add a bank account in your payout settings to receive funds.");
         }
 
         if (transferSuccess) {
           // Update payout request as completed
-          await supabase
+          await supabaseAdmin
             .from('payout_requests')
             .update({
               status: 'completed',
@@ -215,7 +221,7 @@ export class PayoutService {
           }
         } else {
           // Update payout request as failed
-          await supabase
+          await supabaseAdmin
             .from('payout_requests')
             .update({
               status: 'failed',
@@ -242,7 +248,7 @@ export class PayoutService {
         console.error('Transfer error:', transferError);
         
         // Update payout request as failed
-        await supabase
+        await supabaseAdmin
           .from('payout_requests')
           .update({
             status: 'failed',
@@ -277,7 +283,7 @@ export class PayoutService {
   static async manualPayout(sellerId: string, amount: number, adminId: string): Promise<string> {
     try {
       // Get seller's primary account
-      const { data: sellerAccount, error: accountError } = await supabase
+      const { data: sellerAccount, error: accountError } = await supabaseAdmin
         .from('seller_accounts')
         .select('*')
         .eq('user_id', sellerId)
@@ -298,7 +304,7 @@ export class PayoutService {
         requested_at: new Date().toISOString(),
       };
 
-      const { data: payoutRequest, error: payoutError } = await supabase
+      const { data: payoutRequest, error: payoutError } = await supabaseAdmin
         .from('payout_requests')
         .insert(payoutData)
         .select('id')
@@ -324,7 +330,7 @@ export class PayoutService {
    */
   static async getSellerPayoutHistory(sellerId: string): Promise<PayoutRequest[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('payout_requests')
         .select('*')
         .eq('seller_id', sellerId)
@@ -347,7 +353,7 @@ export class PayoutService {
    */
   static async getPendingPayouts(): Promise<PayoutRequest[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('payout_requests')
         .select(`
           *,
@@ -381,7 +387,7 @@ export class PayoutService {
    */
   static async cancelPayout(payoutRequestId: string): Promise<void> {
     try {
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from('payout_requests')
         .update({
           status: 'cancelled',

@@ -15,16 +15,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { transactionReference } = await request.json();
+    // transactionReference = Flutterwave's numeric transaction_id (preferred)
+    // txRef = our UUID tx_ref (fallback when FLW doesn't append transaction_id)
+    const { transactionReference, txRef: bodyTxRef } = await request.json();
 
-    if (!transactionReference) {
+    if (!transactionReference && !bodyTxRef) {
       return NextResponse.json(
         { error: 'Transaction reference is required' },
         { status: 400 }
       );
     }
 
-    // ── Verify payment with Flutterwave directly ──────────
+    // ── Check DB first — webhook may have already marked it PAID ──
+    if (bodyTxRef) {
+      const { data: existing } = await supabaseAdmin
+        .from('escrow_transactions')
+        .select('buyer_id, item_id, seller_id, status, total_amount')
+        .eq('id', bodyTxRef)
+        .single();
+
+      if (existing?.buyer_id !== authUser.id) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      }
+
+      if (existing?.status === EscrowStatus.PAID) {
+        return NextResponse.json({
+          success: true,
+          message: 'Payment already verified',
+          transactionId: bodyTxRef,
+          amount: existing.total_amount,
+        });
+      }
+    }
+
+    // ── Verify with Flutterwave using numeric transaction_id ──
+    // If only tx_ref (UUID) was provided we cannot call the verify endpoint —
+    // rely on the webhook to have updated the status, then re-check.
+    if (!transactionReference) {
+      return NextResponse.json(
+        { error: 'Flutterwave transaction_id not available. Payment may still be processing — please wait a moment and retry.' },
+        { status: 202 }
+      );
+    }
+
     const flwRes = await fetch(
       `https://api.flutterwave.com/v3/transactions/${transactionReference}/verify`,
       {
@@ -42,7 +75,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const txRef: string = flwData.data.tx_ref;
+    const txRef: string = flwData.data.tx_ref;          // our UUID
+    const flwTxId: string = String(flwData.data.id);    // FLW numeric ID
     const amount: number = parseFloat(flwData.data.amount);
 
     // ── Verify the authenticated user is the buyer ────────
@@ -81,7 +115,7 @@ export async function POST(request: NextRequest) {
       .from('escrow_transactions')
       .update({
         status: EscrowStatus.PAID,
-        payment_reference: transactionReference,
+        payment_reference: flwTxId,   // store FLW numeric ID, not our UUID
         paid_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { MapPin, ChevronDown, Globe, Navigation, Map, X } from "lucide-react";
@@ -7,9 +7,9 @@ import { useRouter } from "next/navigation";
 import states from "@/data/states.json";
 
 const GREEN = "#388E3C";
-const FONT = "Raleway, sans-serif";
-const CARD = "#1E2126";
-const BG = "#15181D";
+const FONT = "Inter, sans-serif";
+const CARD = "var(--c-card)";
+const BG = "var(--c-bg)";
 
 /**
  * Location filter chip with dropdown menu.
@@ -100,10 +100,10 @@ export function LocationChip() {
     scope === "lga"
       ? GREEN
       : scope === "state"
-      ? "#82DB7E"
+      ? "#2E7D32"
       : scope === "other_state"
-      ? "#FFB74D"
-      : "#90CAF9";
+      ? "#E65100"
+      : "#1565C0";
 
   return (
     <div className="relative" ref={menuRef}>
@@ -141,8 +141,8 @@ export function LocationChip() {
         <div
           className="absolute left-0 top-full mt-2 rounded-xl shadow-2xl overflow-hidden z-50"
           style={{
-            background: CARD,
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: 'var(--c-card)',
+            border: "1px solid var(--c-border)",
             minWidth: 220,
             animation: "fadeInScale 0.15s ease-out",
           }}
@@ -159,7 +159,7 @@ export function LocationChip() {
                 }}
                 onMouseEnter={(e) =>
                   scope !== "lga" &&
-                  ((e.currentTarget.style.background) = "rgba(255,255,255,0.04)")
+                  ((e.currentTarget.style.background) = "rgba(128,128,128,0.08)")
                 }
                 onMouseLeave={(e) =>
                   scope !== "lga" &&
@@ -168,16 +168,16 @@ export function LocationChip() {
               >
                 <Navigation
                   className="w-4 h-4 flex-shrink-0"
-                  style={{ color: scope === "lga" ? GREEN : "#888" }}
+                  style={{ color: scope === "lga" ? GREEN : "var(--c-text-muted)" }}
                 />
                 <div className="flex-1 min-w-0">
                   <p
                     className="text-[12px] font-semibold truncate"
-                    style={{ color: scope === "lga" ? GREEN : "#fff", fontFamily: FONT }}
+                    style={{ color: scope === "lga" ? GREEN : "var(--c-text)", fontFamily: FONT }}
                   >
                     {userLga || "My LGA"}
                   </p>
-                  <p className="text-[10px]" style={{ color: "#777" }}>
+                  <p className="text-[10px]" style={{ color: "var(--c-text-muted)" }}>
                     Neighborhood
                   </p>
                 </div>
@@ -194,11 +194,11 @@ export function LocationChip() {
                 onClick={() => handleSelectScope("state")}
                 className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
                 style={{
-                  background: scope === "state" ? "rgba(130,219,126,0.1)" : "transparent",
+                  background: scope === "state" ? "rgba(46,125,50,0.1)" : "transparent",
                 }}
                 onMouseEnter={(e) =>
                   scope !== "state" &&
-                  ((e.currentTarget.style.background) = "rgba(255,255,255,0.04)")
+                  ((e.currentTarget.style.background) = "rgba(128,128,128,0.08)")
                 }
                 onMouseLeave={(e) =>
                   scope !== "state" &&
@@ -207,40 +207,40 @@ export function LocationChip() {
               >
                 <MapPin
                   className="w-4 h-4 flex-shrink-0"
-                  style={{ color: scope === "state" ? "#82DB7E" : "#888" }}
+                  style={{ color: scope === "state" ? "#2E7D32" : "var(--c-text-muted)" }}
                 />
                 <div className="flex-1 min-w-0">
                   <p
                     className="text-[12px] font-semibold truncate"
-                    style={{ color: scope === "state" ? "#82DB7E" : "#fff", fontFamily: FONT }}
+                    style={{ color: scope === "state" ? "#2E7D32" : "var(--c-text)", fontFamily: FONT }}
                   >
                     {userState} State
                   </p>
-                  <p className="text-[10px]" style={{ color: "#777" }}>
+                  <p className="text-[10px]" style={{ color: "var(--c-text-muted)" }}>
                     Entire state
                   </p>
                 </div>
                 {scope === "state" && (
                   <div
                     className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ background: "#82DB7E" }}
+                    style={{ background: "#2E7D32" }}
                   />
                 )}
               </button>
 
               {/* Divider */}
-              <div className="mx-4 my-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
+              <div className="mx-4 my-1" style={{ borderTop: "1px solid var(--c-border)" }} />
 
               {/* Other State */}
               <button
                 onClick={() => setShowStatePicker(true)}
                 className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
                 style={{
-                  background: scope === "other_state" ? "rgba(255,183,77,0.1)" : "transparent",
+                  background: scope === "other_state" ? "rgba(230,81,0,0.1)" : "transparent",
                 }}
                 onMouseEnter={(e) =>
                   scope !== "other_state" &&
-                  ((e.currentTarget.style.background) = "rgba(255,255,255,0.04)")
+                  ((e.currentTarget.style.background) = "rgba(128,128,128,0.08)")
                 }
                 onMouseLeave={(e) =>
                   scope !== "other_state" &&
@@ -249,18 +249,18 @@ export function LocationChip() {
               >
                 <Map
                   className="w-4 h-4 flex-shrink-0"
-                  style={{ color: scope === "other_state" ? "#FFB74D" : "#888" }}
+                  style={{ color: scope === "other_state" ? "#E65100" : "var(--c-text-muted)" }}
                 />
                 <div className="flex-1 min-w-0">
                   <p
                     className="text-[12px] font-semibold truncate"
-                    style={{ color: scope === "other_state" ? "#FFB74D" : "#fff", fontFamily: FONT }}
+                    style={{ color: scope === "other_state" ? "#E65100" : "var(--c-text)", fontFamily: FONT }}
                   >
                     {scope === "other_state" && browseState
                       ? `${browseState} State`
                       : "Browse Other State"}
                   </p>
-                  <p className="text-[10px]" style={{ color: "#777" }}>
+                  <p className="text-[10px]" style={{ color: "var(--c-text-muted)" }}>
                     Explore another area
                   </p>
                 </div>
@@ -275,11 +275,11 @@ export function LocationChip() {
                 onClick={() => handleSelectScope("all")}
                 className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
                 style={{
-                  background: scope === "all" ? "rgba(144,202,249,0.1)" : "transparent",
+                  background: scope === "all" ? "rgba(21,101,192,0.1)" : "transparent",
                 }}
                 onMouseEnter={(e) =>
                   scope !== "all" &&
-                  ((e.currentTarget.style.background) = "rgba(255,255,255,0.04)")
+                  ((e.currentTarget.style.background) = "rgba(128,128,128,0.08)")
                 }
                 onMouseLeave={(e) =>
                   scope !== "all" &&
@@ -288,23 +288,23 @@ export function LocationChip() {
               >
                 <Globe
                   className="w-4 h-4 flex-shrink-0"
-                  style={{ color: scope === "all" ? "#90CAF9" : "#888" }}
+                  style={{ color: scope === "all" ? "#1565C0" : "var(--c-text-muted)" }}
                 />
                 <div className="flex-1 min-w-0">
                   <p
                     className="text-[12px] font-semibold"
-                    style={{ color: scope === "all" ? "#90CAF9" : "#fff", fontFamily: FONT }}
+                    style={{ color: scope === "all" ? "#1565C0" : "var(--c-text)", fontFamily: FONT }}
                   >
                     All Nigeria
                   </p>
-                  <p className="text-[10px]" style={{ color: "#777" }}>
+                  <p className="text-[10px]" style={{ color: "var(--c-text-muted)" }}>
                     Everything, everywhere
                   </p>
                 </div>
                 {scope === "all" && (
                   <div
                     className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ background: "#90CAF9" }}
+                    style={{ background: "#1565C0" }}
                   />
                 )}
               </button>
@@ -315,7 +315,7 @@ export function LocationChip() {
               {/* Search header */}
               <div
                 className="flex items-center gap-2 px-3 py-2"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+                style={{ borderBottom: "1px solid var(--c-border)" }}
               >
                 <button
                   onClick={() => {
@@ -324,7 +324,7 @@ export function LocationChip() {
                   }}
                   className="p-1"
                 >
-                  <X className="w-4 h-4" style={{ color: "#888" }} />
+                  <X className="w-4 h-4" style={{ color: "var(--c-text-muted)" }} />
                 </button>
                 <input
                   ref={inputRef}
@@ -332,7 +332,7 @@ export function LocationChip() {
                   value={stateSearch}
                   onChange={(e) => setStateSearch(e.target.value)}
                   placeholder="Search states..."
-                  className="flex-1 bg-transparent text-white text-[12px] outline-none placeholder-gray-500"
+                  className="flex-1 bg-transparent text-foreground text-[12px] outline-none placeholder-gray-500"
                   style={{ fontFamily: FONT }}
                 />
               </div>
@@ -347,16 +347,16 @@ export function LocationChip() {
                     style={{
                       background:
                         browseState === state && scope === "other_state"
-                          ? "rgba(255,183,77,0.1)"
+                          ? "rgba(230,81,0,0.1)"
                           : "transparent",
                     }}
                     onMouseEnter={(e) =>
-                      ((e.currentTarget.style.background) = "rgba(255,255,255,0.04)")
+                      ((e.currentTarget.style.background) = "rgba(128,128,128,0.08)")
                     }
                     onMouseLeave={(e) =>
                       ((e.currentTarget.style.background) =
                         browseState === state && scope === "other_state"
-                          ? "rgba(255,183,77,0.1)"
+                          ? "rgba(230,81,0,0.1)"
                           : "transparent")
                     }
                   >
@@ -368,14 +368,14 @@ export function LocationChip() {
                           state === userState
                             ? GREEN
                             : browseState === state
-                            ? "#FFB74D"
-                            : "#ddd",
+                            ? "#E65100"
+                            : "var(--c-text)",
                       }}
                     >
                       {state}
                     </span>
                     {state === userState && (
-                      <span className="text-[9px] ml-auto" style={{ color: "#666" }}>
+                      <span className="text-[9px] ml-auto" style={{ color: "var(--c-text-muted)" }}>
                         Home
                       </span>
                     )}
@@ -384,7 +384,7 @@ export function LocationChip() {
                 {filteredStates.length === 0 && (
                   <p
                     className="text-center py-4 text-[12px]"
-                    style={{ color: "#666", fontFamily: FONT }}
+                    style={{ color: "var(--c-text-muted)", fontFamily: FONT }}
                   >
                     No states found
                   </p>

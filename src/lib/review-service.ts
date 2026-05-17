@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import * as Sentry from '@sentry/nextjs';
 import { NotificationService } from './notification-service';
+import { EscrowStatus } from '@/types/escrow';
 
 export class ReviewService {
   /**
@@ -29,7 +30,7 @@ export class ReviewService {
       }
 
       // Check if transaction is completed
-      if (transaction.status !== 'COMPLETED') {
+      if (transaction.status !== EscrowStatus.COMPLETED) {
         return { canReview: false, reason: 'Transaction must be completed' };
       }
 

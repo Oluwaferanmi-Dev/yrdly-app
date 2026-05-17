@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
@@ -187,15 +187,15 @@ export function PostDetailView({ post, onCommentCountChange }: PostDetailViewPro
     <div
       className={cn(
         "w-full rounded-[11px] overflow-hidden",
-        "bg-[#1E2126] text-white"
+        "bg-card text-foreground"
       )}
     >
       {/* Top bar: back + "Post" */}
       <div
-        className="flex items-center gap-3 px-4 py-3 border-b border-white/10"
+        className="flex items-center gap-3 px-4 py-3 border-b border-border"
         style={{ background: "rgba(185,185,185,0.05)" }}
       >
-        <button onClick={handleBack} className="p-1 -ml-1 rounded hover:bg-white/10">
+        <button onClick={handleBack} className="p-1 -ml-1 rounded hover:bg-accent">
           <ChevronLeft className="w-6 h-6" />
         </button>
         <span className="font-normal text-sm leading-tight" style={{ fontFamily: '"Pacifico", cursive' }}>
@@ -215,15 +215,15 @@ export function PostDetailView({ post, onCommentCountChange }: PostDetailViewPro
             </Avatar>
           )}
           <div className="min-w-0">
-            <p className="font-raleway font-bold text-sm text-white truncate">{author?.name || "Anonymous"}</p>
-            <p className="font-raleway font-normal text-[11px] text-white/80">
+            <p className="font-sans font-bold text-sm text-foreground truncate">{author?.name || "Anonymous"}</p>
+            <p className="font-sans font-normal text-[11px] text-muted-foreground">
               {timeAgo(post.timestamp ? new Date(post.timestamp) : null)}
             </p>
           </div>
         </div>
         <span
-          className="flex-shrink-0 px-3 py-1 rounded-[12.5px] font-raleway font-medium text-xs text-white"
-          style={{ background: "#1E293B" }}
+          className="flex-shrink-0 px-3 py-1 rounded-[12.5px] font-sans font-medium text-xs text-foreground"
+          style={{ background: "var(--c-card2)" }}
         >
           {post.category}
         </span>
@@ -231,60 +231,64 @@ export function PostDetailView({ post, onCommentCountChange }: PostDetailViewPro
 
       {/* Post body text */}
       <div className="px-4 pb-3">
-        <p className="font-raleway font-normal text-[13px] leading-[15px] text-white whitespace-pre-wrap">
+        <p className="font-sans font-normal text-[13px] leading-[15px] text-foreground whitespace-pre-wrap">
           {post.text || ""}
         </p>
       </div>
 
-      {/* Image collage: 1 large left + 2 right, or single/full grid */}
+      {/* Image collage — mirrors PostCard layout */}
       {urls.length > 0 && (
         <div className="px-3 pb-4">
-          {urls.length >= 3 ? (
-            <div className="grid grid-cols-2 gap-1 rounded-[15px] overflow-hidden">
-              <div className="row-span-2 relative aspect-[276/311] min-h-[180px] bg-[#D9D9D9]">
-                <Image src={urls[0]} alt="" fill className="object-cover" sizes="(max-width: 640px) 50vw, 276px" />
-              </div>
-              <div className="relative aspect-[276/150] bg-[#D9D9D9]">
-                <Image src={urls[1]} alt="" fill className="object-cover" sizes="(max-width: 640px) 50vw, 276px" />
-              </div>
-              <div className="relative aspect-[276/150] bg-[#D9D9D9]">
-                <Image src={urls[2]} alt="" fill className="object-cover" sizes="(max-width: 640px) 50vw, 276px" />
-              </div>
+          {urls.length === 1 ? (
+            <div className="relative w-full overflow-hidden" style={{ borderRadius: 12, height: 320, maxHeight: 320 }}>
+              <Image src={urls[0]} alt="" fill className="object-cover" sizes="(max-width: 640px) 100vw, 626px" />
             </div>
           ) : urls.length === 2 ? (
-            <div className="grid grid-cols-2 gap-1 rounded-[15px] overflow-hidden">
-              <div className="relative aspect-square bg-[#D9D9D9]">
-                <Image src={urls[0]} alt="" fill className="object-cover" sizes="50vw" />
-              </div>
-              <div className="relative aspect-square bg-[#D9D9D9]">
-                <Image src={urls[1]} alt="" fill className="object-cover" sizes="50vw" />
-              </div>
+            <div className="grid grid-cols-2 gap-0.5 overflow-hidden" style={{ borderRadius: 12, height: 240 }}>
+              {urls.slice(0, 2).map((u, i) => (
+                <div key={i} className="relative h-full">
+                  <Image src={u} alt="" fill className="object-cover" sizes="50vw" />
+                </div>
+              ))}
             </div>
           ) : (
-            <div className="relative w-full aspect-[4/3] rounded-[15px] overflow-hidden bg-[#D9D9D9]">
-              <Image src={urls[0]} alt="" fill className="object-cover" sizes="(max-width: 640px) 100vw, 626px" />
+            <div className="grid grid-cols-2 gap-0.5 overflow-hidden" style={{ borderRadius: 12, height: 260 }}>
+              <div className="relative row-span-2 h-full">
+                <Image src={urls[0]} alt="" fill className="object-cover" sizes="50vw" />
+              </div>
+              <div className="relative">
+                <Image src={urls[1]} alt="" fill className="object-cover" sizes="50vw" />
+              </div>
+              <div className="relative">
+                <Image src={urls[2]} alt="" fill className="object-cover" sizes="50vw" />
+                {urls.length > 3 && (
+                  <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <span className="text-white font-semibold text-base font-sans">+{urls.length - 3}</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
       )}
 
       {/* Engagement row */}
-      <div className="flex items-center justify-between px-4 py-3 border-t border-white/10">
+      <div className="flex items-center justify-between px-4 py-3 border-t border-border">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <button
               onClick={handleLike}
-              className="flex items-center justify-center w-6 h-6 rounded-lg bg-[#D9D9D9]/20 hover:bg-white/10"
+              className="flex items-center justify-center w-6 h-6 rounded-lg bg-[#D9D9D9]/20 hover:bg-accent"
             >
               <Heart className={cn("w-5 h-5", isLiked && "fill-[#ED1111] text-[#ED1111]")} />
             </button>
-            <span className="font-raleway font-light italic text-xs text-white">{formatCount(likes)}</span>
+            <span className="font-sans font-light italic text-xs text-foreground">{formatCount(likes)}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <MessageCircle className="w-5 h-5 text-white" />
-            <span className="font-raleway font-light text-xs text-white">{formatCount(commentCount)}</span>
+            <MessageCircle className="w-5 h-5 text-foreground" />
+            <span className="font-sans font-light text-xs text-foreground">{formatCount(commentCount)}</span>
           </div>
-          <button onClick={handleShare} className="p-1 rounded hover:bg-white/10">
+          <button onClick={handleShare} className="p-1 rounded hover:bg-accent">
             <Share2 className="w-6 h-6" />
           </button>
         </div>
@@ -292,18 +296,18 @@ export function PostDetailView({ post, onCommentCountChange }: PostDetailViewPro
           <AlertDialog>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="p-1 rounded hover:bg-white/10">
+                <button className="p-1 rounded hover:bg-accent">
                   <MoreHorizontal className="w-6 h-6" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-[#1E2126] border-white/10">
+              <DropdownMenuContent align="end" className="bg-card border-border">
                 {post.category === "Event" ? (
                   <CreateEventDialog
                     postToEdit={post}
                     open={isEventEditDialogOpen}
                     onOpenChange={setIsEventEditDialogOpen}
                   >
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-white focus:bg-white/10">
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-foreground focus:bg-accent">
                       <Edit className="mr-2 h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
@@ -317,7 +321,7 @@ export function PostDetailView({ post, onCommentCountChange }: PostDetailViewPro
                   >
                     <DropdownMenuItem
                       onSelect={() => setIsPostEditDialogOpen(true)}
-                      className="text-white focus:bg-white/10"
+                      className="text-foreground focus:bg-accent"
                     >
                       <Edit className="mr-2 h-4 w-4" />
                       Edit
@@ -332,7 +336,7 @@ export function PostDetailView({ post, onCommentCountChange }: PostDetailViewPro
                 </AlertDialogTrigger>
               </DropdownMenuContent>
             </DropdownMenu>
-            <AlertDialogContent className="bg-[#1E2126] border-white/10 text-white">
+            <AlertDialogContent className="bg-card border-border text-foreground">
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
@@ -340,7 +344,7 @@ export function PostDetailView({ post, onCommentCountChange }: PostDetailViewPro
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="bg-white/10 text-white border-0">Cancel</AlertDialogCancel>
+                <AlertDialogCancel className="bg-white/10 text-foreground border-0">Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
                   Delete
                 </AlertDialogAction>
@@ -351,7 +355,7 @@ export function PostDetailView({ post, onCommentCountChange }: PostDetailViewPro
       </div>
 
       {/* Comment input + CommentSection (inline, dark) */}
-      <div className="border-t border-white/10">
+      <div className="border-t border-border">
         <CommentSection
           postId={post.id}
           post={post}

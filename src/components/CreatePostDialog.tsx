@@ -1,4 +1,4 @@
-
+﻿
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -24,10 +24,10 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 // ── Design tokens ──────────────────────────────────────────────
-const BG       = "#15181D";
+const BG       = "var(--c-bg)";
 const BORDER   = "rgba(187,187,187,0.3)";
 const GREEN    = "#388E3C";
-const FONT_RL  = "'Raleway', sans-serif";
+const FONT_RL  = "Inter, sans-serif";
 
 // ── Schema ─────────────────────────────────────────────────────
 const getFormSchema = (_isEditMode: boolean) =>
@@ -145,7 +145,7 @@ function PostForm({
         <button
           type="button"
           onClick={onClose}
-          className="w-5 h-5 flex items-center justify-center text-white hover:opacity-70 transition-opacity"
+          className="w-5 h-5 flex items-center justify-center text-foreground hover:opacity-70 transition-opacity"
           aria-label="Close"
         >
           <X size={18} strokeWidth={2} />
@@ -161,7 +161,7 @@ function PostForm({
           rows={4}
           className={cn(
             "w-full bg-transparent resize-none outline-none border-none flex-shrink-0",
-            "text-white placeholder:text-white/90 text-[16px] leading-[18px]",
+            "text-foreground placeholder:text-foreground text-[16px] leading-[18px]",
           )}
           style={{ fontFamily: FONT_RL, fontWeight: 400 }}
           autoFocus
@@ -261,7 +261,7 @@ function PostForm({
         <button
           type="submit"
           disabled={loading || !text?.trim()}
-          className="h-[37px] px-8 rounded-full text-white text-[14px] font-medium transition-opacity disabled:opacity-50 hover:opacity-90"
+          className="h-[37px] px-8 rounded-full text-foreground text-[14px] font-medium transition-opacity disabled:opacity-50 hover:opacity-90"
           style={{ background: GREEN, fontFamily: FONT_RL }}
         >
           {loading
