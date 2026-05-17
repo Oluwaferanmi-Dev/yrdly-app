@@ -26,14 +26,12 @@ export class EventEscrowService {
   }
 
   /**
-   * Get the organizer's Flutterwave subaccount ID from their seller_account
+   * Get the organizer's bank details for outbound transfers
    */
-  static async getOrganizerSubaccountId(organizerId: string): Promise<string | null> {
-    // First check if the event itself has a cached subaccount_id
-    // Then fall back to the organizer's primary seller_account
+  static async getOrganizerBankDetails(organizerId: string): Promise<{ bankCode: string; accountNumber: string } | null> {
     const { data, error } = await adminSupabase
       .from('seller_accounts')
-      .select('flutterwave_subaccount_id')
+      .select('account_details, account_type')
       .eq('user_id', organizerId)
       .eq('is_primary', true)
       .eq('is_active', true)
@@ -41,15 +39,21 @@ export class EventEscrowService {
       .single();
 
     if (error || !data) return null;
-    return data.flutterwave_subaccount_id || null;
+
+    const accountDetails = data.account_details as Record<string, string> | null;
+    const bankCode = accountDetails?.bank_code || accountDetails?.bankCode;
+    const accountNumber = accountDetails?.account_number || accountDetails?.accountNumber;
+
+    if (!bankCode || !accountNumber) return null;
+    return { bankCode, accountNumber };
   }
 
   /**
    * Check if an organizer has a verified payout account (required for paid events)
    */
   static async organizerCanReceivePayments(organizerId: string): Promise<boolean> {
-    const subaccountId = await this.getOrganizerSubaccountId(organizerId);
-    return !!subaccountId;
+    const details = await this.getOrganizerBankDetails(organizerId);
+    return !!details;
   }
 
   /**
@@ -111,9 +115,9 @@ export class EventEscrowService {
     const gross = tickets.reduce((sum, t) => sum + Number(t.amount_paid), 0);
     const { commission, net } = this.calculateAmounts(gross);
 
-    // Get organizer subaccount
-    const subaccountId = await this.getOrganizerSubaccountId(organizerId);
-    if (!subaccountId) throw new Error('Organizer has no verified payout account');
+    // Get organizer bank details for outbound transfer
+    const bankDetails = await this.getOrganizerBankDetails(organizerId);
+    if (!bankDetails) throw new Error('Organizer has no verified payout account');
 
     // Check for existing payout record to avoid double-processing
     const { data: existing } = await adminSupabase
@@ -142,12 +146,13 @@ export class EventEscrowService {
     if (payoutError || !payout) throw payoutError || new Error('Failed to create payout record');
 
     // Execute transfer via Flutterwave
-    const transferSuccess = await FlutterwaveService.transferToSeller(
-      subaccountId,
-      net,
-      `event-payout-${payout.id}`,
-      `Event payout for event ${eventId}`
-    );
+    const transferSuccess = await FlutterwaveService.transferToSeller({
+      bankCode: bankDetails.bankCode,
+      accountNumber: bankDetails.accountNumber,
+      amount: net,
+      reference: `event-payout-${payout.id}`,
+      narration: `Event payout for event ${eventId}`,
+    });
 
     const updatePayload = transferSuccess
       ? { status: 'COMPLETED', paid_at: new Date().toISOString() }
