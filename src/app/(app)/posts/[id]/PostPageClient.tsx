@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -60,7 +60,7 @@ export function PostPageClient({ postId }: { postId: string }) {
   if (loading) {
     return (
       <div className="w-full max-w-[626px] mx-auto px-3 py-4">
-        <Skeleton className="h-[400px] w-full rounded-[11px] bg-[#1E2126]" />
+        <Skeleton className="h-[400px] w-full rounded-[11px] bg-card" />
       </div>
     );
   }
@@ -68,8 +68,8 @@ export function PostPageClient({ postId }: { postId: string }) {
   if (!post) {
     return (
       <div className="max-w-[626px] mx-auto text-center py-10 px-4">
-        <h1 className="text-xl font-bold text-white">Post not found</h1>
-        <p className="text-white/70 text-sm mt-1">The post may have been deleted.</p>
+        <h1 className="text-xl font-bold text-foreground">Post not found</h1>
+        <p className="text-muted-foreground text-sm mt-1">The post may have been deleted.</p>
       </div>
     );
   }

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -9,13 +9,13 @@ import { useAuth } from "@/hooks/use-supabase-auth";
 import { supabase } from "@/lib/supabase";
 
 /* ── Design tokens ─────────────────────────────────── */
-const BG     = "#101418";
-const CARD   = "#191c21";
-const CARDH  = "#272a2f";
+const BG     = "var(--c-bg)";
+const CARD   = "var(--c-bg)";
+const CARDH  = "var(--c-card2)";
 const Green  = "#388E3C";
 const GreenL = "#82DB7E";
-const MUTED  = "#bfcab9";
-const DIM    = "#899485";
+const MUTED  = "var(--c-text-muted)";
+const DIM    = "var(--c-text-muted)";
 
 const QUICK_TAGS = [
   "Fast response",
@@ -84,7 +84,7 @@ export default function ReviewPage() {
   return (
     <div
       className="min-h-dvh"
-      style={{ background: BG, color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}
+      style={{ background: BG, color: "var(--c-text)", fontFamily: "Inter, sans-serif" }}
     >
       {/* Ambient glows */}
       <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
@@ -111,7 +111,7 @@ export default function ReviewPage() {
         <section className="flex items-center gap-5 p-4 rounded-lg" style={{ background: CARD }}>
           <div
             className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold flex-shrink-0"
-            style={{ background: CARDH, color: GreenL, fontFamily: "Plus Jakarta Sans, sans-serif" }}
+            style={{ background: CARDH, color: GreenL, fontFamily: "Inter, sans-serif" }}
           >
             {sellerName.charAt(0).toUpperCase()}
           </div>
@@ -145,7 +145,7 @@ export default function ReviewPage() {
           </div>
           <p
             className="text-lg font-semibold"
-            style={{ color: GreenL, fontFamily: "Raleway, sans-serif" }}
+            style={{ color: GreenL, fontFamily: "Inter, sans-serif" }}
           >
             {STAR_LABELS[display]}
           </p>
@@ -162,8 +162,8 @@ export default function ReviewPage() {
               className="w-full rounded-[11px] p-4 text-sm resize-none focus:outline-none transition-all font-light italic"
               style={{
                 background: CARDH,
-                color: "#e1e2e9",
-                fontFamily: "Raleway, sans-serif",
+                color: "var(--c-text)",
+                fontFamily: "Inter, sans-serif",
                 border: "1px solid rgba(64,73,61,0.2)",
               }}
               onFocus={(e) => (e.target.style.borderColor = Green)}
@@ -195,7 +195,7 @@ export default function ReviewPage() {
                   onClick={() => toggleTag(t)}
                   className="px-4 py-2 rounded-full text-sm font-semibold transition-all"
                   style={{
-                    fontFamily: "Raleway, sans-serif",
+                    fontFamily: "Inter, sans-serif",
                     background: active ? "rgba(6,23,27,1)" : CARD,
                     border: `1px solid ${active ? Green : "rgba(255,255,255,0.08)"}`,
                     color: active ? "#BBF7D0" : MUTED,
@@ -217,15 +217,15 @@ export default function ReviewPage() {
             style={{
               background: Green,
               color: "#fff",
-              fontFamily: "Raleway, sans-serif",
+              fontFamily: "Inter, sans-serif",
             }}
           >
             {loading ? "Submitting…" : "Submit Review"}
           </button>
           <button
             onClick={() => router.back()}
-            className="text-sm py-2 px-6 hover:text-white transition-colors"
-            style={{ color: DIM, fontFamily: "Raleway, sans-serif" }}
+            className="text-sm py-2 px-6 hover:text-foreground transition-colors"
+            style={{ color: DIM, fontFamily: "Inter, sans-serif" }}
           >
             Skip for now
           </button>

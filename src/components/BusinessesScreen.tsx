@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,10 +31,10 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const GREEN = "#388E3C";
-const CARD = "#1d2025";
-const FONT = "Work Sans, sans-serif";
+const CARD = "var(--c-card)";
+const FONT = "Inter, sans-serif";
 const PACIFICO = "Pacifico, cursive";
-const JAKARTA = "Plus Jakarta Sans, sans-serif";
+const JAKARTA = "Inter, sans-serif";
 
 const CATEGORY_ICONS: Record<string, string> = {
   "Restaurant & Food": "🍲",
@@ -112,10 +112,10 @@ function BusinessCard({ business }: { business: Business }) {
   return (
     <div
       className="overflow-hidden group cursor-pointer"
-      style={{ background: CARD, borderRadius: 16, border: "1px solid rgba(64,73,61,0.1)" }}
+      style={{ background: 'var(--c-card)', borderRadius: 16, border: "1px solid rgba(64,73,61,0.1)" }}
     >
       {/* Image with hover scale */}
-      <div className="relative overflow-hidden" style={{ aspectRatio: "16/9" }}>
+      <div className="relative overflow-hidden" style={{ aspectRatio: '4/3' }}>
         {coverImg ? (
           <Image
             src={coverImg}
@@ -124,7 +124,7 @@ function BusinessCard({ business }: { business: Business }) {
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center" style={{ background: "#272a2f" }}>
+          <div className="w-full h-full flex items-center justify-center" style={{ background: "var(--c-card2)" }}>
             <Briefcase className="w-10 h-10" style={{ color: GREEN, opacity: 0.4 }} />
           </div>
         )}
@@ -140,7 +140,7 @@ function BusinessCard({ business }: { business: Business }) {
         </div>
         {/* Owner badge */}
         {isOwner && (
-          <div className="absolute top-3 left-3 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase text-white"
+          <div className="absolute top-3 left-3 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase text-foreground"
             style={{ background: GREEN, fontFamily: FONT }}>
             Your Business
           </div>
@@ -154,30 +154,30 @@ function BusinessCard({ business }: { business: Business }) {
             <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: GREEN, fontFamily: FONT }}>
               {business.category}
             </p>
-            <h4 className="text-[17px] font-bold text-white truncate" style={{ fontFamily: JAKARTA }}>
+            <h4 className="text-[17px] font-bold text-foreground truncate" style={{ fontFamily: JAKARTA }}>
               {business.name}
             </h4>
           </div>
           <div className="flex gap-2 ml-2">
             {user?.id !== business.owner_id && (
               <button onClick={handleMessage}>
-                <MessageCircle className="w-5 h-5 transition-colors" style={{ color: "#899485" }}
+                <MessageCircle className="w-5 h-5 transition-colors" style={{ color: "var(--c-text-muted)" }}
                   onMouseEnter={(e) => ((e.currentTarget as SVGElement).style.color = GREEN)}
-                  onMouseLeave={(e) => ((e.currentTarget as SVGElement).style.color = "#899485")} />
+                  onMouseLeave={(e) => ((e.currentTarget as SVGElement).style.color = "var(--c-text-muted)")} />
               </button>
             )}
             <button onClick={handleShare}>
-              <Share2 className="w-5 h-5 transition-colors" style={{ color: "#899485" }}
+              <Share2 className="w-5 h-5 transition-colors" style={{ color: "var(--c-text-muted)" }}
                 onMouseEnter={(e) => ((e.currentTarget as SVGElement).style.color = GREEN)}
-                onMouseLeave={(e) => ((e.currentTarget as SVGElement).style.color = "#899485")} />
+                onMouseLeave={(e) => ((e.currentTarget as SVGElement).style.color = "var(--c-text-muted)")} />
             </button>
             {isOwner && (
               <AlertDialog>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button><MoreVertical className="w-5 h-5" style={{ color: "#899485" }} /></button>
+                    <button><MoreVertical className="w-5 h-5" style={{ color: "var(--c-text-muted)" }} /></button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" style={{ background: CARD, border: "1px solid rgba(64,73,61,0.2)" }}>
+                  <DropdownMenuContent align="end" style={{ background: 'var(--c-card)', border: "1px solid rgba(64,73,61,0.2)" }}>
                     <CreateBusinessDialog postToEdit={business}>
                       <DropdownMenuItem onSelect={(e) => e.preventDefault()} style={{ fontFamily: FONT }}>
                         <Edit className="mr-2 w-4 h-4" /> Edit
@@ -192,8 +192,8 @@ function BusinessCard({ business }: { business: Business }) {
                 </DropdownMenu>
                 <AlertDialogContent style={{ background: CARD }}>
                   <AlertDialogHeader>
-                    <AlertDialogTitle className="text-white">Delete Business?</AlertDialogTitle>
-                    <AlertDialogDescription style={{ color: "#899485" }}>
+                    <AlertDialogTitle className="text-foreground">Delete Business?</AlertDialogTitle>
+                    <AlertDialogDescription style={{ color: "var(--c-text-muted)" }}>
                       This will permanently delete this business listing.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
@@ -208,14 +208,14 @@ function BusinessCard({ business }: { business: Business }) {
         </div>
 
         {business.location?.address && (
-          <div className="flex items-center gap-1.5 mb-5 text-[13px]" style={{ color: "#899485", fontFamily: FONT }}>
+          <div className="flex items-center gap-1.5 mb-5 text-[13px]" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
             <MapPin className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">{shortenAddress(business.location.address, 40)}</span>
           </div>
         )}
 
         <button
-          className="w-full py-3 rounded-full text-sm font-bold text-white transition-all active:scale-95"
+          className="w-full py-3 rounded-full text-sm font-bold text-foreground transition-all active:scale-95"
           style={{ background: GREEN, fontFamily: FONT }}
           onClick={() => router.push(`/businesses/${business.id}`)}
         >
@@ -288,7 +288,7 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
   const rest = filteredBusinesses.slice(1);
 
   return (
-    <div className={`min-h-screen pb-28 ${className}`} style={{ background: "#101418" }}>
+    <div className={`min-h-screen pb-28 ${className}`} style={{ background: "var(--c-bg)" }}>
       <div className="max-w-7xl mx-auto px-4 pt-6 space-y-10">
 
         {/* Header */}
@@ -302,8 +302,8 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
               placeholder="Search neighborhood gems..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-full py-3 px-6 pr-12 text-sm text-white outline-none"
-              style={{ background: "#272a2f", fontFamily: FONT, caretColor: GREEN }}
+              className="w-full rounded-full py-3 px-6 pr-12 text-sm text-foreground outline-none"
+              style={{ background: "var(--c-card2)", fontFamily: FONT, caretColor: GREEN }}
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xl" style={{ color: GREEN }}>⚙</span>
           </div>
@@ -323,18 +323,18 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
               {featured.image_urls?.[0] ? (
                 <Image src={featured.image_urls[0]} alt={featured.name} fill className="object-cover transition-transform duration-700 hover:scale-105" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center" style={{ background: "#272a2f" }}>
+                <div className="w-full h-full flex items-center justify-center" style={{ background: "var(--c-card2)" }}>
                   <Briefcase className="w-16 h-16" style={{ color: GREEN, opacity: 0.3 }} />
                 </div>
               )}
               {/* Gradient overlay */}
-              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #101418 0%, transparent 50%)" }} />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, var(--c-bg) 0%, transparent 50%)" }} />
             </div>
 
             {/* Featured badge */}
             <div className="absolute top-5 left-5">
               <span className="rounded-full px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest border"
-                style={{ background: "#06171B", color: GREEN, borderColor: "rgba(56,142,60,0.2)", fontFamily: FONT }}>
+                style={{ background: "var(--c-bg)", color: GREEN, borderColor: "rgba(56,142,60,0.2)", fontFamily: FONT }}>
                 Featured
               </span>
             </div>
@@ -348,16 +348,16 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
                     <div className="flex items-center gap-1.5 mb-1">
                       <span style={{ color: GREEN }}>★</span>
                       <span className="font-bold text-sm" style={{ color: GREEN }}>{featured.rating}</span>
-                      <span className="text-sm" style={{ color: "#899485" }}>({featured.review_count || 0} reviews)</span>
+                      <span className="text-sm" style={{ color: "var(--c-text-muted)" }}>({featured.review_count || 0} reviews)</span>
                     </div>
                   )}
-                  <h2 className="text-[22px] font-extrabold text-white leading-tight" style={{ fontFamily: JAKARTA }}>
+                  <h2 className="text-[22px] font-extrabold text-foreground leading-tight" style={{ fontFamily: JAKARTA }}>
                     {featured.name}
                   </h2>
-                  <p className="text-sm max-w-md mt-1" style={{ color: "#bfcab9" }}>{featured.description}</p>
+                  <p className="text-sm max-w-md mt-1" style={{ color: "var(--c-text-muted)" }}>{featured.description}</p>
                 </div>
                 <button
-                  className="rounded-full px-7 py-3 text-sm font-bold text-white transition-all active:scale-95 shadow-lg whitespace-nowrap"
+                  className="rounded-full px-7 py-3 text-sm font-bold text-foreground transition-all active:scale-95 shadow-lg whitespace-nowrap"
                   style={{ background: GREEN, fontFamily: FONT }}
                   onClick={(e) => { e.stopPropagation(); router.push(`/businesses/${featured.id}`); }}
                 >
@@ -371,7 +371,7 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
         {/* Category Chips */}
         {categoryStats.length > 0 && (
           <section className="space-y-5">
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#bfcab9", fontFamily: FONT }}>
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
               Explore Categories
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -387,7 +387,7 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
                   }}
                 >
                   <span className="text-2xl">{icon}</span>
-                  <span className="font-semibold text-sm text-white" style={{ fontFamily: FONT }}>{name}</span>
+                  <span className="font-semibold text-sm text-foreground" style={{ fontFamily: FONT }}>{name}</span>
                 </button>
               ))}
             </div>
@@ -397,7 +397,7 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
         {/* Business Grid */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "#bfcab9", fontFamily: FONT }}>
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
               {selectedCategory ? selectedCategory : "Nearby Professionals"}
             </h3>
             {selectedCategory && (
@@ -418,8 +418,8 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
               <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4" style={{ background: CARD }}>
                 <Briefcase className="w-8 h-8" style={{ color: GREEN, opacity: 0.4 }} />
               </div>
-              <h3 className="text-white text-lg mb-1" style={{ fontFamily: PACIFICO }}>No businesses yet</h3>
-              <p className="text-sm" style={{ color: "#BBBBBB", fontFamily: FONT }}>
+              <h3 className="text-foreground text-lg mb-1" style={{ fontFamily: PACIFICO }}>No businesses yet</h3>
+              <p className="text-sm" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
                 Be the first to add a local business!
               </p>
             </div>
@@ -443,7 +443,7 @@ export function BusinessesScreen({ className }: BusinessesScreenProps) {
             boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
           }}
         >
-          <Plus className="w-7 h-7 text-white" />
+          <Plus className="w-7 h-7 text-foreground" />
         </button>
       </CreateBusinessDialog>
     </div>

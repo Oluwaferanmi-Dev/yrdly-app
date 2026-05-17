@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from 'react';
 import Image from 'next/image';
@@ -226,7 +226,7 @@ export function EventDetail({
 
                   {/* Image counter */}
                   {images && images.length > 1 && (
-                    <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
+                    <div className="absolute bottom-2 right-2 bg-black/50 text-foreground px-2 py-1 rounded text-sm">
                       {currentImageIndex + 1} / {images.length}
                     </div>
                   )}

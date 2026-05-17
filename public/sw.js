@@ -65,28 +65,25 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - offline-first strategy
+// Fetch event - network first; do NOT cache /_next/ bundles so code
+// changes are picked up immediately without a hard refresh.
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Only cache http/https; chrome-extension and other schemes are unsupported
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    return;
-  }
-  // Skip non-GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
+  // Only handle http/https
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+  if (request.method !== 'GET') return;
 
-  // Handle different types of requests
-  if (url.pathname.startsWith('/_next/') || url.pathname.includes('.')) {
-    // Static assets - cache first, fallback to network
-    event.respondWith(handleStaticRequest(request));
-  } else if (!url.pathname.startsWith('/api/')) {
-    // Page requests (excluding API) - network first, fallback to cache
-    event.respondWith(handlePageRequest(request));
-  }
+  // Let Next.js static chunks bypass the SW entirely — they have
+  // content-hashed filenames in production and must not be stale in dev.
+  if (url.pathname.startsWith('/_next/')) return;
+
+  // API routes — no caching
+  if (url.pathname.startsWith('/api/')) return;
+
+  // Page requests — network first, cache as offline fallback only
+  event.respondWith(handlePageRequest(request));
 });
 
 

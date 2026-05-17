@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from 'react';
 import Image from 'next/image';
@@ -104,7 +104,7 @@ export function EnhancedItemCard({ item, onEditItem, onDeleteItem }: EnhancedIte
                 className="w-8 h-8 p-0 bg-red-500/90 hover:bg-red-500"
                 onClick={() => setIsDeleteDialogOpen(true)}
               >
-                <Trash2 className="w-4 h-4 text-white" />
+                <Trash2 className="w-4 h-4 text-foreground" />
               </Button>
             </div>
           )}

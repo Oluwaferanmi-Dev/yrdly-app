@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,12 +26,12 @@ import {
 
 const GREEN = "#388E3C";
 const GREEN_LIGHT = "#82DB7E";
-const CARD = "#1E2126";
-const SURFACE = "#1d2025";
-const BG = "#101418";
-const FONT = "Work Sans, sans-serif";
-const RALEWAY = "Raleway, sans-serif";
-const JAKARTA = "Plus Jakarta Sans, sans-serif";
+const CARD = "var(--c-card)";
+const SURFACE = "var(--c-card)";
+const BG = "var(--c-bg)";
+const FONT = "Inter, sans-serif";
+const RALEWAY = "Inter, sans-serif";
+const JAKARTA = "Inter, sans-serif";
 
 interface ProfileScreenProps {
   onBack?: () => void;
@@ -54,7 +54,7 @@ function TabBar({ active, onChange }: { active: string; onChange: (k: string) =>
     <nav
       className="flex p-1"
       style={{
-        background: "#191c21",
+        background: "var(--c-bg)",
         borderRadius: 9999,
         border: "0.5px solid rgba(130,219,126,0.2)",
       }}
@@ -67,8 +67,8 @@ function TabBar({ active, onChange }: { active: string; onChange: (k: string) =>
             onClick={() => onChange(key)}
             className="flex-1 py-3 text-xs font-bold uppercase tracking-wider rounded-full transition-colors"
             style={{
-              background: isActive ? "#1B2B3A" : "transparent",
-              color: isActive ? GREEN_LIGHT : "#bfcab9",
+              background: isActive ? "var(--c-card2)" : "transparent",
+              color: isActive ? GREEN_LIGHT : "var(--c-text-muted)",
               fontFamily: JAKARTA,
             }}
           >
@@ -90,7 +90,7 @@ function EmptyState({ icon, label, action, onAction }: { icon: React.ReactNode; 
       <div className="w-14 h-14 rounded-full flex items-center justify-center mb-3" style={{ background: "rgba(56,142,60,0.1)" }}>
         {icon}
       </div>
-      <p className="text-white font-semibold mb-1 text-sm" style={{ fontFamily: RALEWAY }}>{label}</p>
+      <p className="text-foreground font-semibold mb-1 text-sm" style={{ fontFamily: RALEWAY }}>{label}</p>
       <button
         onClick={onAction}
         className="mt-3 rounded-full px-5 py-2 text-xs font-bold"
@@ -120,14 +120,14 @@ function MiniCard({ title, sub, img, badge, onClick }: { title: string; sub?: st
         )}
         {badge && (
           <span
-            className="absolute top-0.5 right-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white"
+            className="absolute top-0.5 right-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full text-foreground"
             style={{ background: GREEN }}
           >{badge}</span>
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-white text-sm font-semibold truncate" style={{ fontFamily: RALEWAY }}>{title}</p>
-        {sub && <p className="text-xs truncate mt-0.5" style={{ color: "#899485", fontFamily: FONT }}>{sub}</p>}
+        <p className="text-foreground text-sm font-semibold truncate" style={{ fontFamily: RALEWAY }}>{title}</p>
+        {sub && <p className="text-xs truncate mt-0.5" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>{sub}</p>}
       </div>
     </div>
   );
@@ -323,7 +323,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
       {/* ── Hero Card ── */}
       <section
         className="flex flex-col items-center text-center p-8 relative overflow-hidden"
-        style={{ background: CARD, borderRadius: 11 }}
+        style={{ background: 'var(--c-card)', borderRadius: 11 }}
       >
         {/* Subtle green wash at top */}
         <div className="absolute top-0 left-0 w-full h-24 pointer-events-none"
@@ -355,17 +355,17 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
             )}
           </div>
 
-          <h1 className="mt-6 text-2xl text-white font-extrabold tracking-tight" style={{ fontFamily: RALEWAY }}>
+          <h1 className="mt-6 text-2xl text-foreground font-extrabold tracking-tight" style={{ fontFamily: RALEWAY }}>
             {name}
           </h1>
           {bio && (
-            <p className="mt-2 text-[13px] font-light italic max-w-sm" style={{ fontFamily: RALEWAY, color: "#BBBBBB" }}>
+            <p className="mt-2 text-[13px] font-light italic max-w-sm" style={{ fontFamily: RALEWAY, color: "var(--c-text-muted)" }}>
               {bio}
             </p>
           )}
 
           {/* Location + Join date */}
-          <div className="mt-5 flex items-center justify-center gap-5 flex-wrap text-[11px] font-bold uppercase tracking-widest" style={{ color: "#899485" }}>
+          <div className="mt-5 flex items-center justify-center gap-5 flex-wrap text-[11px] font-bold uppercase tracking-widest" style={{ color: "var(--c-text-muted)" }}>
             {locationStr && (
               <div className="flex items-center gap-1.5">
                 <MapPin className="w-3.5 h-3.5" /> {locationStr}
@@ -384,7 +384,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
                 <>
                   <button
                     onClick={handleMessageUser}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-white transition-all active:scale-95 shadow-lg"
+                    className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-foreground transition-all active:scale-95 shadow-lg"
                     style={{
                       background: GREEN,
                       fontFamily: FONT,
@@ -399,12 +399,12 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
                       <DropdownMenuTrigger asChild>
                         <button
                           className="w-12 h-12 rounded-full flex items-center justify-center border transition-colors"
-                          style={{ background: "#1E2126", borderColor: "rgba(130,219,126,0.2)", color: "#899485" }}
+                          style={{ background: "var(--c-card)", borderColor: "rgba(130,219,126,0.2)", color: "var(--c-text-muted)" }}
                         >
                           <MoreHorizontal className="w-5 h-5" />
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" style={{ background: "#1E2126", border: "1px solid rgba(130,219,126,0.2)" }}>
+                      <DropdownMenuContent align="end" style={{ background: "var(--c-card)", border: "1px solid rgba(130,219,126,0.2)" }}>
                         <DropdownMenuItem
                           className="text-red-400 focus:text-red-400 focus:bg-red-500/10 cursor-pointer"
                           onClick={() => {
@@ -422,7 +422,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
                 // Request pending
                 <button
                   disabled
-                  className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-white/50 border transition-all"
+                  className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-muted-foreground border transition-all"
                   style={{ background: "transparent", borderColor: "rgba(255,255,255,0.1)", fontFamily: FONT }}
                 >
                   <Users className="w-5 h-5" />
@@ -432,7 +432,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
                 // No relationship: Add Friend
                 <button
                   onClick={handleAddFriend}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-white transition-all active:scale-95 shadow-lg"
+                  className="flex-1 flex items-center justify-center gap-2 rounded-full h-14 text-sm font-bold text-foreground transition-all active:scale-95 shadow-lg"
                   style={{
                     background: GREEN,
                     fontFamily: FONT,
@@ -449,10 +449,10 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
           {/* Remove Friend confirmation dialog */}
           {showRemoveFriendDialog && (
             <AlertDialog open={showRemoveFriendDialog} onOpenChange={setShowRemoveFriendDialog}>
-              <AlertDialogContent style={{ background: "#1E2126", border: "1px solid rgba(130,219,126,0.2)" }}>
+              <AlertDialogContent style={{ background: "var(--c-card)", border: "1px solid rgba(130,219,126,0.2)" }}>
                 <AlertDialogHeader>
-                  <AlertDialogTitle className="text-white">Remove Friend?</AlertDialogTitle>
-                  <AlertDialogDescription style={{ color: "#899485" }}>
+                  <AlertDialogTitle className="text-foreground">Remove Friend?</AlertDialogTitle>
+                  <AlertDialogDescription style={{ color: "var(--c-text-muted)" }}>
                     Are you sure you want to remove {name} as a friend? This cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -485,8 +485,8 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
             <Users className="w-6 h-6" style={{ color: GREEN_LIGHT }} />
           </div>
           <div>
-            <p className="text-2xl font-bold text-white">{stats.friends.toLocaleString()}</p>
-            <p className="text-[10px] font-bold uppercase tracking-tighter" style={{ color: "#899485" }}>Connections</p>
+            <p className="text-2xl font-bold text-foreground">{stats.friends.toLocaleString()}</p>
+            <p className="text-[10px] font-bold uppercase tracking-tighter" style={{ color: "var(--c-text-muted)" }}>Connections</p>
           </div>
         </button>
         <div
@@ -498,8 +498,8 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
             <CalendarDays className="w-6 h-6" style={{ color: GREEN_LIGHT }} />
           </div>
           <div>
-            <p className="text-2xl font-bold text-white">{stats.events}</p>
-            <p className="text-[10px] font-bold uppercase tracking-tighter" style={{ color: "#899485" }}>Events</p>
+            <p className="text-2xl font-bold text-foreground">{stats.events}</p>
+            <p className="text-[10px] font-bold uppercase tracking-tighter" style={{ color: "var(--c-text-muted)" }}>Events</p>
           </div>
         </div>
       </div>
@@ -507,7 +507,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
       {/* ── Interests ── */}
       {interests && interests.length > 0 && (
         <section className="p-6 rounded-[11px]" style={{ background: CARD }}>
-          <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-4" style={{ color: "#bfcab9", fontFamily: FONT }}>
+          <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-4" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
             Interests &amp; Expertise
           </h3>
           <div className="flex flex-wrap gap-2">
@@ -515,7 +515,7 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
               <span
                 key={i}
                 className="px-4 py-1.5 rounded-full text-xs font-medium"
-                style={{ background: "#06171B", border: "1px solid rgba(130,219,126,0.3)", color: GREEN_LIGHT, fontFamily: FONT }}
+                style={{ background: "var(--c-bg)", border: "1px solid rgba(130,219,126,0.3)", color: GREEN_LIGHT, fontFamily: FONT }}
               >
                 {interest}
               </span>
@@ -541,20 +541,20 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
                     onClick={() => router.push(`/posts/${userPosts[0].id}`)}
                   >
                     {userPosts[0].image_url && (
-                      <div className="relative h-48 overflow-hidden">
+                      <div className="relative overflow-hidden" style={{ aspectRatio: '4/3' }}>
                         <Image src={userPosts[0].image_url} alt={userPosts[0].text || "Post"} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
-                        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #1d2025 0%, transparent 60%)" }} />
+                        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, var(--c-bg) 0%, transparent 60%)" }} />
                         <div className="absolute bottom-4 left-4 right-4">
                           <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded"
                             style={{ background: "rgba(110,223,81,0.1)", color: "#6edf51" }}>Article</span>
-                          <h4 className="text-white font-bold mt-1 text-lg leading-tight">{userPosts[0].text}</h4>
+                          <h4 className="text-foreground font-bold mt-1 text-lg leading-tight">{userPosts[0].text}</h4>
                         </div>
                       </div>
                     )}
                     {!userPosts[0].image_url && (
                       <div className="p-5">
-                        <p className="text-white text-sm" style={{ fontFamily: FONT }}>{userPosts[0].text}</p>
-                        <div className="flex items-center gap-3 mt-3 text-xs" style={{ color: "#899485" }}>
+                        <p className="text-foreground text-sm" style={{ fontFamily: FONT }}>{userPosts[0].text}</p>
+                        <div className="flex items-center gap-3 mt-3 text-xs" style={{ color: "var(--c-text-muted)" }}>
                           <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{userPosts[0].liked_by?.length || 0}</span>
                           <span>{new Date(userPosts[0].timestamp).toLocaleDateString()}</span>
                         </div>
@@ -571,8 +571,8 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
                       style={{ background: SURFACE }}
                       onClick={() => router.push(`/posts/${post.id}`)}
                     >
-                      <p className="text-white text-xs line-clamp-3" style={{ fontFamily: FONT }}>{post.text || post.title}</p>
-                      <div className="flex items-center gap-2 mt-2 text-[10px]" style={{ color: "#899485" }}>
+                      <p className="text-foreground text-xs line-clamp-3" style={{ fontFamily: FONT }}>{post.text || post.title}</p>
+                      <div className="flex items-center gap-2 mt-2 text-[10px]" style={{ color: "var(--c-text-muted)" }}>
                         <Heart className="w-3 h-3" />{post.liked_by?.length || 0}
                       </div>
                     </div>
@@ -640,20 +640,20 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#6edf51" }} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#bfcab9", fontFamily: FONT }}>Event</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>Event</span>
                     </div>
-                    <h4 className="text-white font-bold text-sm" style={{ fontFamily: RALEWAY }}>
+                    <h4 className="text-foreground font-bold text-sm" style={{ fontFamily: RALEWAY }}>
                       {event.text || event.title || "Untitled Event"}
                     </h4>
                     {event.event_date && (
-                      <div className="flex items-center gap-1.5 mt-2 text-xs" style={{ color: "#899485", fontFamily: FONT }}>
+                      <div className="flex items-center gap-1.5 mt-2 text-xs" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
                         <Calendar className="w-3 h-3" />
                         {new Date(event.event_date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                         {event.event_time && <><Clock className="w-3 h-3 ml-2" /> {event.event_time}</>}
                       </div>
                     )}
                     {event.attendees?.length > 0 && (
-                      <p className="text-xs mt-1 italic" style={{ color: "#899485", fontFamily: FONT }}>
+                      <p className="text-xs mt-1 italic" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
                         {event.attendees.length} participants joined
                       </p>
                     )}
@@ -670,13 +670,13 @@ export function ProfileScreen({ onBack, user, isOwnProfile = true, targetUserId,
         /* External profile – show recent posts inline */
         userPosts.length > 0 && (
           <section className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: "#bfcab9", fontFamily: FONT }}>
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
               Recent Posts
             </h3>
             {userPosts.slice(0, 3).map((post) => (
               <div key={post.id} className="p-5 rounded-[11px]" style={{ background: SURFACE }}>
-                <p className="text-white text-sm leading-relaxed" style={{ fontFamily: FONT }}>{post.text || post.title}</p>
-                <div className="flex items-center gap-3 mt-3 text-xs" style={{ color: "#899485" }}>
+                <p className="text-foreground text-sm leading-relaxed" style={{ fontFamily: FONT }}>{post.text || post.title}</p>
+                <div className="flex items-center gap-3 mt-3 text-xs" style={{ color: "var(--c-text-muted)" }}>
                   <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{post.liked_by?.length || 0}</span>
                   <span>{new Date(post.timestamp).toLocaleDateString()}</span>
                 </div>

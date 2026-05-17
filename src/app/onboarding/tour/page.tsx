@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -98,7 +98,7 @@ export default function OnboardingTourPage() {
   const Icon = slide.icon;
 
   return (
-    <div className="min-h-screen relative flex flex-col items-center justify-between overflow-hidden px-6 py-12" style={{ background: "#0d0f11", fontFamily: "Raleway, sans-serif" }}>
+    <div className="min-h-screen relative flex flex-col items-center justify-between overflow-hidden px-6 py-12" style={{ background: "var(--c-bg)", fontFamily: "Inter, sans-serif" }}>
       
       {/* Background Animated Blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -116,7 +116,7 @@ export default function OnboardingTourPage() {
       <div className="w-full max-w-lg flex items-center justify-between relative z-20">
         <button 
           onClick={handleBack}
-          className={cn("w-10 h-10 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-white transition-all active:scale-90", step === 0 && "opacity-0 pointer-events-none")}
+          className={cn("w-10 h-10 rounded-full flex items-center justify-center bg-white/5 border border-border text-white transition-all active:scale-90", step === 0 && "opacity-0 pointer-events-none")}
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -137,7 +137,7 @@ export default function OnboardingTourPage() {
 
         <button 
           onClick={handleSkip}
-          className="text-xs font-black uppercase tracking-widest text-[#899485] hover:text-white transition-colors"
+          className="text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-white transition-colors"
         >
           Skip
         </button>
@@ -168,7 +168,7 @@ export default function OnboardingTourPage() {
               </div>
               
               {/* Decorative elements */}
-              <div className="absolute -top-4 -right-4 w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center animate-bounce" style={{ animationDuration: '3s' }}>
+              <div className="absolute -top-4 -right-4 w-12 h-12 rounded-2xl bg-white/5 backdrop-blur-md border border-border flex items-center justify-center animate-bounce" style={{ animationDuration: '3s' }}>
                 <Sparkles className="w-5 h-5 text-[#388E3C]" />
               </div>
               <div className="absolute -bottom-2 -left-6 w-10 h-10 rounded-xl bg-[#388E3C]/10 backdrop-blur-md border border-[#388E3C]/20 flex items-center justify-center animate-pulse">
@@ -183,7 +183,7 @@ export default function OnboardingTourPage() {
           >
             {slide.title}
           </h1>
-          <p className="text-lg text-[#899485] font-medium leading-relaxed max-w-sm mx-auto">
+          <p className="text-lg text-muted-foreground font-medium leading-relaxed max-w-sm mx-auto">
             {slide.body}
           </p>
         </div>
@@ -206,7 +206,7 @@ export default function OnboardingTourPage() {
           </span>
         </button>
         
-        <p className="text-center mt-6 text-[10px] uppercase tracking-[0.3em] font-black text-[#899485]/40">
+        <p className="text-center mt-6 text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground/40">
           Step {step + 1} of {SLIDES.length} • Yrdly Resident Portal
         </p>
       </div>

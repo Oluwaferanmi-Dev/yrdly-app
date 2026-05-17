@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Yrdly Stitch Design System Tokens
  * Single source of truth for all colors, fonts, and spacing constants.
  * Import from "@/lib/designTokens" to use in any component.
@@ -6,13 +6,13 @@
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 export const colors = {
-  // Backgrounds
-  bg: "#101418",
-  surface: "#1d2025",
-  surfaceLow: "#191c21",
-  card: "#1E2126",
-  elevated: "#272a2f",
-  dark: "#15181D",
+  // Backgrounds — use CSS vars so they respond to light/dark theme
+  bg: "var(--c-bg)",
+  surface: "var(--c-card)",
+  surfaceLow: "var(--c-bg)",
+  card: "var(--c-card)",
+  elevated: "var(--c-card2)",
+  dark: "var(--c-bg)",
 
   // Green (primary brand)
   green: "#388E3C",
@@ -30,10 +30,10 @@ export const colors = {
   errorFg: "#ffb4ab",
   errorBg: "#690005",
 
-  // Text
-  onSurface: "#e1e2e9",
-  onSurfaceVariant: "#bfcab9",
-  outline: "#899485",
+  // Text — use CSS vars so they flip with theme
+  onSurface: "var(--c-text)",
+  onSurfaceVariant: "var(--c-text-muted)",
+  outline: "var(--c-text-muted)",
   outlineVariant: "rgba(64,73,61,0.3)",
 
   // Misc
@@ -42,9 +42,9 @@ export const colors = {
 
 // ── Typography ────────────────────────────────────────────────────────────────
 export const fonts = {
-  body: "Work Sans, sans-serif",
-  headline: "Plus Jakarta Sans, sans-serif",
-  editorial: "Raleway, sans-serif",
+  body: "Inter, sans-serif",
+  headline: "Inter, sans-serif",
+  editorial: "Inter, sans-serif",
   display: "Pacifico, cursive",
   brand: "Jersey 25, sans-serif",
 };

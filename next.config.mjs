@@ -1,5 +1,9 @@
 // next.config.mjs
 import { withSentryConfig } from '@sentry/nextjs';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -17,10 +21,19 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '*.supabase.in',
-      }
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
     ]
   },
   
+  // Pin Turbopack to the correct project root (avoids picking up C:\Users\JAY\package-lock.json)
+  turbopack: {
+    root: __dirname,
+  },
+
   // Experimental features for better mobile performance
   experimental: {
     optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react', '@radix-ui/react-accordion', '@radix-ui/react-alert-dialog', '@radix-ui/react-avatar', '@radix-ui/react-checkbox', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-label', '@radix-ui/react-popover', '@radix-ui/react-progress', '@radix-ui/react-radio-group', '@radix-ui/react-scroll-area', '@radix-ui/react-select', '@radix-ui/react-separator', '@radix-ui/react-slider', '@radix-ui/react-slot', '@radix-ui/react-switch', '@radix-ui/react-tabs', '@radix-ui/react-toast', '@radix-ui/react-tooltip'],

@@ -18,7 +18,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta
           name="viewport"
@@ -27,44 +27,24 @@ export default function RootLayout({
         <meta name="theme-color" content="#ffffff" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        {/* Root layout: font loads for all pages. Suppress no-page-custom-font (rule targets Pages Router _document). */}
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Jersey+25&family=Pacifico&family=Raleway:ital,wght@0,300;0,400;0,500;1,300&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Jersey+25&family=Pacifico&display=swap"
           rel="stylesheet"
         />
-
       </head>
 
       <body className={cn('font-body antialiased min-h-screen bg-background')}>
-        {/* Force dark mode synchronously before React hydration — prevents flash of light theme */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  // Always force dark mode — clear any stale 'system' or 'light' localStorage value
-                  var stored = localStorage.getItem('theme');
-                  if (!stored || stored !== 'dark') {
-                    localStorage.setItem('theme', 'dark');
-                  }
-                  document.documentElement.classList.remove('light', 'system');
-                  document.documentElement.classList.add('dark');
-                } catch(e) {}
-              })();
-            `,
-          }}
-        />
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem={false}
           disableTransitionOnChange
+          storageKey="yrdly-theme"
         >
           <AuthProvider>
             {children}
           </AuthProvider>
-
           <Toaster />
           <Analytics />
         </ThemeProvider>

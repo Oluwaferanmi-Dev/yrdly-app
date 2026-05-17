@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -12,11 +12,11 @@ import Image from "next/image";
 import { BuyButton } from "@/components/escrow/BuyButton";
 
 /* ─── colour tokens matching the Figma ─────────────────────────── */
-const BG = "#15181D";
-const CARD_BG = "#1E2126";
+const BG = "var(--c-bg)";
+const CARD_BG = "var(--c-card)";
 const GREEN = "#388E3C";
 const FADED = "#BBBBBB";
-const FONT_RALEWAY = "Raleway, sans-serif";
+const FONT_RALEWAY = "Inter, sans-serif";
 const FONT_PACIFICO = "Pacifico, cursive";
 
 export default function MarketplaceItemPage() {
@@ -50,15 +50,16 @@ export default function MarketplaceItemPage() {
         if (error) throw error;
         setItem({ ...data, author_name: data.user?.name, author_image: data.user?.avatar_url });
 
-        /* fetch related items (other For Sale posts, exclude current) */
-        const { data: related } = await supabase
+        /* fetch related items — same state as the viewed item */
+        let relatedQuery = supabase
           .from("posts")
           .select(`*, user:users!posts_user_id_fkey(id, name, avatar_url)`)
           .eq("category", "For Sale")
           .eq("is_sold", false)
           .neq("id", itemId)
-          .order("timestamp", { ascending: false })
-          .limit(4);
+          .order("timestamp", { ascending: false });
+        if (data.state) relatedQuery = relatedQuery.eq("state", data.state);
+        const { data: related } = await relatedQuery.limit(4);
 
         if (related) setRelatedItems(related as PostType[]);
       } catch {
@@ -181,7 +182,7 @@ export default function MarketplaceItemPage() {
             }}
           >
             <h1
-              className="text-2xl font-extrabold text-white leading-tight"
+              className="text-2xl font-extrabold text-foreground leading-tight"
               style={{ fontFamily: FONT_RALEWAY }}
             >
               {item.title || item.text || "Item"}
@@ -201,7 +202,7 @@ export default function MarketplaceItemPage() {
               ) : (
                 <div
                   className="w-full h-full flex items-center justify-center"
-                  style={{ background: "#252B35" }}
+                  style={{ background: "var(--c-card2)" }}
                 >
                   <ShoppingBag className="w-16 h-16" style={{ color: GREEN, opacity: 0.4 }} />
                 </div>
@@ -229,13 +230,13 @@ export default function MarketplaceItemPage() {
           {/* Details section */}
           <div className="px-6 pb-4">
             <p
-              className="font-bold text-[13px] text-white mb-2"
+              className="font-bold text-[13px] text-foreground mb-2"
               style={{ fontFamily: FONT_RALEWAY }}
             >
               Details
             </p>
             <p
-              className="text-[13px] text-white leading-[18px]"
+              className="text-[13px] text-foreground leading-[18px]"
               style={{ fontFamily: FONT_RALEWAY, fontWeight: 400 }}
             >
               {item.description || item.text || "No description provided."}
@@ -248,7 +249,7 @@ export default function MarketplaceItemPage() {
           {/* Directions / location */}
           <div className="px-6 pb-6">
             <p
-              className="font-bold text-[13px] text-white mb-3"
+              className="font-bold text-[13px] text-foreground mb-3"
               style={{ fontFamily: FONT_RALEWAY }}
             >
               Directions
@@ -256,7 +257,7 @@ export default function MarketplaceItemPage() {
             {item.lga || item.state ? (
               <div
                 className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm"
-                style={{ background: "#252B35", color: FADED, fontFamily: FONT_RALEWAY }}
+                style={{ background: "var(--c-card2)", color: FADED, fontFamily: FONT_RALEWAY }}
               >
                 <MapPin className="w-4 h-4" style={{ color: GREEN }} />
                 <span>{[item.lga, item.state].filter(Boolean).join(", ")}</span>
@@ -264,7 +265,7 @@ export default function MarketplaceItemPage() {
             ) : (
               <div
                 className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm"
-                style={{ background: "#252B35", color: FADED, fontFamily: FONT_RALEWAY }}
+                style={{ background: "var(--c-card2)", color: FADED, fontFamily: FONT_RALEWAY }}
               >
                 <MapPin className="w-4 h-4" style={{ color: GREEN }} />
                 <span>Location not specified</span>
@@ -303,7 +304,7 @@ export default function MarketplaceItemPage() {
           {/* Seller Information */}
           <div>
             <p
-              className="font-bold text-[13px] text-white mb-3"
+              className="font-bold text-[13px] text-foreground mb-3"
               style={{ fontFamily: FONT_RALEWAY }}
             >
               Seller Information
@@ -312,7 +313,7 @@ export default function MarketplaceItemPage() {
               className="flex items-center gap-3 hover:opacity-80 transition-opacity w-full text-left"
               onClick={() => router.push(`/profile/${item.user_id}`)}
             >
-              <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-xs font-bold text-white"
+              <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-xs font-bold text-foreground"
                    style={{ background: GREEN }}>
                 {item.author_image ? (
                   <Image
@@ -328,13 +329,13 @@ export default function MarketplaceItemPage() {
               </div>
               <div>
                 <p
-                  className="text-[13px] font-normal text-white"
+                  className="text-[13px] font-normal text-muted-foreground"
                   style={{ fontFamily: FONT_RALEWAY }}
                 >
                   {item.author_name || "Unknown Seller"}
                 </p>
                 <p
-                  className="text-[10px] italic font-extralight text-white"
+                  className="text-[10px] italic font-extralight text-muted-foreground"
                   style={{ fontFamily: FONT_RALEWAY }}
                 >
                   Joined Yrdly in {new Date(item.user?.created_at || item.timestamp).getFullYear()}
@@ -351,7 +352,7 @@ export default function MarketplaceItemPage() {
             <div className="flex items-start gap-3">
               {/* Current user avatar */}
               <div
-                className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-xs font-bold text-white mt-1"
+                className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-xs font-bold text-foreground mt-1"
                 style={{ background: GREEN }}
               >
                 {profile?.avatar_url ? (
@@ -382,7 +383,7 @@ export default function MarketplaceItemPage() {
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Hi, Is this available?"
                     rows={3}
-                    className="w-full bg-transparent text-white text-[13px] font-light p-3 pr-10 resize-none outline-none placeholder:text-[#BBBBBB]"
+                    className="w-full bg-transparent text-foreground text-[13px] font-light p-3 pr-10 resize-none outline-none placeholder:text-[#BBBBBB]"
                     style={{ fontFamily: FONT_RALEWAY }}
                   />
                   <button
@@ -394,7 +395,7 @@ export default function MarketplaceItemPage() {
                   </button>
                 </div>
                 <p
-                  className="text-[10px] italic font-extralight text-white pl-1"
+                  className="text-[10px] italic font-extralight text-foreground pl-1"
                   style={{ fontFamily: FONT_RALEWAY }}
                 >
                   Send seller a message
@@ -407,7 +408,7 @@ export default function MarketplaceItemPage() {
           {isOwn && (
             <div
               className="text-center text-sm py-3 rounded-xl"
-              style={{ background: "#252B35", color: FADED, fontFamily: FONT_RALEWAY }}
+              style={{ background: "var(--c-card2)", color: FADED, fontFamily: FONT_RALEWAY }}
             >
               This is your listing
             </div>
@@ -475,7 +476,7 @@ function RelatedCard({
         ) : (
           <div
             className="w-full h-full flex items-center justify-center"
-            style={{ background: "#252B35" }}
+            style={{ background: "var(--c-card2)" }}
           >
             <ShoppingBag className="w-8 h-8" style={{ color: GREEN, opacity: 0.4 }} />
           </div>
@@ -485,7 +486,7 @@ function RelatedCard({
       {/* Info */}
       <div className="p-2.5">
         <p
-          className="text-[13px] text-white line-clamp-1 mb-1"
+          className="text-[13px] text-foreground line-clamp-1 mb-1"
           style={{ fontFamily: FONT_RALEWAY, fontWeight: 500 }}
         >
           {item.title || item.text || "Untitled"}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -97,7 +97,7 @@ export default function AdminDisputeReviewPage() {
     const Icon = config.icon;
     
     return (
-      <Badge className={`${config.color} text-white`}>
+      <Badge className={`${config.color} text-foreground`}>
         <Icon className="mr-1 h-3 w-3" />
         {config.text}
       </Badge>

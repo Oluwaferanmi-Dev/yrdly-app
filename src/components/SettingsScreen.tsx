@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -20,10 +20,10 @@ import {
 import { useAuth } from "@/hooks/use-supabase-auth";
 import { useTheme } from "@/components/ThemeProvider";
 
-const FONT = "Raleway, sans-serif";
+const FONT = "Inter, sans-serif";
 const PACIFICO = "Pacifico, cursive";
 const GREEN = "#388E3C";
-const CARD = "#1E2126";
+const CARD = "var(--c-card)";
 
 interface SettingsScreenProps {
   onBack?: () => void;
@@ -44,7 +44,7 @@ function Toggle({
       aria-checked={checked}
       onClick={() => onChange(!checked)}
       className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200"
-      style={{ background: checked ? GREEN : "#272a2f" }}
+      style={{ background: checked ? GREEN : "var(--c-card2)" }}
     >
       <span
         className="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200"
@@ -71,9 +71,9 @@ function NavRow({
     <button
       onClick={onClick}
       className="w-full flex items-center justify-between px-4 py-4 transition-colors"
-      style={{ background: CARD, borderRadius: 11 }}
+      style={{ background: 'var(--c-card)', borderRadius: 11 }}
       onMouseEnter={(e) =>
-        ((e.currentTarget as HTMLElement).style.background = "#252a30")
+        ((e.currentTarget as HTMLElement).style.background = "var(--c-card2)")
       }
       onMouseLeave={(e) =>
         ((e.currentTarget as HTMLElement).style.background = CARD)
@@ -82,7 +82,7 @@ function NavRow({
       <div className="flex items-center gap-3">
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: GREEN }} />
         <span
-          className="text-white text-[14px]"
+          className="text-foreground text-[14px]"
           style={{ fontFamily: FONT }}
         >
           {label}
@@ -107,12 +107,12 @@ function ToggleRow({
   return (
     <div
       className="flex items-center justify-between px-4 py-4"
-      style={{ background: CARD, borderRadius: 11 }}
+      style={{ background: 'var(--c-card)', borderRadius: 11 }}
     >
       <div className="flex items-center gap-3">
         <Icon className="w-5 h-5 flex-shrink-0" style={{ color: GREEN }} />
         <span
-          className="text-white text-[14px]"
+          className="text-foreground text-[14px]"
           style={{ fontFamily: FONT }}
         >
           {label}
@@ -126,7 +126,7 @@ function ToggleRow({
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <h2
-      className="text-white text-[16px] px-1"
+      className="text-foreground text-[16px] px-1"
       style={{ fontFamily: PACIFICO, fontWeight: 400 }}
     >
       {children}
@@ -192,14 +192,14 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
   return (
     <div
       className="min-h-screen pb-32"
-      style={{ background: "#15181D" }}
+      style={{ background: "var(--c-bg)" }}
     >
       <div className="max-w-2xl mx-auto px-4 pt-8 space-y-8">
 
         {/* ── Profile Card ── */}
         <section
           className="flex items-center gap-4 p-4"
-          style={{ background: CARD, borderRadius: 11 }}
+          style={{ background: 'var(--c-card)', borderRadius: 11 }}
         >
           <Avatar className="w-16 h-16 flex-shrink-0">
             <AvatarImage src={avatarUrl} alt={displayName} />
@@ -217,14 +217,14 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
           </Avatar>
           <div className="flex-1 min-w-0">
             <h1
-              className="text-white text-[14px] truncate"
+              className="text-foreground text-[14px] truncate"
               style={{ fontFamily: FONT, fontWeight: 700 }}
             >
               {displayName}
             </h1>
             <p
               className="text-[12px] truncate"
-              style={{ fontFamily: FONT, color: "#BBBBBB" }}
+              style={{ fontFamily: FONT, color: "var(--c-text-muted)" }}
             >
               {email}
             </p>
@@ -232,13 +232,13 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
           <button
             onClick={() => router.push("/settings/profile")}
             className="p-2 rounded-full transition-colors"
-            style={{ background: "#272a2f" }}
+            style={{ background: "var(--c-card2)" }}
             onMouseEnter={(e) =>
               ((e.currentTarget as HTMLElement).style.background =
                 "rgba(255,255,255,0.05)")
             }
             onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLElement).style.background = "#272a2f")
+              ((e.currentTarget as HTMLElement).style.background = "var(--c-card2)")
             }
           >
             <Pencil className="w-4 h-4" style={{ color: GREEN }} />

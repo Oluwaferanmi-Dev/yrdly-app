@@ -1,15 +1,15 @@
-"use client";
+﻿"use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, Check, MessageCircle, Receipt } from "lucide-react";
 
 /* ── Design tokens ─────────────────────────────────── */
-const BG     = "#101418";
-const CARD   = "#1d2025";
+const BG     = "var(--c-bg)";
+const CARD   = "var(--c-card)";
 const GREEN  = "#388E3C";
 const GREEN_L = "#82DB7E";
-const MUTED  = "#bfcab9";
-const DIM    = "#899485";
+const MUTED  = "var(--c-text-muted)";
+const DIM    = "var(--c-text-muted)";
 
 const STEPS = [
   { label: "Seller prepares your item", sub: "Notification sent to the seller" },
@@ -32,7 +32,7 @@ export default function EscrowConfirmationPage() {
   return (
     <div
       className="min-h-dvh flex flex-col"
-      style={{ background: BG, color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}
+      style={{ background: BG, color: "var(--c-text)", fontFamily: "Inter, sans-serif" }}
     >
       {/* Header */}
       <header
@@ -85,7 +85,7 @@ export default function EscrowConfirmationPage() {
           >
             Payment Secured!
           </h2>
-          <p className="text-sm font-medium" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+          <p className="text-sm font-medium" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
             {fmt(amount)} is held safely in escrow
           </p>
         </section>
@@ -96,10 +96,10 @@ export default function EscrowConfirmationPage() {
           style={{ background: CARD }}
         >
           <div className="flex-1 min-w-0">
-            <h3 className="text-white font-bold truncate text-sm">{itemTitle}</h3>
+            <h3 className="text-foreground font-bold truncate text-sm">{itemTitle}</h3>
             <p
               className="text-[11px] mt-0.5"
-              style={{ color: MUTED, fontFamily: "Raleway, sans-serif", fontVariantNumeric: "tabular-nums" }}
+              style={{ color: MUTED, fontFamily: "Inter, sans-serif", fontVariantNumeric: "tabular-nums" }}
             >
               Ref: #{ref}
             </p>
@@ -156,7 +156,7 @@ export default function EscrowConfirmationPage() {
                         className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm relative z-10"
                         style={{
                           border: `2px solid ${active ? GREEN : "#40493d"}`,
-                          background: active ? "rgba(39,42,47,1)" : "#1d2025",
+                          background: active ? "rgba(39,42,47,1)" : "var(--c-card)",
                           color: active ? GREEN_L : MUTED,
                         }}
                       >
@@ -164,7 +164,7 @@ export default function EscrowConfirmationPage() {
                       </div>
                     </div>
                     <div className="pt-1">
-                      <p className="text-white font-semibold text-sm">{step.label}</p>
+                      <p className="text-foreground font-semibold text-sm">{step.label}</p>
                       {step.sub && (
                         <p className="text-xs mt-0.5" style={{ color: "rgba(191,202,185,0.7)" }}>
                           {step.sub}
@@ -198,7 +198,7 @@ export default function EscrowConfirmationPage() {
             style={{
               background: GREEN,
               color: "#fff",
-              fontFamily: "Plus Jakarta Sans, sans-serif",
+              fontFamily: "Inter, sans-serif",
               boxShadow: "0 10px 30px rgba(56,142,60,0.25)",
             }}
           >
@@ -215,7 +215,7 @@ export default function EscrowConfirmationPage() {
               color: GREEN_L,
               background: "rgba(21,24,29,0.6)",
               backdropFilter: "blur(8px)",
-              fontFamily: "Plus Jakarta Sans, sans-serif",
+              fontFamily: "Inter, sans-serif",
             }}
           >
             <Receipt className="w-5 h-5" />

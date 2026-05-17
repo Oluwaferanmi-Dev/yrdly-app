@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { Post as PostType } from "@/types";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -187,16 +187,16 @@ export function EventCard({ event }: EventCardProps) {
     <>
     <Card className="flex flex-col">
       <div onClick={handleCardClick} className="cursor-pointer">
-        <div className="relative w-full h-48 rounded-t-lg overflow-hidden">
+        <div className="relative w-full overflow-hidden rounded-t-lg" style={{ aspectRatio: '16/9' }}>
           <Image
             src={event.image_url || event.image_urls?.[0] || '/placeholder-event.svg'}
             alt={event.title || event.text}
             fill
-            style={{ objectFit: "cover" }}
+            className="object-cover"
             data-ai-hint="event image"
           />
           {event.image_urls && event.image_urls.length > 1 && (
-            <div className="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+            <div className="absolute top-2 right-2 bg-black/50 text-foreground px-2 py-1 rounded text-xs">
               +{event.image_urls.length - 1}
             </div>
           )}

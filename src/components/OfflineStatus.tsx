@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Wifi, WifiOff, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
 import { useOffline } from '@/hooks/use-offline';
 
@@ -46,14 +46,14 @@ export function OfflineStatus() {
             {isOnline ? (
               <>
                 <Wifi className="w-4 h-4 text-green-500" />
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                <span className="text-sm font-medium text-gray-900 dark:text-foreground">
                   Online
                 </span>
               </>
             ) : (
               <>
                 <WifiOff className="w-4 h-4 text-red-500" />
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                <span className="text-sm font-medium text-gray-900 dark:text-foreground">
                   Offline
                 </span>
               </>
@@ -107,7 +107,7 @@ export function OfflineStatus() {
             <button
               onClick={triggerSync}
               disabled={isConnecting}
-              className="flex-1 flex items-center justify-center space-x-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white text-xs font-medium py-2 px-3 rounded-md transition-colors"
+              className="flex-1 flex items-center justify-center space-x-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-foreground text-xs font-medium py-2 px-3 rounded-md transition-colors"
             >
               {isConnecting ? (
                 <>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -53,7 +53,7 @@ export default function ManageEventPage() {
     setCheckInLoading(false);
   };
 
-  if (loading) return <div className="min-h-screen bg-[#15181D] flex items-center justify-center"><Loader2 className="w-8 h-8 text-[#388E3C] animate-spin" /></div>;
+  if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-8 h-8 text-[#388E3C] animate-spin" /></div>;
   if (!event) return null;
 
   const gross = tickets.filter(t => t.status !== "REFUNDED" && t.status !== "CANCELLED").reduce((s, t) => s + Number(t.amount_paid), 0);
@@ -75,19 +75,19 @@ export default function ManageEventPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#15181D] text-white pb-16">
-      <div className="sticky top-0 z-10 bg-[#15181D]/95 backdrop-blur-sm border-b border-white/10 px-4 py-4 flex items-center gap-3">
-        <button onClick={() => router.back()} className="text-white/60 hover:text-white"><ArrowLeft className="w-5 h-5" /></button>
+    <div className="min-h-screen bg-background text-foreground pb-16">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-4 flex items-center gap-3">
+        <button onClick={() => router.back()} className="text-muted-foreground hover:text-foreground"><ArrowLeft className="w-5 h-5" /></button>
         <div className="flex-1 min-w-0">
-          <h1 className="font-raleway font-bold text-base text-white truncate">{event.title}</h1>
-          <p className="font-raleway text-xs text-white/50">{event.status}</p>
+          <h1 className="font-sans font-bold text-base text-foreground truncate">{event.title}</h1>
+          <p className="font-sans text-xs text-muted-foreground">{event.status}</p>
         </div>
       </div>
 
-      <div className="flex border-b border-white/10 px-4">
+      <div className="flex border-b border-border px-4">
         {(["overview", "attendees", "checkin"] as const).map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-3 font-raleway text-sm capitalize border-b-2 transition-colors ${activeTab === tab ? "border-[#388E3C] text-white font-semibold" : "border-transparent text-white/40"}`}>
+            className={`flex-1 py-3 font-sans text-sm capitalize border-b-2 transition-colors ${activeTab === tab ? "border-[#388E3C] text-foreground font-semibold" : "border-transparent text-muted-foreground"}`}>
             {tab === "checkin" ? "Check-in" : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
@@ -103,15 +103,15 @@ export default function ManageEventPage() {
                 { label: "Gross Revenue", value: `₦${gross.toLocaleString()}`, icon: DollarSign },
                 { label: "Net Payout", value: `₦${net.toLocaleString()}`, icon: DollarSign },
               ].map(({ label, value, icon: Icon }) => (
-                <div key={label} className="rounded-2xl bg-[#1E2126] border border-white/10 p-4">
+                <div key={label} className="rounded-2xl bg-card border border-border p-4">
                   <Icon className="w-5 h-5 mb-2 text-[#4CAF50]" />
-                  <p className="font-raleway font-bold text-xl text-white">{value}</p>
-                  <p className="font-raleway text-xs text-white/40 mt-0.5">{label}</p>
+                  <p className="font-sans font-bold text-xl text-foreground">{value}</p>
+                  <p className="font-sans text-xs text-muted-foreground mt-0.5">{label}</p>
                 </div>
               ))}
             </div>
             <div className="rounded-xl bg-[#388E3C]/10 border border-[#388E3C]/20 p-3">
-              <p className="font-raleway text-xs text-white/60">
+              <p className="font-sans text-xs text-muted-foreground">
                 2% platform fee deducted. Net payout of ₦{net.toLocaleString()} released {EVENT_CONSTANTS.AUTO_RELEASE_HOURS}h after event ends.
               </p>
             </div>
@@ -121,24 +121,24 @@ export default function ManageEventPage() {
         {activeTab === "attendees" && (
           <>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-              <input className="w-full bg-[#1E2126] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white font-raleway text-sm placeholder:text-white/30 outline-none focus:border-[#388E3C]"
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input className="w-full bg-card border border-border rounded-xl pl-10 pr-4 py-3 text-foreground font-sans text-sm placeholder:text-muted-foreground outline-none focus:border-[#388E3C]"
                 placeholder="Search name, email or code…" value={search} onChange={e => setSearch(e.target.value)} />
             </div>
             <div className="space-y-2">
               {filtered.length === 0 ? (
-                <div className="rounded-2xl bg-[#1E2126] border border-white/10 py-12 flex flex-col items-center gap-2">
-                  <Users className="w-10 h-10 text-white/20" />
-                  <p className="font-raleway text-sm text-white/40">{search ? "No results" : "No tickets sold yet"}</p>
+                <div className="rounded-2xl bg-card border border-border py-12 flex flex-col items-center gap-2">
+                  <Users className="w-10 h-10 text-muted-foreground" />
+                  <p className="font-sans text-sm text-muted-foreground">{search ? "No results" : "No tickets sold yet"}</p>
                 </div>
               ) : filtered.map(ticket => (
-                <div key={ticket.id} className="rounded-xl bg-[#1E2126] border border-white/10 p-4 flex items-center justify-between gap-3">
+                <div key={ticket.id} className="rounded-xl bg-card border border-border p-4 flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="font-raleway font-semibold text-sm text-white truncate">{ticket.attendee_name}</p>
-                    <p className="font-raleway text-xs text-white/50 truncate">{ticket.attendee_email}</p>
-                    <p className="font-raleway text-xs text-white/30 font-mono mt-0.5">{ticket.ticket_code}</p>
+                    <p className="font-sans font-semibold text-sm text-foreground truncate">{ticket.attendee_name}</p>
+                    <p className="font-sans text-xs text-muted-foreground truncate">{ticket.attendee_email}</p>
+                    <p className="font-sans text-xs text-muted-foreground font-mono mt-0.5">{ticket.ticket_code}</p>
                   </div>
-                  <Badge className={`text-xs font-raleway border ${statusColor[ticket.status] || statusColor.CANCELLED}`}>
+                  <Badge className={`text-xs font-sans border ${statusColor[ticket.status] || statusColor.CANCELLED}`}>
                     {ticket.status}
                   </Badge>
                 </div>
@@ -149,21 +149,21 @@ export default function ManageEventPage() {
 
         {activeTab === "checkin" && (
           <>
-            <div className="rounded-2xl bg-[#1E2126] border border-white/10 p-5 space-y-4">
+            <div className="rounded-2xl bg-card border border-border p-5 space-y-4">
               <div className="flex items-center gap-2">
                 <QrCode className="w-5 h-5 text-[#388E3C]" />
-                <h3 className="font-raleway font-bold text-sm text-white">Enter Ticket Code</h3>
+                <h3 className="font-sans font-bold text-sm text-foreground">Enter Ticket Code</h3>
               </div>
               <div className="flex gap-2">
                 <input
-                  className="flex-1 bg-[#15181D] border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm placeholder:text-white/30 outline-none focus:border-[#388E3C] uppercase"
+                  className="flex-1 bg-background border border-border rounded-xl px-4 py-3 text-foreground font-mono text-sm placeholder:text-muted-foreground outline-none focus:border-[#388E3C] uppercase"
                   placeholder="YRD-XXXXXXXX"
                   value={ticketCode}
                   onChange={e => { setTicketCode(e.target.value.toUpperCase()); setCheckInResult(null); }}
                   onKeyDown={e => e.key === "Enter" && handleCheckIn()}
                 />
                 <Button onClick={handleCheckIn} disabled={!ticketCode.trim() || checkInLoading}
-                  className="rounded-xl font-raleway text-sm text-white px-5" style={{ background: "#388E3C" }}>
+                  className="rounded-xl font-sans text-sm text-foreground px-5" style={{ background: "#388E3C" }}>
                   {checkInLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Check In"}
                 </Button>
               </div>
@@ -171,17 +171,17 @@ export default function ManageEventPage() {
                 <div className={`rounded-xl p-4 flex items-start gap-3 ${checkInResult.valid ? "bg-[#388E3C]/15 border border-[#388E3C]/30" : "bg-red-500/15 border border-red-500/30"}`}>
                   {checkInResult.valid ? <CheckCircle2 className="w-5 h-5 text-[#4CAF50] flex-shrink-0" /> : <XCircle className="w-5 h-5 text-red-400 flex-shrink-0" />}
                   <div>
-                    <p className={`font-raleway font-bold text-sm ${checkInResult.valid ? "text-[#4CAF50]" : "text-red-400"}`}>{checkInResult.message}</p>
-                    {checkInResult.attendee_name && <p className="font-raleway text-xs text-white/60 mt-0.5">{checkInResult.attendee_name} · {checkInResult.tier_name}</p>}
+                    <p className={`font-sans font-bold text-sm ${checkInResult.valid ? "text-[#4CAF50]" : "text-red-400"}`}>{checkInResult.message}</p>
+                    {checkInResult.attendee_name && <p className="font-sans text-xs text-muted-foreground mt-0.5">{checkInResult.attendee_name} · {checkInResult.tier_name}</p>}
                   </div>
                 </div>
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {[{ label: "Checked In", value: used, color: "text-blue-400" }, { label: "Remaining", value: paid, color: "text-white" }].map(({ label, value, color }) => (
-                <div key={label} className="rounded-xl bg-[#1E2126] border border-white/10 p-4 text-center">
-                  <p className={`font-raleway font-bold text-3xl ${color}`}>{value}</p>
-                  <p className="font-raleway text-xs text-white/40 mt-1">{label}</p>
+              {[{ label: "Checked In", value: used, color: "text-blue-400" }, { label: "Remaining", value: paid, color: "text-foreground" }].map(({ label, value, color }) => (
+                <div key={label} className="rounded-xl bg-card border border-border p-4 text-center">
+                  <p className={`font-sans font-bold text-3xl ${color}`}>{value}</p>
+                  <p className="font-sans text-xs text-muted-foreground mt-1">{label}</p>
                 </div>
               ))}
             </div>

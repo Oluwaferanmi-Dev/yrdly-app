@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from 'react';
 import { 
@@ -129,7 +129,7 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         className="max-w-lg w-[95vw] p-0 border-none bg-transparent shadow-2xl overflow-hidden"
-        style={{ fontFamily: "Raleway, sans-serif" }}
+        style={{ fontFamily: "Inter, sans-serif" }}
       >
         <div 
           className="relative w-full max-h-[90vh] overflow-y-auto rounded-[32px] p-8 space-y-8 animate-in zoom-in-95 duration-300"
@@ -147,24 +147,24 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
                 <div className="w-10 h-10 rounded-2xl bg-[#388E3C]/20 flex items-center justify-center">
                   <Shield className="w-5 h-5 text-[#388E3C]" />
                 </div>
-                <h2 className="text-2xl font-black text-white tracking-tight">Verify Account</h2>
+                <h2 className="text-2xl font-black text-foreground tracking-tight">Verify Account</h2>
               </div>
             </div>
-            <p className="text-sm text-[#899485] font-medium leading-relaxed">
+            <p className="text-sm text-muted-foreground font-medium leading-relaxed">
               Complete verification to unlock faster payouts and higher limits.
             </p>
           </div>
 
           <div className="relative z-10 space-y-8">
             {/* Account Preview Card */}
-            <div className="p-6 rounded-[24px] bg-white/5 border border-white/10 space-y-4">
+            <div className="p-6 rounded-[24px] bg-white/5 border border-border space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-[#899485]">
+                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-muted-foreground">
                   {getAccountTypeIcon(account.accountType)}
                 </div>
                 <div>
-                  <p className="text-xs font-black text-white tracking-wide">{getAccountDisplayName(account)}</p>
-                  <p className="text-[10px] font-bold text-[#899485] uppercase tracking-wider">{account.accountType.replace('_', ' ')}</p>
+                  <p className="text-xs font-black text-foreground tracking-wide">{getAccountDisplayName(account)}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{account.accountType.replace('_', ' ')}</p>
                 </div>
                 <div className="ml-auto">
                   <Badge variant="secondary" className="bg-[#388E3C]/20 text-[#388E3C] border-none font-bold text-[10px] px-3">
@@ -179,13 +179,13 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
               <div className="space-y-6">
                 <div className="space-y-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-lg bg-[#388E3C] flex items-center justify-center text-white text-[10px] font-black">1</div>
-                    <h3 className="text-sm font-black text-white">Micro-deposit Verification</h3>
+                    <div className="w-6 h-6 rounded-lg bg-[#388E3C] flex items-center justify-center text-foreground text-[10px] font-black">1</div>
+                    <h3 className="text-sm font-black text-foreground">Micro-deposit Verification</h3>
                   </div>
                   
                   {verificationStep === 'initiate' && (
                     <div className="space-y-4 pl-9">
-                      <p className="text-xs text-[#899485] leading-relaxed">
+                      <p className="text-xs text-muted-foreground leading-relaxed">
                         We&apos;ll send a small amount (₦1-₦5) to your account. You&apos;ll need to enter the exact amount here to verify ownership.
                       </p>
                       <button
@@ -207,10 +207,10 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
                       </div>
                       
                       <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Enter Amount (₦)</label>
+                        <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Enter Amount (₦)</label>
                         <input
                           type="number"
-                          className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                          className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none placeholder:text-muted-foreground"
                           placeholder="e.g. 3"
                           value={enteredAmount}
                           onChange={(e) => setEnteredAmount(e.target.value)}
@@ -220,7 +220,7 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
                       <div className="flex gap-3">
                         <button
                           onClick={() => setVerificationStep('initiate')}
-                          className="flex-1 h-12 rounded-xl bg-white/5 text-[#899485] font-black text-xs uppercase tracking-widest hover:text-white transition-all"
+                          className="flex-1 h-12 rounded-xl bg-white/5 text-muted-foreground font-black text-xs uppercase tracking-widest hover:text-foreground transition-all"
                         >
                           Back
                         </button>
@@ -236,12 +236,12 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
                   )}
                 </div>
 
-                <div className="pt-6 border-t border-white/5 space-y-4 opacity-50">
+                <div className="pt-6 border-t border-border space-y-4 opacity-50">
                   <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center text-[#899485] text-[10px] font-black">2</div>
-                    <h3 className="text-sm font-black text-white">Identity Verification</h3>
+                    <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center text-muted-foreground text-[10px] font-black">2</div>
+                    <h3 className="text-sm font-black text-foreground">Identity Verification</h3>
                   </div>
-                  <p className="text-[10px] text-[#899485] pl-9">
+                  <p className="text-[10px] text-muted-foreground pl-9">
                     Upload government ID or utility bill to increase your transaction limits. (Coming soon)
                   </p>
                 </div>
@@ -251,8 +251,8 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
                 <div className="p-6 rounded-[24px] bg-[#388E3C]/5 border border-[#388E3C]/20 flex gap-4">
                   <Clock className="w-5 h-5 text-[#388E3C] shrink-0" />
                   <div>
-                    <p className="text-xs font-black text-white mb-1 uppercase tracking-widest">Manual Review Required</p>
-                    <p className="text-[10px] text-[#899485] leading-relaxed font-medium">
+                    <p className="text-xs font-black text-foreground mb-1 uppercase tracking-widest">Manual Review Required</p>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed font-medium">
                       Mobile money accounts are reviewed manually by our team. Verification typically completes within 24-48 hours.
                     </p>
                   </div>
@@ -264,7 +264,7 @@ export function VerificationDialog({ open, onOpenChange, account, onSuccess }: V
             <div className="pt-4">
               <button
                 onClick={() => onOpenChange(false)}
-                className="w-full h-12 rounded-2xl bg-white/5 text-[#899485] font-black text-xs uppercase tracking-widest hover:text-white transition-all"
+                className="w-full h-12 rounded-2xl bg-white/5 text-muted-foreground font-black text-xs uppercase tracking-widest hover:text-foreground transition-all"
               >
                 Close
               </button>

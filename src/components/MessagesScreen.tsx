@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,8 +11,8 @@ import Image from "next/image";
 import { ActivityIndicator } from "@/components/ActivityIndicator";
 
 const GREEN = "#388E3C";
-const CARD = "#1E2126";
-const FONT = "Raleway, sans-serif";
+const CARD = "var(--c-card)";
+const FONT = "Inter, sans-serif";
 const PACIFICO = "Pacifico, cursive";
 
 function deduplicateConversations(conversations: Conversation[]): Conversation[] {
@@ -210,14 +210,14 @@ export function MessagesScreen() {
   ];
 
   return (
-    <div className="min-h-screen" style={{ background: "#15181D" }}>
+    <div className="min-h-screen" style={{ background: "var(--c-bg)" }}>
       {/* Sticky Header */}
       <div
         className="sticky top-0 z-40 px-4 pt-5 pb-4 space-y-4"
-        style={{ background: CARD, borderRadius: "0 0 11px 11px", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}
+        style={{ background: 'var(--c-card)', borderRadius: "0 0 11px 11px", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}
       >
         <div className="flex justify-between items-center">
-          <h1 className="text-[18px] text-white" style={{ fontFamily: PACIFICO }}>Messages</h1>
+          <h1 className="text-[18px] text-foreground" style={{ fontFamily: PACIFICO }}>Messages</h1>
           <Edit className="w-5 h-5" style={{ color: GREEN }} />
         </div>
 
@@ -229,15 +229,15 @@ export function MessagesScreen() {
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-full py-3 pl-11 pr-4 text-sm text-white outline-none"
-            style={{ background: "#272a2f", border: "0.5px solid rgba(130,219,126,0.4)", fontFamily: FONT }}
+            className="w-full rounded-full py-3 pl-11 pr-4 text-sm text-foreground outline-none"
+            style={{ background: "var(--c-card2)", border: "0.5px solid rgba(130,219,126,0.4)", fontFamily: FONT }}
           />
         </div>
 
         {/* Filter Tabs */}
         <div
           className="flex items-center gap-1 p-1 overflow-x-auto"
-          style={{ border: "0.5px solid rgba(130,219,126,0.3)", borderRadius: 9999, background: "#0b0e13" }}
+          style={{ border: "0.5px solid rgba(130,219,126,0.3)", borderRadius: 9999, background: "var(--c-bg)" }}
         >
           {TABS.map(({ key, label }) => {
             const isActive = activeTab === key;
@@ -248,7 +248,7 @@ export function MessagesScreen() {
                   onClick={() => setActiveTab(key)}
                   className="whitespace-nowrap rounded-full px-5 py-2 text-xs font-bold uppercase tracking-wider transition-colors"
                   style={{
-                    background: isActive ? "#1B2B3A" : "transparent",
+                    background: isActive ? "var(--c-card2)" : "transparent",
                     color: isActive ? GREEN : "#9ca3af",
                     fontFamily: FONT,
                   }}
@@ -258,7 +258,7 @@ export function MessagesScreen() {
                 {unreadCounts[key as keyof typeof unreadCounts] > 0 && (
                   <span
                     className="absolute top-0 right-0 w-2 h-2 rounded-full"
-                    style={{ background: GREEN, border: "1px solid #0b0e13" }}
+                    style={{ background: GREEN, border: "1px solid var(--c-border)" }}
                   />
                 )}
               </div>
@@ -271,19 +271,19 @@ export function MessagesScreen() {
       <div className="px-4 mt-4 pb-24 space-y-3">
         {loading ? (
           [...Array(5)].map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-4" style={{ background: CARD, borderRadius: 11 }}>
-              <Skeleton className="w-14 h-14 rounded-[11px]" style={{ background: "#272a2f" }} />
+            <div key={i} className="flex items-center gap-3 p-4" style={{ background: 'var(--c-card)', borderRadius: 11 }}>
+              <Skeleton className="w-14 h-14 rounded-[11px]" style={{ background: "var(--c-card2)" }} />
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-32" style={{ background: "#272a2f" }} />
-                <Skeleton className="h-3 w-48" style={{ background: "#272a2f" }} />
+                <Skeleton className="h-4 w-32" style={{ background: "var(--c-card2)" }} />
+                <Skeleton className="h-3 w-48" style={{ background: "var(--c-card2)" }} />
               </div>
             </div>
           ))
         ) : filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <MessageCircle className="w-12 h-12 mb-4" style={{ color: GREEN, opacity: 0.4 }} />
-            <h3 className="text-white text-lg mb-1" style={{ fontFamily: PACIFICO }}>No conversations</h3>
-            <p className="text-sm" style={{ color: "#BBBBBB", fontFamily: FONT }}>
+            <h3 className="text-foreground text-lg mb-1" style={{ fontFamily: PACIFICO }}>No conversations</h3>
+            <p className="text-sm" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
               {searchQuery ? "No matches found" : "Start chatting with your neighbors"}
             </p>
           </div>
@@ -299,7 +299,7 @@ export function MessagesScreen() {
                 <div
                   className="flex items-center gap-3 p-4 transition-colors"
                   style={{
-                    background: CARD,
+                    background: 'var(--c-card)',
                     borderRadius: 11,
                     borderLeft: unread ? `4px solid ${GREEN}` : "4px solid transparent",
                   }}
@@ -333,12 +333,12 @@ export function MessagesScreen() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-0.5">
-                      <span className="text-white text-[14px] truncate" style={{ fontFamily: FONT, fontWeight: 700 }}>
+                      <span className="text-foreground text-[14px] truncate" style={{ fontFamily: FONT, fontWeight: 700 }}>
                         {conv.participantName}
                       </span>
                       <span
                         className="text-[10px] flex-shrink-0 ml-2"
-                        style={{ color: unread ? GREEN : "#899485", fontFamily: FONT, fontWeight: unread ? 700 : 400 }}
+                        style={{ color: unread ? GREEN : "var(--c-text-muted)", fontFamily: FONT, fontWeight: unread ? 700 : 400 }}
                       >
                         {conv.timestamp}
                       </span>
@@ -348,7 +348,7 @@ export function MessagesScreen() {
                         ₦{conv.context.itemPrice.toLocaleString()}
                       </div>
                     )}
-                    <p className="text-[12px] truncate" style={{ color: unread ? "#e1e2e9" : "#899485", fontFamily: FONT, fontWeight: unread ? 500 : 400 }}>
+                    <p className="text-[12px] truncate" style={{ color: unread ? "var(--c-text)" : "var(--c-text-muted)", fontFamily: FONT, fontWeight: unread ? 500 : 400 }}>
                       {conv.lastMessage}
                     </p>
                   </div>

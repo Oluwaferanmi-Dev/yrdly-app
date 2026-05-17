@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -7,11 +7,11 @@ import { useLocationData } from "@/hooks/use-location-data";
 import { useLocation } from "@/contexts/LocationContext";
 import { ArrowLeft, MapPin, Check } from "lucide-react";
 
-const FONT = "Raleway, sans-serif";
+const FONT = "Inter, sans-serif";
 const PACIFICO = "Pacifico, cursive";
 const GREEN = "#388E3C";
-const CARD = "#1E2126";
-const BG = "#15181D";
+const CARD = "var(--c-card)";
+const BG = "var(--c-bg)";
 
 export default function LocationSettingsPage() {
   const router = useRouter();
@@ -107,10 +107,10 @@ export default function LocationSettingsPage() {
             className="w-10 h-10 flex items-center justify-center rounded-full"
             style={{ background: CARD }}
           >
-            <ArrowLeft className="w-5 h-5 text-white" />
+            <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
           <h1
-            className="text-white text-[20px]"
+            className="text-foreground text-[20px]"
             style={{ fontFamily: PACIFICO }}
           >
             Location
@@ -131,12 +131,12 @@ export default function LocationSettingsPage() {
           <div className="flex-1">
             <p
               className="text-[11px] uppercase tracking-wider"
-              style={{ fontFamily: FONT, color: "#888" }}
+              style={{ fontFamily: FONT, color: "var(--c-text-muted)" }}
             >
               Current Location
             </p>
             <p
-              className="text-white text-[14px] font-semibold"
+              className="text-foreground text-[14px] font-semibold"
               style={{ fontFamily: FONT }}
             >
               {displayLabel}
@@ -147,7 +147,7 @@ export default function LocationSettingsPage() {
         {/* Info */}
         <p
           className="text-[12px] px-1"
-          style={{ fontFamily: FONT, color: "#999", lineHeight: 1.6 }}
+          style={{ fontFamily: FONT, color: "var(--c-text-muted)", lineHeight: 1.6 }}
         >
           Your location determines which posts, events, marketplace items, and
           neighbors you see. Change it if you&apos;ve moved to a new area.
@@ -157,7 +157,7 @@ export default function LocationSettingsPage() {
         <div className="space-y-2">
           <label
             className="text-[12px] uppercase tracking-wider px-1"
-            style={{ fontFamily: FONT, color: "#888" }}
+            style={{ fontFamily: FONT, color: "var(--c-text-muted)" }}
           >
             State *
           </label>
@@ -165,9 +165,9 @@ export default function LocationSettingsPage() {
             value={selectedState}
             onChange={(e) => handleStateChange(e.target.value)}
             disabled={locationLoading}
-            className="w-full p-4 rounded-[11px] text-white text-[14px] appearance-none outline-none"
+            className="w-full p-4 rounded-[11px] text-foreground text-[14px] appearance-none outline-none"
             style={{
-              background: CARD,
+              background: 'var(--c-card)',
               fontFamily: FONT,
               border: selectedState ? `1px solid ${GREEN}` : "1px solid #333",
             }}
@@ -187,7 +187,7 @@ export default function LocationSettingsPage() {
         <div className="space-y-2">
           <label
             className="text-[12px] uppercase tracking-wider px-1"
-            style={{ fontFamily: FONT, color: "#888" }}
+            style={{ fontFamily: FONT, color: "var(--c-text-muted)" }}
           >
             Local Government Area *
           </label>
@@ -195,9 +195,9 @@ export default function LocationSettingsPage() {
             value={selectedLga}
             onChange={(e) => handleLgaChange(e.target.value)}
             disabled={!selectedState || locationLoading}
-            className="w-full p-4 rounded-[11px] text-white text-[14px] appearance-none outline-none"
+            className="w-full p-4 rounded-[11px] text-foreground text-[14px] appearance-none outline-none"
             style={{
-              background: CARD,
+              background: 'var(--c-card)',
               fontFamily: FONT,
               border: selectedLga ? `1px solid ${GREEN}` : "1px solid #333",
               opacity: !selectedState ? 0.5 : 1,
@@ -220,7 +220,7 @@ export default function LocationSettingsPage() {
         <div className="space-y-2">
           <label
             className="text-[12px] uppercase tracking-wider px-1"
-            style={{ fontFamily: FONT, color: "#888" }}
+            style={{ fontFamily: FONT, color: "var(--c-text-muted)" }}
           >
             Ward (Optional)
           </label>
@@ -228,9 +228,9 @@ export default function LocationSettingsPage() {
             value={selectedWard}
             onChange={(e) => handleWardChange(e.target.value)}
             disabled={!selectedLga || locationLoading}
-            className="w-full p-4 rounded-[11px] text-white text-[14px] appearance-none outline-none"
+            className="w-full p-4 rounded-[11px] text-foreground text-[14px] appearance-none outline-none"
             style={{
-              background: CARD,
+              background: 'var(--c-card)',
               fontFamily: FONT,
               border: selectedWard ? `1px solid ${GREEN}` : "1px solid #333",
               opacity: !selectedLga ? 0.5 : 1,

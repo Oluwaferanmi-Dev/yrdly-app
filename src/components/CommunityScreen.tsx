@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,8 +17,8 @@ import { useLocation } from "@/contexts/LocationContext";
 import { LocationChip } from "@/components/LocationChip";
 
 const GREEN = "#388E3C";
-const CARD = "#1E2126";
-const FONT = "Raleway, sans-serif";
+const CARD = "var(--c-card)";
+const FONT = "Inter, sans-serif";
 const PACIFICO = "Pacifico, cursive";
 
 interface CommunityScreenProps {
@@ -42,7 +42,7 @@ function UserActionButton({
       return (
         <button
           onClick={() => onFriendAction(userId, "add", () => friendshipHook.addFriend())}
-          className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase disabled:opacity-50"
+          className="rounded-full px-3 py-1 text-[11px] text-foreground font-bold uppercase disabled:opacity-50"
           style={{ background: GREEN, fontFamily: FONT }}
           disabled={isLoading}
         >
@@ -75,7 +75,7 @@ function UserActionButton({
         <>
           <button
             onClick={() => onFriendAction(userId, "accept", () => friendshipHook.acceptRequest())}
-            className="rounded-full px-3 py-1 text-[11px] text-white font-bold uppercase disabled:opacity-50"
+            className="rounded-full px-3 py-1 text-[11px] text-foreground font-bold uppercase disabled:opacity-50"
             style={{ background: GREEN, fontFamily: FONT }}
             disabled={isLoading}
           >
@@ -116,7 +116,7 @@ function StatCard({
       className={`flex flex-col items-center text-center p-4 space-y-2 ${
         onClick ? "cursor-pointer transition-all hover:opacity-80" : ""
       }`}
-      style={{ background: CARD, borderRadius: 11 }}
+      style={{ background: 'var(--c-card)', borderRadius: 11 }}
     >
       <div
         className="w-10 h-10 rounded-full flex items-center justify-center"
@@ -125,12 +125,12 @@ function StatCard({
         <Icon className="w-5 h-5" style={{ color: GREEN }} />
       </div>
       <div>
-        <div className="text-xl font-bold text-white" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+        <div className="text-xl font-bold text-foreground" style={{ fontFamily: "Inter, sans-serif" }}>
           {value}
         </div>
         <div
           className="text-[10px] uppercase tracking-wider"
-          style={{ color: "#899485", fontFamily: FONT }}
+          style={{ color: "var(--c-text-muted)", fontFamily: FONT }}
         >
           {label}
         </div>
@@ -300,33 +300,33 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
   }, [posts, searchQuery, showUserSearch]);
 
   return (
-    <div className="min-h-screen pb-32" style={{ background: "#15181D" }}>
+    <div className="min-h-screen pb-32" style={{ background: "var(--c-bg)" }}>
       <div className="max-w-2xl mx-auto px-4 pt-6 space-y-8">
 
         {/* ── Header ── */}
         <header className="space-y-1">
           <div className="flex items-center justify-between">
-            <h1 className="text-[20px] text-white" style={{ fontFamily: PACIFICO }}>
+            <h1 className="text-[20px] text-foreground" style={{ fontFamily: PACIFICO }}>
               Community
             </h1>
             <LocationChip />
           </div>
-          <p className="text-[12px]" style={{ fontFamily: FONT, fontStyle: "italic", fontWeight: 300, color: "#BBBBBB" }}>
+          <p className="text-[12px]" style={{ fontFamily: FONT, fontStyle: "italic", fontWeight: 300, color: "var(--c-text-muted)" }}>
             Connecting neighbors, one story at a time.
           </p>
         </header>
 
         {/* ── Search ── */}
         <div className="relative" ref={searchRef}>
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#899485" }} />
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "var(--c-text-muted)" }} />
           <input
             type="text"
             placeholder="Search for neighbors or posts..."
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full rounded-full px-6 pl-11 py-4 text-sm text-white outline-none focus:ring-1 focus:ring-[#388E3C]/50"
+            className="w-full rounded-full px-6 pl-11 py-4 text-sm text-foreground outline-none focus:ring-1 focus:ring-[#388E3C]/50"
             style={{
-              background: "#272a2f",
+              background: "var(--c-card2)",
               border: "0.5px solid #388E3C",
               fontFamily: FONT,
             }}
@@ -336,14 +336,14 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
           {showUserSearch && users.length > 0 && (
             <div
               className="absolute top-full mt-2 w-full z-20 overflow-hidden"
-              style={{ background: CARD, borderRadius: 11, border: "0.5px solid rgba(255,255,255,0.08)" }}
+              style={{ background: 'var(--c-card)', borderRadius: 11, border: "0.5px solid rgba(255,255,255,0.08)" }}
             >
               {userSearchLoading ? (
                 <div className="p-4 space-y-3">
                   {[1, 2].map((i) => (
                     <div key={i} className="flex items-center gap-3">
-                      <Skeleton className="w-10 h-10 rounded-full" style={{ background: "#272a2f" }} />
-                      <Skeleton className="h-4 w-32" style={{ background: "#272a2f" }} />
+                      <Skeleton className="w-10 h-10 rounded-full" style={{ background: "var(--c-card2)" }} />
+                      <Skeleton className="h-4 w-32" style={{ background: "var(--c-card2)" }} />
                     </div>
                   ))}
                 </div>
@@ -361,7 +361,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white text-[13px] truncate" style={{ fontFamily: FONT, fontWeight: 600 }}>
+                      <p className="text-foreground text-[13px] truncate" style={{ fontFamily: FONT, fontWeight: 600 }}>
                         {u.name}
                       </p>
                     </div>
@@ -391,7 +391,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
         {(pendingFriendRequests.length > 0 || friendRequestsLoading) && (
           <section className="space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="text-white font-semibold text-lg" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+              <h2 className="text-foreground font-semibold text-lg" style={{ fontFamily: "Inter, sans-serif" }}>
                 Friend Requests
               </h2>
               <button className="text-[11px] font-bold uppercase tracking-widest" style={{ color: GREEN, fontFamily: FONT }}>
@@ -404,11 +404,11 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
                     <div
                       key={i}
                       className="min-w-[180px] flex flex-col items-center p-4 space-y-3"
-                      style={{ background: "#1d2025", borderRadius: 11 }}
+                      style={{ background: "var(--c-card)", borderRadius: 11 }}
                     >
-                      <Skeleton className="w-16 h-16 rounded-full" style={{ background: "#272a2f" }} />
-                      <Skeleton className="h-4 w-24" style={{ background: "#272a2f" }} />
-                      <Skeleton className="h-8 w-full rounded-full" style={{ background: "#272a2f" }} />
+                      <Skeleton className="w-16 h-16 rounded-full" style={{ background: "var(--c-card2)" }} />
+                      <Skeleton className="h-4 w-24" style={{ background: "var(--c-card2)" }} />
+                      <Skeleton className="h-8 w-full rounded-full" style={{ background: "var(--c-card2)" }} />
                     </div>
                   ))
                 : pendingFriendRequests.map((req) => {
@@ -419,7 +419,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
                       <div
                         key={req.id}
                         className="min-w-[180px] flex flex-col items-center p-4 space-y-3 flex-shrink-0"
-                        style={{ background: "#1d2025", borderRadius: 11 }}
+                        style={{ background: "var(--c-card)", borderRadius: 11 }}
                       >
                         <Avatar
                           className="w-16 h-16 cursor-pointer"
@@ -433,11 +433,11 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
                           </AvatarFallback>
                         </Avatar>
                         <div className="text-center">
-                          <p className="text-white text-sm font-semibold" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+                          <p className="text-foreground text-sm font-semibold" style={{ fontFamily: "Inter, sans-serif" }}>
                             {sender.name}
                           </p>
                           {loc && (
-                            <p className="text-[10px]" style={{ color: "#899485", fontFamily: FONT }}>
+                            <p className="text-[10px]" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
                               {loc}
                             </p>
                           )}
@@ -454,7 +454,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
 
         {/* ── Recent Updates Feed ── */}
         <section className="space-y-4">
-          <h2 className="text-white font-semibold text-lg" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
+          <h2 className="text-foreground font-semibold text-lg" style={{ fontFamily: "Inter, sans-serif" }}>
             Recent Updates
           </h2>
 
@@ -472,10 +472,10 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
               >
                 <FileText className="w-8 h-8" style={{ color: GREEN, opacity: 0.5 }} />
               </div>
-              <h3 className="text-white text-lg mb-2" style={{ fontFamily: PACIFICO }}>
+              <h3 className="text-foreground text-lg mb-2" style={{ fontFamily: PACIFICO }}>
                 No posts yet
               </h3>
-              <p className="text-[13px]" style={{ color: "#BBBBBB", fontFamily: FONT }}>
+              <p className="text-[13px]" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
                 Be the first to share something with your neighbors!
               </p>
             </div>
@@ -498,7 +498,7 @@ export function CommunityScreen({ className }: CommunityScreenProps) {
             boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
           }}
         >
-          <Plus className="w-7 h-7 text-white" />
+          <Plus className="w-7 h-7 text-foreground" />
         </button>
       </CreatePostDialog>
     </div>

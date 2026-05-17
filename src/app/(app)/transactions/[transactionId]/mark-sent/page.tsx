@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -8,13 +8,13 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, ShieldCheck, HeadphonesIcon } from "lucide-react";
 
 /* ── Design tokens ─────────────────────────────────── */
-const BG    = "#101418";
-const CARD  = "#1d2025";
-const CARDHIGH = "#272a2f";
+const BG    = "var(--c-bg)";
+const CARD  = "var(--c-card)";
+const CARDHIGH = "var(--c-card2)";
 const GREEN = "#388E3C";
 const GREEN_L = "#82DB7E";
-const MUTED = "#bfcab9";
-const DIM   = "#899485";
+const MUTED = "var(--c-text-muted)";
+const DIM   = "var(--c-text-muted)";
 
 const CHECKLIST = [
   "Item matches the listing description",
@@ -54,7 +54,7 @@ export default function MarkAsSentPage() {
   return (
     <div
       className="min-h-dvh pb-10"
-      style={{ background: BG, color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}
+      style={{ background: BG, color: "var(--c-text)", fontFamily: "Inter, sans-serif" }}
     >
       {/* Header */}
       <header
@@ -65,7 +65,7 @@ export default function MarkAsSentPage() {
           onClick={() => router.back()}
           className="flex items-center justify-center w-9 h-9 rounded-full hover:opacity-70 transition-opacity"
         >
-          <ArrowLeft className="w-5 h-5" style={{ color: "#e1e2e9" }} />
+          <ArrowLeft className="w-5 h-5" style={{ color: "var(--c-text)" }} />
         </button>
         <h1 style={{ fontFamily: "Pacifico, cursive", fontSize: 22, color: "#fff" }}>
           Ready to Hand Over?
@@ -80,12 +80,12 @@ export default function MarkAsSentPage() {
             <p className="text-[11px] uppercase tracking-widest font-bold mb-1" style={{ color: DIM }}>
               Escrow Held
             </p>
-            <p className="font-bold text-2xl" style={{ color: GREEN_L, fontFamily: "Raleway, sans-serif" }}>
+            <p className="font-bold text-2xl" style={{ color: GREEN_L, fontFamily: "Inter, sans-serif" }}>
               Funds will be released to you
             </p>
           </div>
           <div className="px-5 py-4 text-center">
-            <p className="text-[11px] leading-normal" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+            <p className="text-[11px] leading-normal" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
               After buyer confirms receipt (or 48h auto-release)
             </p>
           </div>
@@ -114,7 +114,7 @@ export default function MarkAsSentPage() {
                     </svg>
                   )}
                 </div>
-                <p className="text-[15px] font-medium" style={{ color: done ? "#fff" : MUTED, fontFamily: "Raleway, sans-serif" }}>
+                <p className="text-[15px] font-medium" style={{ color: done ? "#fff" : MUTED, fontFamily: "Inter, sans-serif" }}>
                   {label}
                 </p>
               </button>
@@ -131,14 +131,14 @@ export default function MarkAsSentPage() {
             style={{
               background: allChecked && !loading ? GREEN : CARDHIGH,
               color: allChecked && !loading ? "#fff" : DIM,
-              fontFamily: "Plus Jakarta Sans, sans-serif",
+              fontFamily: "Inter, sans-serif",
               boxShadow: allChecked && !loading ? "0 0 24px rgba(56,142,60,0.35)" : "none",
               cursor: allChecked && !loading ? "pointer" : "not-allowed",
             }}
           >
             {loading ? "Confirming…" : "Confirm Item Sent / Ready"}
           </button>
-          <p className="text-center text-[12px] leading-relaxed px-8" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+          <p className="text-center text-[12px] leading-relaxed px-8" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
             Once confirmed, the 48h buyer confirmation window begins.
           </p>
         </section>
@@ -147,17 +147,17 @@ export default function MarkAsSentPage() {
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div
             className="p-4 rounded-xl border-l-2"
-            style={{ background: "#191c21", borderColor: "#6edf51" }}
+            style={{ background: "var(--c-bg)", borderColor: "#6edf51" }}
           >
             <ShieldCheck className="w-5 h-5 mb-2" style={{ color: "#6edf51" }} />
-            <h3 className="text-sm font-bold text-white">Escrow Secure</h3>
+            <h3 className="text-sm font-bold text-foreground">Escrow Secure</h3>
             <p className="text-[11px] mt-1" style={{ color: DIM }}>
               Funds are held safely by the platform until handover.
             </p>
           </div>
-          <div className="p-4 rounded-xl" style={{ background: "#191c21" }}>
+          <div className="p-4 rounded-xl" style={{ background: "var(--c-bg)" }}>
             <HeadphonesIcon className="w-5 h-5 mb-2" style={{ color: "#a5c8ff" }} />
-            <h3 className="text-sm font-bold text-white">Need Help?</h3>
+            <h3 className="text-sm font-bold text-foreground">Need Help?</h3>
             <p className="text-[11px] mt-1" style={{ color: DIM }}>
               Contact support if the buyer is a no-show.
             </p>

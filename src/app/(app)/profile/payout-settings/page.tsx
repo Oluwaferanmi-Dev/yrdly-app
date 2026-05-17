@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,13 +8,13 @@ import { supabase } from "@/lib/supabase";
 import { ArrowLeft, Building2, CheckCircle, AlertCircle, Loader2, Sparkles } from "lucide-react";
 
 /* ── Design tokens ─────────────────────────────────── */
-const BG     = "#101418";
-const CARD   = "#1d2025";
-const CARDH  = "#272a2f";
+const BG     = "var(--c-bg)";
+const CARD   = "var(--c-card)";
+const CARDH  = "var(--c-card2)";
 const GREEN  = "#388E3C";
 const GREEN_L = "#82DB7E";
-const MUTED  = "#bfcab9";
-const DIM    = "#899485";
+const MUTED  = "var(--c-text-muted)";
+const DIM    = "var(--c-text-muted)";
 
 const NIGERIAN_BANKS = [
   { code: "044", name: "Access Bank" },
@@ -145,10 +145,10 @@ export default function PayoutSettingsPage() {
   }
 
   return (
-    <div className="min-h-dvh pb-20" style={{ background: "var(--background)", color: "var(--foreground)", fontFamily: "Raleway, sans-serif" }}>
+    <div className="min-h-dvh pb-20" style={{ background: "var(--background)", color: "var(--foreground)", fontFamily: "Inter, sans-serif" }}>
       {/* Header */}
       <header
-        className="fixed top-0 w-full z-50 flex items-center border-b border-white/5"
+        className="fixed top-0 w-full z-50 flex items-center border-b border-border"
         style={{ 
           background: "rgba(13,15,17,0.85)", 
           backdropFilter: "blur(20px)",
@@ -160,11 +160,11 @@ export default function PayoutSettingsPage() {
           <div className="flex items-center gap-4">
             <button 
               onClick={() => router.back()} 
-              className="w-10 h-10 rounded-full flex items-center justify-center bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-90"
+              className="w-10 h-10 rounded-full flex items-center justify-center bg-white/5 border border-border hover:bg-accent transition-all active:scale-90"
             >
               <ArrowLeft className="w-5 h-5" style={{ color: "#388E3C" }} />
             </button>
-            <h1 className="text-xl font-black text-white tracking-tight">
+            <h1 className="text-xl font-black text-foreground tracking-tight">
               Payout Settings
             </h1>
           </div>
@@ -203,11 +203,11 @@ export default function PayoutSettingsPage() {
             <Sparkles className="w-5 h-5 text-[#388E3C]" />
           </div>
           <div className="relative z-10 space-y-1">
-            <p className="text-sm font-black text-white">
+            <p className="text-sm font-black text-foreground">
               Smart Payout Splitting
             </p>
-            <p className="text-xs leading-relaxed text-[#899485] font-medium">
-              When you sell, <span className="text-white font-bold">97%</span> goes directly to you. A tiny <span className="text-white font-bold">3%</span> platform fee keeps the neighborhood running.
+            <p className="text-xs leading-relaxed text-muted-foreground font-medium">
+              When you sell, <span className="text-foreground font-bold">97%</span> goes directly to you. A tiny <span className="text-foreground font-bold">3%</span> platform fee keeps the neighborhood running.
             </p>
           </div>
         </section>
@@ -228,35 +228,35 @@ export default function PayoutSettingsPage() {
                   <CheckCircle className="w-6 h-6 text-[#388E3C]" />
                 </div>
                 <div>
-                  <h3 className="font-black text-white">Bank Linked</h3>
+                  <h3 className="font-black text-foreground">Bank Linked</h3>
                   <p className="text-xs font-bold text-[#388E3C] uppercase tracking-widest">Verified Account</p>
                 </div>
               </div>
-              <div className="text-[10px] font-black text-[#899485] uppercase tracking-tighter opacity-40">
+              <div className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter opacity-40">
                 Primary
               </div>
             </div>
 
-            <div className="space-y-4 pt-4 border-t border-white/5">
+            <div className="space-y-4 pt-4 border-t border-border">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-black uppercase tracking-widest text-[#899485]">Account Holder</span>
-                <span className="text-sm font-bold text-white">{existing.accountName}</span>
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Account Holder</span>
+                <span className="text-sm font-bold text-foreground">{existing.accountName}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs font-black uppercase tracking-widest text-[#899485]">Account Number</span>
-                <span className="text-sm font-bold text-white tracking-widest">
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Account Number</span>
+                <span className="text-sm font-bold text-foreground tracking-widest">
                   •••• •••• {existing.accountNumber.slice(-4)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-xs font-black uppercase tracking-widest text-[#899485]">Financial Institution</span>
-                <span className="text-sm font-bold text-white">{getBankName(existing.bankCode)}</span>
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Financial Institution</span>
+                <span className="text-sm font-bold text-foreground">{getBankName(existing.bankCode)}</span>
               </div>
             </div>
 
             <button
               onClick={() => setShowForm(true)}
-              className="w-full h-14 rounded-2xl text-xs font-black uppercase tracking-widest text-white transition-all border border-white/5 bg-white/[0.03] hover:bg-white/[0.08] active:scale-95"
+              className="w-full h-14 rounded-2xl text-xs font-black uppercase tracking-widest text-foreground transition-all border border-border bg-white/[0.03] hover:bg-white/[0.08] active:scale-95"
             >
               Update Bank Details
             </button>
@@ -274,10 +274,10 @@ export default function PayoutSettingsPage() {
             }}
           >
             <div className="space-y-1">
-              <h2 className="text-xl font-black text-white">
+              <h2 className="text-xl font-black text-foreground">
                 {existing ? "Update" : "Add"} Bank Account
               </h2>
-              <p className="text-xs text-[#899485] font-medium">
+              <p className="text-xs text-muted-foreground font-medium">
                 Enter your local bank details to receive payments.
               </p>
             </div>
@@ -285,18 +285,18 @@ export default function PayoutSettingsPage() {
             <div className="space-y-6">
               {/* Bank selection */}
               <div className="space-y-3">
-                <label className="text-[10px] uppercase tracking-[0.2em] font-black text-[#899485] ml-1">
+                <label className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground ml-1">
                   Select Bank
                 </label>
                 <div className="relative">
                   <select
                     value={bankCode}
                     onChange={(e) => setBankCode(e.target.value)}
-                    className="w-full h-14 rounded-2xl p-4 text-base bg-white/5 border border-white/10 focus:border-[#388E3C]/50 focus:outline-none transition-all appearance-none cursor-pointer text-white font-medium"
+                    className="w-full h-14 rounded-2xl p-4 text-base bg-white/5 border border-border focus:border-[#388E3C]/50 focus:outline-none transition-all appearance-none cursor-pointer text-foreground font-medium"
                   >
-                    <option value="" className="bg-[#1E2126]">Choose institution...</option>
+                    <option value="" className="bg-card">Choose institution...</option>
                     {NIGERIAN_BANKS.map((bank) => (
-                      <option key={bank.code} value={bank.code} className="bg-[#1E2126]">
+                      <option key={bank.code} value={bank.code} className="bg-card">
                         {bank.name}
                       </option>
                     ))}
@@ -309,7 +309,7 @@ export default function PayoutSettingsPage() {
 
               {/* Account number */}
               <div className="space-y-3">
-                <label className="text-[10px] uppercase tracking-[0.2em] font-black text-[#899485] ml-1">
+                <label className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground ml-1">
                   Account Number
                 </label>
                 <input
@@ -318,13 +318,13 @@ export default function PayoutSettingsPage() {
                   onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 10))}
                   placeholder="0123456789"
                   maxLength={10}
-                  className="w-full h-14 rounded-2xl p-4 text-base bg-white/5 border border-white/10 focus:border-[#388E3C]/50 focus:outline-none transition-all text-white font-medium placeholder:text-white/10"
+                  className="w-full h-14 rounded-2xl p-4 text-base bg-white/5 border border-border focus:border-[#388E3C]/50 focus:outline-none transition-all text-foreground font-medium placeholder:text-muted-foreground"
                 />
               </div>
 
               {/* Account name */}
               <div className="space-y-3">
-                <label className="text-[10px] uppercase tracking-[0.2em] font-black text-[#899485] ml-1">
+                <label className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground ml-1">
                   Account Holder Name
                 </label>
                 <input
@@ -332,7 +332,7 @@ export default function PayoutSettingsPage() {
                   value={accountName}
                   onChange={(e) => setAccountName(e.target.value)}
                   placeholder="e.g. John Doe"
-                  className="w-full h-14 rounded-2xl p-4 text-base bg-white/5 border border-white/10 focus:border-[#388E3C]/50 focus:outline-none transition-all text-white font-medium placeholder:text-white/10"
+                  className="w-full h-14 rounded-2xl p-4 text-base bg-white/5 border border-border focus:border-[#388E3C]/50 focus:outline-none transition-all text-foreground font-medium placeholder:text-muted-foreground"
                 />
               </div>
             </div>
@@ -342,7 +342,7 @@ export default function PayoutSettingsPage() {
               <button
                 onClick={handleSubmit}
                 disabled={loading || !bankCode || !accountNumber || !accountName}
-                className="w-full h-16 rounded-[24px] flex items-center justify-center text-white text-lg font-black transition-all active:scale-95 disabled:opacity-50 disabled:grayscale group relative overflow-hidden"
+                className="w-full h-16 rounded-[24px] flex items-center justify-center text-foreground text-lg font-black transition-all active:scale-95 disabled:opacity-50 disabled:grayscale group relative overflow-hidden"
                 style={{
                   background: "#388E3C",
                   boxShadow: "0 12px 24px -6px rgba(56,142,60,0.4)"
@@ -362,7 +362,7 @@ export default function PayoutSettingsPage() {
               {existing && (
                 <button
                   onClick={() => setShowForm(false)}
-                  className="w-full h-12 rounded-2xl text-xs font-black uppercase tracking-widest text-[#899485] hover:text-white transition-colors"
+                  className="w-full h-12 rounded-2xl text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Cancel
                 </button>
@@ -372,9 +372,9 @@ export default function PayoutSettingsPage() {
         )}
 
         {/* Security Note */}
-        <div className="flex items-center justify-center gap-3 px-6 py-4 rounded-3xl bg-white/[0.02] border border-white/5">
-          <AlertCircle className="w-4 h-4 text-[#899485]" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#899485]">
+        <div className="flex items-center justify-center gap-3 px-6 py-4 rounded-3xl bg-white/[0.02] border border-border">
+          <AlertCircle className="w-4 h-4 text-muted-foreground" />
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
             Encrypted & PCI-DSS Compliant Storage
           </p>
         </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/use-supabase-auth";
@@ -405,7 +405,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                   <div className="relative">
                     <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600 group-hover:ring-blue-300 dark:group-hover:ring-blue-600 transition-all">
                     <AvatarImage src={otherParticipant.avatar_url} alt={otherParticipant.name} />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-foreground font-semibold">
                         {otherParticipant.name.charAt(0)}
                       </AvatarFallback>
                   </Avatar>
@@ -426,7 +426,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                           }) : ''}
                         </span>
                         {conversation.unread_count && conversation.unread_count > 0 && (
-                          <div className="bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
+                          <div className="bg-blue-500 text-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-semibold">
                             {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
                           </div>
                         )}
@@ -506,7 +506,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
             >
               <Avatar className="h-12 w-12 ring-2 ring-slate-200 dark:ring-slate-600">
             <AvatarImage src={otherParticipant.avatar_url} alt={otherParticipant.name} />
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-foreground font-semibold">
                   {otherParticipant.name.charAt(0)}
                 </AvatarFallback>
           </Avatar>
@@ -549,7 +549,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                 {message.sender_id !== user?.id && (
                     <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarImage src={otherParticipant.avatar_url} alt={otherParticipant.name} />
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-foreground text-xs">
                         {otherParticipant.name.charAt(0)}
                       </AvatarFallback>
                   </Avatar>
@@ -558,7 +558,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                   className={cn(
                       "rounded-2xl px-4 py-3 max-w-xs lg:max-w-md break-words shadow-sm",
                     message.sender_id === user?.id
-                        ? "bg-blue-500 text-white rounded-br-md"
+                        ? "bg-blue-500 text-foreground rounded-br-md"
                         : "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-bl-md"
                   )}
                 >
@@ -642,7 +642,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
             <Button 
               type="submit" 
               disabled={(!newMessage.trim() && !imageFile) || uploading}
-              className="px-6 py-3 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+              className="px-6 py-3 rounded-2xl bg-blue-500 hover:bg-blue-600 text-foreground shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
             >
               {uploading ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -721,7 +721,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                       {message.sender_id !== user?.id && (
                         <Avatar className="h-8 w-8 flex-shrink-0">
                           <AvatarImage src={getOtherParticipant(selectedConversation)?.avatar_url} alt={getOtherParticipant(selectedConversation)?.name} />
-                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-foreground text-xs">
                             {getOtherParticipant(selectedConversation)?.name.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
@@ -730,7 +730,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
                         className={cn(
                           "rounded-2xl px-4 py-3 max-w-xs lg:max-w-md break-words shadow-sm",
                           message.sender_id === user?.id
-                            ? "bg-blue-500 text-white rounded-br-md"
+                            ? "bg-blue-500 text-foreground rounded-br-md"
                             : "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-600 rounded-bl-md"
                         )}
                       >
@@ -815,7 +815,7 @@ export function NeighborChatLayout({ selectedConversationId }: NeighborChatLayou
               <Button 
                 type="submit" 
                 disabled={(!newMessage.trim() && !imageFile) || uploading}
-                className="px-6 py-3 rounded-2xl bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+                className="px-6 py-3 rounded-2xl bg-blue-500 hover:bg-blue-600 text-foreground shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
               >
                 {uploading ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />

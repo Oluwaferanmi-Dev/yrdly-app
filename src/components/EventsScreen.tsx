@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
@@ -123,21 +123,21 @@ export function EventsScreen({ className }: EventsScreenProps) {
   if (loading) {
     return (
       <div className={cn("p-4 space-y-6", className)}>
-        <Skeleton className="h-[280px] sm:h-[330px] w-full rounded-[28px]" style={{ background: "#1E2126" }} />
-        <Skeleton className="h-8 w-32" style={{ background: "#1E2126" }} />
+        <Skeleton className="h-[280px] sm:h-[330px] w-full rounded-[28px]" style={{ background: "var(--c-card)" }} />
+        <Skeleton className="h-8 w-32" style={{ background: "var(--c-card)" }} />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-[200px] rounded" style={{ background: "#1E2126" }} />
+            <Skeleton key={i} className="h-[200px] rounded" style={{ background: "var(--c-card)" }} />
           ))}
         </div>
         <div className="flex gap-2 overflow-x-auto pb-2">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-8 w-20 flex-shrink-0 rounded-md" style={{ background: "#1E2126" }} />
+            <Skeleton key={i} className="h-8 w-20 flex-shrink-0 rounded-md" style={{ background: "var(--c-card)" }} />
           ))}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-[400px] rounded-[11px]" style={{ background: "#1E2126" }} />
+            <Skeleton key={i} className="h-[400px] rounded-[11px]" style={{ background: "var(--c-card)" }} />
           ))}
         </div>
       </div>
@@ -153,7 +153,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
       {/* Picked for You */}
       <section className="space-y-3 sm:space-y-4">
         <h2
-          className="text-lg sm:text-[18px] leading-8 text-white"
+          className="text-lg sm:text-[18px] leading-8 text-foreground"
           style={{ fontFamily: '"Pacifico", cursive' }}
         >
           Picked for You
@@ -161,11 +161,11 @@ export function EventsScreen({ className }: EventsScreenProps) {
         {pickedForYou.length === 0 ? (
           <div
             className="rounded-[28px] h-[220px] sm:h-[280px] md:h-[330px] flex flex-col items-center justify-center gap-3 px-6"
-            style={{ background: "#1E2126" }}
+            style={{ background: "var(--c-card)" }}
           >
-            <CalendarDays className="w-12 h-12 text-white/30" aria-hidden />
-            <p className="text-white/70 font-raleway text-sm text-center">No events picked for you yet</p>
-            <p className="text-white/50 font-raleway text-xs text-center max-w-[240px]">Create an event or check back later for recommendations.</p>
+            <CalendarDays className="w-12 h-12 text-muted-foreground" aria-hidden />
+            <p className="text-muted-foreground font-sans text-sm text-center">No events picked for you yet</p>
+            <p className="text-muted-foreground font-sans text-xs text-center max-w-[240px]">Create an event or check back later for recommendations.</p>
           </div>
         ) : (
           <>
@@ -181,7 +181,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
                     className="pl-2 sm:pl-4 basis-full sm:basis-[85%] md:basis-[75%] lg:basis-[70%]"
                   >
                     <div
-                      className="relative w-full rounded-[28px] overflow-hidden aspect-[820/330] max-h-[280px] sm:max-h-[330px] bg-[#1E2126]"
+                      className="relative w-full rounded-[28px] overflow-hidden aspect-[820/330] max-h-[280px] sm:max-h-[330px] bg-card"
                       onClick={() => router.push(`/events/${event.id}`)}
                     >
                       <Image
@@ -199,10 +199,10 @@ export function EventsScreen({ className }: EventsScreenProps) {
                         }}
                       />
                       <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 md:p-8">
-                        <h3 className="font-raleway font-extrabold text-lg sm:text-[23px] text-white mb-2">
+                        <h3 className="font-sans font-extrabold text-lg sm:text-[23px] text-foreground mb-2">
                           {event.title || "Event"}
                         </h3>
-                        <div className="flex flex-wrap items-center gap-3 text-white/90 text-xs sm:text-[13px] font-raleway">
+                        <div className="flex flex-wrap items-center gap-3 text-foreground text-xs sm:text-[13px] font-sans">
                           <span className="flex items-center gap-1">
                             <CalendarDays className="w-4 h-4" />
                             {formatEventDateTime(event.start_time)}
@@ -213,7 +213,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
                           </span>
                         </div>
                         <Button
-                          className="mt-4 w-full sm:w-auto sm:min-w-[180px] rounded-full font-raleway font-medium text-sm text-white border border-white/80"
+                          className="mt-4 w-full sm:w-auto sm:min-w-[180px] rounded-full font-sans font-medium text-sm text-foreground border border-white/80"
                           style={{ background: "#388E3C" }}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -251,14 +251,14 @@ export function EventsScreen({ className }: EventsScreenProps) {
       <section className="space-y-3 sm:space-y-4">
         <div className="flex items-center justify-between">
           <h2
-            className="text-lg sm:text-[18px] leading-8 text-white"
+            className="text-lg sm:text-[18px] leading-8 text-foreground"
             style={{ fontFamily: '"Pacifico", cursive' }}
           >
             Events in your Area
           </h2>
           <Link
             href="/events"
-            className="font-raleway font-medium text-xs text-[#1976D2] hover:underline flex-shrink-0"
+            className="font-sans font-medium text-xs text-[#1976D2] hover:underline flex-shrink-0"
           >
             See all
           </Link>
@@ -268,11 +268,11 @@ export function EventsScreen({ className }: EventsScreenProps) {
             <div
               key={event.id}
               className="rounded overflow-hidden cursor-pointer transition hover:opacity-95"
-              style={{ background: "#1E2126" }}
+              style={{ background: "var(--c-card)" }}
               onClick={() => router.push(`/events/${event.id}`)}
             >
               <div className="p-3 flex gap-2">
-                <div className="w-14 h-14 rounded flex-shrink-0 bg-[#15181D] overflow-hidden">
+                <div className="w-14 h-14 rounded flex-shrink-0 bg-background overflow-hidden">
                   <Image
                     src={event.cover_image_url || "/placeholder.svg"}
                     alt=""
@@ -282,27 +282,27 @@ export function EventsScreen({ className }: EventsScreenProps) {
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-raleway font-medium italic text-xs sm:text-[13px] text-white truncate">
+                  <p className="font-sans font-medium italic text-xs sm:text-[13px] text-foreground truncate">
                     {event.title || "Event"}
                   </p>
-                  <p className="font-raleway text-[9px] sm:text-[9px] text-white/80 mt-0.5">
+                  <p className="font-sans text-[9px] sm:text-[9px] text-foreground mt-0.5">
                     {formatEventDate(event.start_time)}
                   </p>
-                  <div className="flex items-center gap-1 mt-1 text-white/70">
+                  <div className="flex items-center gap-1 mt-1 text-muted-foreground">
                     <MapPin className="w-3 h-3 flex-shrink-0" />
-                    <span className="font-raleway text-[9px] sm:text-[11px] truncate">
+                    <span className="font-sans text-[9px] sm:text-[11px] truncate">
                       {event.location_address || event.description?.slice(0, 30) || "—"}
                     </span>
                   </div>
                 </div>
               </div>
-              <div className="px-3 pb-3 pt-0 border-t border-white/10">
-                <p className="font-raleway text-[9px] text-white/60 mb-2">
+              <div className="px-3 pb-3 pt-0 border-t border-border">
+                <p className="font-sans text-[9px] text-muted-foreground mb-2">
                   {event.attendee_count || 0} are interested
                 </p>
                 <Button
                   size="sm"
-                  className="w-full rounded-[15px] font-raleway text-[11px] text-white"
+                  className="w-full rounded-[15px] font-sans text-[11px] text-foreground"
                   style={{ background: "#388E3C" }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -322,8 +322,8 @@ export function EventsScreen({ className }: EventsScreenProps) {
         <button
           onClick={() => setSortBy("all")}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-2 rounded-md font-raleway text-[10px] sm:text-xs flex-shrink-0",
-            sortBy === "all" ? "bg-white text-black" : "border border-white/50 text-white"
+            "flex items-center gap-1.5 px-3 py-2 rounded-md font-sans text-[10px] sm:text-xs flex-shrink-0",
+            sortBy === "all" ? "bg-white text-black" : "border border-border0 text-foreground"
           )}
         >
           All Events
@@ -332,8 +332,8 @@ export function EventsScreen({ className }: EventsScreenProps) {
         <button
           onClick={() => setSortBy("price")}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-2 rounded-md font-raleway text-[10px] sm:text-xs flex-shrink-0",
-            sortBy === "price" ? "bg-white text-black" : "border border-white/50 text-white"
+            "flex items-center gap-1.5 px-3 py-2 rounded-md font-sans text-[10px] sm:text-xs flex-shrink-0",
+            sortBy === "price" ? "bg-white text-black" : "border border-border0 text-foreground"
           )}
         >
           Price
@@ -342,8 +342,8 @@ export function EventsScreen({ className }: EventsScreenProps) {
         <button
           onClick={() => setSortBy("date")}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-2 rounded-md font-raleway text-[10px] sm:text-xs flex-shrink-0",
-            sortBy === "date" ? "bg-white text-black" : "border border-white/50 text-white"
+            "flex items-center gap-1.5 px-3 py-2 rounded-md font-sans text-[10px] sm:text-xs flex-shrink-0",
+            sortBy === "date" ? "bg-white text-black" : "border border-border0 text-foreground"
           )}
         >
           Date
@@ -354,7 +354,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
       {/* Mainstream Events */}
       <section className="space-y-4">
         <h2
-          className="text-lg sm:text-[18px] leading-8 text-white"
+          className="text-lg sm:text-[18px] leading-8 text-foreground"
           style={{ fontFamily: '"Pacifico", cursive' }}
         >
           Mainstream Events
@@ -362,11 +362,11 @@ export function EventsScreen({ className }: EventsScreenProps) {
         {mainstream.length === 0 ? (
           <div
             className="rounded-[11px] py-16 px-6 flex flex-col items-center justify-center gap-3"
-            style={{ background: "#1E2126" }}
+            style={{ background: "var(--c-card)" }}
           >
-            <CalendarDays className="w-14 h-14 text-white/30" aria-hidden />
-            <p className="text-white/70 font-raleway text-sm text-center">No events yet</p>
-            <p className="text-white/50 font-raleway text-xs text-center max-w-[280px]">Be the first to create an event in your neighborhood.</p>
+            <CalendarDays className="w-14 h-14 text-muted-foreground" aria-hidden />
+            <p className="text-muted-foreground font-sans text-sm text-center">No events yet</p>
+            <p className="text-muted-foreground font-sans text-xs text-center max-w-[280px]">Be the first to create an event in your neighborhood.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -374,7 +374,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
               <div
                 key={event.id}
                 className="rounded-[11px] overflow-hidden cursor-pointer transition hover:opacity-95"
-                style={{ background: "#1E2126" }}
+                style={{ background: "var(--c-card)" }}
                 onClick={() => router.push(`/events/${event.id}`)}
               >
                 <div className="p-4 sm:p-5">
@@ -387,19 +387,19 @@ export function EventsScreen({ className }: EventsScreenProps) {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-raleway font-bold text-sm text-white">
+                        <p className="font-sans font-bold text-sm text-foreground">
                           {(event.organizer as any)?.name}
                         </p>
-                        <p className="font-raleway text-[11px] text-white/60">
+                        <p className="font-sans text-[11px] text-muted-foreground">
                           {timeAgo(event.created_at ? new Date(event.created_at) : null)}
                         </p>
                       </div>
                     </div>
                   )}
-                  <h3 className="font-raleway font-extrabold text-base sm:text-lg text-white mb-3">
+                  <h3 className="font-sans font-extrabold text-base sm:text-lg text-foreground mb-3">
                     {event.title || "Event"}
                   </h3>
-                  <div className="relative w-full aspect-[434/262] rounded-[15px] overflow-hidden bg-[#15181D] mb-4">
+                  <div className="relative w-full aspect-[434/262] rounded-[15px] overflow-hidden bg-background mb-4">
                     <Image
                       src={event.cover_image_url || "/placeholder.svg"}
                       alt={event.title || "Event"}
@@ -408,7 +408,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
                       sizes="(max-width: 768px) 100vw, 50vw"
                     />
                   </div>
-                  <div className="space-y-2 text-white/90 font-raleway text-[13px]">
+                  <div className="space-y-2 text-foreground font-sans text-[13px]">
                     <div className="flex items-center gap-2">
                       <CalendarDays className="w-4 h-4 flex-shrink-0" />
                       {formatEventDateTime(event.start_time)}
@@ -419,13 +419,13 @@ export function EventsScreen({ className }: EventsScreenProps) {
                     </div>
                   </div>
                   <div className="flex items-center justify-between mt-4">
-                    <span className="font-raleway font-bold text-xl sm:text-2xl text-[#388E3C]">
+                    <span className="font-sans font-bold text-xl sm:text-2xl text-[#388E3C]">
                       {event.ticket_tiers && event.ticket_tiers.length > 0
                         ? `From ₦${Math.min(...event.ticket_tiers.map(t => t.price)).toLocaleString()}`
                         : "Free"}
                     </span>
                     <button
-                      className="p-2 text-white hover:bg-white/10 rounded-full"
+                      className="p-2 text-foreground hover:bg-accent rounded-full"
                       onClick={(e) => {
                         e.stopPropagation();
                         if (navigator.share) {
@@ -457,7 +457,7 @@ export function EventsScreen({ className }: EventsScreenProps) {
           style={{ background: "#388E3C" }}
           onClick={() => setOnboardingOpen(true)}
         >
-          <Plus className="h-6 w-6 text-white" />
+          <Plus className="h-6 w-6 text-foreground" />
         </Button>
       </div>
 

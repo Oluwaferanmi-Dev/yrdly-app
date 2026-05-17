@@ -1,20 +1,20 @@
-"use client";
+﻿"use client";
 
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 /* ── Design tokens ─────────────────────────────────────── */
-const BG   = "#191c21";
+const BG   = "var(--c-bg)";
 const GREEN = "#388E3C";
-const DIM  = "#bfcab9";
+const DIM  = "var(--c-text-muted)";
 
 export default function PaymentRedirectPage() {
   const params = useSearchParams();
   const link   = params.get("link");
 
-  /* Auto-redirect once the page mounts */
+  /* Auto-redirect once the page mounts — only allow https:// to prevent open redirect / javascript: injection */
   useEffect(() => {
-    if (link) {
+    if (link && link.startsWith('https://')) {
       const t = setTimeout(() => { window.location.href = link; }, 1500);
       return () => clearTimeout(t);
     }
@@ -23,7 +23,7 @@ export default function PaymentRedirectPage() {
   return (
     <div
       className="min-h-dvh flex flex-col"
-      style={{ background: BG, color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}
+      style={{ background: BG, color: "var(--c-text)", fontFamily: "Inter, sans-serif" }}
     >
       {/* Header */}
       <header
@@ -49,7 +49,7 @@ export default function PaymentRedirectPage() {
           <div className="relative flex items-center justify-center">
             <div
               className="w-14 h-14 rounded-full border-4"
-              style={{ borderColor: "#32353a" }}
+              style={{ borderColor: "var(--c-card2)" }}
             />
             <div
               className="absolute w-14 h-14 rounded-full border-4 border-t-transparent animate-spin"
@@ -64,13 +64,13 @@ export default function PaymentRedirectPage() {
             >
               Connecting to Flutterwave...
             </h1>
-            <p className="text-sm" style={{ color: DIM, fontFamily: "Raleway, sans-serif" }}>
+            <p className="text-sm" style={{ color: DIM, fontFamily: "Inter, sans-serif" }}>
               Please do not close this screen
             </p>
           </div>
 
           {/* Progress bar */}
-          <div className="w-48 h-1.5 rounded-full overflow-hidden" style={{ background: "#32353a" }}>
+          <div className="w-48 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--c-card2)" }}>
             <div
               className="h-full rounded-full"
               style={{
@@ -84,13 +84,13 @@ export default function PaymentRedirectPage() {
 
         {/* Footer lock */}
         <footer className="absolute bottom-10 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-1.5" style={{ color: "#899485" }}>
+          <div className="flex items-center gap-1.5" style={{ color: "var(--c-text-muted)" }}>
             <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
               <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
             </svg>
             <span
               className="text-[11px] uppercase tracking-widest"
-              style={{ fontFamily: "Raleway, sans-serif" }}
+              style={{ fontFamily: "Inter, sans-serif" }}
             >
               Secured payment
             </span>

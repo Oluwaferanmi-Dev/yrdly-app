@@ -1,4 +1,4 @@
-
+﻿
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -34,10 +34,10 @@ import type { Post } from "@/types";
 import Image from "next/image";
 
 /* ─── design tokens ─────────────────────────────────────────────── */
-const BG_DARK = "#15181D";
-const CARD_BG = "#1E2126";
+const BG_DARK = "var(--c-bg)";
+const CARD_BG = "var(--c-card)";
 const GREEN = "#388E3C";
-const FONT_RALEWAY = "Raleway, sans-serif";
+const FONT_RALEWAY = "Inter, sans-serif";
 const FONT_PACIFICO = "Pacifico, cursive";
 
 /* ─── schema ────────────────────────────────────────────────────── */
@@ -98,9 +98,9 @@ function FormBody({
   onClose,
 }: FormBodyProps) {
   return (
-    <div className="max-w-2xl mx-auto p-4 sm:p-6 text-white pb-6">
+    <div className="max-w-2xl mx-auto p-4 sm:p-6 text-foreground pb-6">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-black font-raleway">
+        <h1 className="text-2xl font-black font-sans">
             {isEditMode ? "Edit Item" : "Create Item for Sale"}
         </h1>
         <button type="button" onClick={onClose} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition">
@@ -111,32 +111,32 @@ function FormBody({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           
-          <div className="space-y-4 p-6 rounded-3xl bg-[#1E2126] border border-white/5">
-            <h2 className="text-lg font-bold font-raleway text-[#388E3C]">Item Details</h2>
+          <div className="space-y-4 p-6 rounded-3xl bg-card border border-border">
+            <h2 className="text-lg font-bold font-sans text-[#388E3C]">Item Details</h2>
             
             <FormField control={form.control} name="text" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white/70">Item Title</FormLabel>
-                <FormControl><Input placeholder="e.g Slightly used armchair" className="bg-[#15181D] border-white/10 h-12 rounded-xl text-base" {...field} /></FormControl>
+                <FormLabel className="text-muted-foreground">Item Title</FormLabel>
+                <FormControl><Input placeholder="e.g Slightly used armchair" className="bg-background border-border h-12 rounded-xl text-base" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
 
             <FormField control={form.control} name="description" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white/70">Description</FormLabel>
-                <FormControl><Textarea placeholder="Add more details about the item..." className="bg-[#15181D] border-white/10 rounded-xl resize-none h-24 text-base" {...field} /></FormControl>
+                <FormLabel className="text-muted-foreground">Description</FormLabel>
+                <FormControl><Textarea placeholder="Add more details about the item..." className="bg-background border-border rounded-xl resize-none h-24 text-base" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
 
             <FormField control={form.control} name="price" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white/70">Price (Optional)</FormLabel>
+                <FormLabel className="text-muted-foreground">Price (Optional)</FormLabel>
                 <FormControl>
                     <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70">₦</span>
-                        <Input type="number" placeholder="Leave blank if free" className="bg-[#15181D] border-white/10 h-12 rounded-xl pl-8 text-base" {...field} />
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">₦</span>
+                        <Input type="number" placeholder="Leave blank if free" className="bg-background border-border h-12 rounded-xl pl-8 text-base" {...field} />
                     </div>
                 </FormControl>
                 <FormMessage />
@@ -144,10 +144,10 @@ function FormBody({
             )} />
 
             <FormItem>
-              <FormLabel className="text-white/70">Item Images</FormLabel>
-              <label className="flex items-center gap-3 w-full bg-[#15181D] border border-white/10 h-12 rounded-xl px-4 cursor-pointer hover:bg-white/5 transition">
-                <ImageIcon className="w-5 h-5 text-white/50" />
-                <span className="text-sm text-white/70">
+              <FormLabel className="text-muted-foreground">Item Images</FormLabel>
+              <label className="flex items-center gap-3 w-full bg-background border border-border h-12 rounded-xl px-4 cursor-pointer hover:bg-accent transition">
+                <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
                     {form.watch("image") && form.watch("image").length > 0 ? `${form.watch("image").length} image(s) selected` : "Choose images..."}
                 </span>
                 <input type="file" accept="image/*" multiple className="hidden" {...imageField} />
@@ -158,7 +158,7 @@ function FormBody({
             {/* Newly selected image previews */}
             {form.watch("image") && form.watch("image").length > 0 && Array.from(form.watch("image") as FileList).some(f => f instanceof File) && (
               <div className="space-y-2 mt-4">
-                <p className="text-sm text-white/50 font-raleway">New images:</p>
+                <p className="text-sm text-muted-foreground font-sans">New images:</p>
                 <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
                   {Array.from(form.watch("image") as FileList).filter(f => f instanceof File).map((file, i) => (
                     <div key={i} className="relative w-16 h-16 flex-shrink-0 rounded-md overflow-hidden">
@@ -172,7 +172,7 @@ function FormBody({
             {/* Existing images (edit mode) */}
             {postToEdit?.image_urls && postToEdit.image_urls.length > 0 && (
               <div className="space-y-2 mt-4">
-                <p className="text-sm text-white/50 font-raleway">Current images ({postToEdit.image_urls.length}):</p>
+                <p className="text-sm text-muted-foreground font-sans">Current images ({postToEdit.image_urls.length}):</p>
                 <div className="grid grid-cols-4 gap-2">
                   {postToEdit.image_urls.map((url, index) => {
                     const isRemoved = removedImageIndexes.includes(index);
@@ -181,7 +181,7 @@ function FormBody({
                         <Image src={url} alt={`Image ${index + 1}`} width={80} height={64} className="w-full h-16 object-cover" />
                         {!isRemoved && (
                           <button type="button" onClick={() => setRemovedImageIndexes((p) => [...p, index])} className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <X className="w-3 h-3 text-white" />
+                            <X className="w-3 h-3 text-foreground" />
                           </button>
                         )}
                       </div>
@@ -192,7 +192,7 @@ function FormBody({
             )}
           </div>
 
-          <button type="submit" className="w-full h-14 rounded-full font-raleway font-bold text-lg bg-[#388E3C] flex items-center justify-center hover:bg-[#2E7D32] transition-colors disabled:opacity-50" disabled={loading}>
+          <button type="submit" className="w-full h-14 rounded-full font-sans font-bold text-lg bg-[#388E3C] flex items-center justify-center hover:bg-[#2E7D32] transition-colors disabled:opacity-50" disabled={loading}>
             {loading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> {isEditMode ? "Saving..." : "Listing Item..."}</> : (isEditMode ? "Save Changes" : "List Item")}
           </button>
         </form>

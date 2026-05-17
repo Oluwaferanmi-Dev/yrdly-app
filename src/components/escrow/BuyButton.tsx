@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { X, Lock, Info, ChevronRight } from "lucide-react";
@@ -10,13 +10,13 @@ import { supabase } from "@/lib/supabase";
 
 
 /* ── Design tokens ─────────────────────────────────── */
-const BG     = "#101418";
-const CARD   = "#1d2025";
-const CARDH  = "#272a2f";
+const BG     = "var(--c-bg)";
+const CARD   = "var(--c-card)";
+const CARDH  = "var(--c-card2)";
 const GREEN  = "#388E3C";
 const GREEN_L = "#82DB7E";
-const MUTED  = "#bfcab9";
-const DIM    = "#899485";
+const MUTED  = "var(--c-text-muted)";
+const DIM    = "var(--c-text-muted)";
 
 interface BuyButtonProps {
   itemId: string;
@@ -119,7 +119,7 @@ export function BuyButton({
         style={{
           background: GREEN,
           color: "#fff",
-          fontFamily: "Plus Jakarta Sans, sans-serif",
+          fontFamily: "Inter, sans-serif",
           boxShadow: "0 8px 24px rgba(56,142,60,0.25)",
         }}
       >
@@ -180,21 +180,21 @@ export function BuyButton({
                 )}
                 <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                   <h2
-                    className="font-bold text-[14px] leading-tight text-white line-clamp-2"
-                    style={{ fontFamily: "Raleway, sans-serif" }}
+                    className="font-bold text-[14px] leading-tight text-foreground line-clamp-2"
+                    style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     {itemTitle}
                   </h2>
                   <div className="flex items-center gap-3">
                     <span
                       className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider"
-                      style={{ background: CARD, color: MUTED, fontFamily: "Raleway, sans-serif" }}
+                      style={{ background: 'var(--c-card)', color: MUTED, fontFamily: "Inter, sans-serif" }}
                     >
                       {condition}
                     </span>
                     <span
                       className="text-[12px]"
-                      style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}
+                      style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}
                     >
                       Sold by {sellerName}
                     </span>
@@ -208,34 +208,34 @@ export function BuyButton({
                 style={{ background: CARD }}
               >
                 <div className="flex justify-between items-center">
-                  <span className="text-[13px]" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+                  <span className="text-[13px]" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
                     Item Price
                   </span>
-                  <span className="text-[14px]" style={{ fontFamily: "Raleway, sans-serif" }}>
+                  <span className="text-[14px]" style={{ fontFamily: "Inter, sans-serif" }}>
                     ₦{price.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[13px]" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+                    <span className="text-[13px]" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
                       Platform Fee
                     </span>
                     <Info className="w-3.5 h-3.5" style={{ color: "rgba(191,202,185,0.5)" }} />
                   </div>
-                  <span className="text-[14px]" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+                  <span className="text-[14px]" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
                     ₦{commission.toLocaleString()}
                   </span>
                 </div>
                 <div className="h-px w-full my-1" style={{ background: "rgba(225,226,233,0.06)" }} />
                 <div className="flex justify-between items-center py-1">
-                  <span className="font-bold text-[15px] text-white" style={{ fontFamily: "Raleway, sans-serif" }}>
+                  <span className="font-bold text-[15px] text-foreground" style={{ fontFamily: "Inter, sans-serif" }}>
                     You Pay
                   </span>
-                  <span className="font-bold text-[18px] text-white" style={{ fontFamily: "Raleway, sans-serif" }}>
+                  <span className="font-bold text-[18px] text-foreground" style={{ fontFamily: "Inter, sans-serif" }}>
                     ₦{totalPay.toLocaleString()}
                   </span>
                 </div>
-                <p className="text-[11px] leading-normal" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+                <p className="text-[11px] leading-normal" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
                   Funds are held securely until you confirm receipt
                 </p>
               </section>
@@ -251,12 +251,12 @@ export function BuyButton({
                 <Lock className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "#6edf51" }} />
                 <div>
                   <h3
-                    className="font-bold text-[13px] text-white mb-0.5"
-                    style={{ fontFamily: "Raleway, sans-serif" }}
+                    className="font-bold text-[13px] text-foreground mb-0.5"
+                    style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     Your payment is held in escrow
                   </h3>
-                  <p className="text-[11px] leading-relaxed" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+                  <p className="text-[11px] leading-relaxed" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
                     Release funds only after you confirm the item is in good condition.
                   </p>
                 </div>
@@ -271,7 +271,7 @@ export function BuyButton({
                   style={{
                     background: GREEN,
                     color: "#fff",
-                    fontFamily: "Raleway, sans-serif",
+                    fontFamily: "Inter, sans-serif",
                     boxShadow: "0 8px 24px rgba(56,142,60,0.3)",
                     opacity: loading ? 0.75 : 1,
                   }}
@@ -293,7 +293,7 @@ export function BuyButton({
                 </button>
                 <div className="flex items-center gap-1.5 opacity-60">
                   <Lock className="w-3.5 h-3.5" style={{ color: DIM }} />
-                  <span className="text-[11px]" style={{ color: DIM, fontFamily: "Raleway, sans-serif" }}>
+                  <span className="text-[11px]" style={{ color: DIM, fontFamily: "Inter, sans-serif" }}>
                     256-bit SSL secured
                   </span>
                 </div>

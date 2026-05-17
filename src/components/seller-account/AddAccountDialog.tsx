@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -144,7 +144,7 @@ export function AddAccountDialog({ open, onOpenChange, onSuccess }: AddAccountDi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         className="max-w-lg w-[95vw] p-0 border-none bg-transparent shadow-2xl overflow-hidden"
-        style={{ fontFamily: "Raleway, sans-serif" }}
+        style={{ fontFamily: "Inter, sans-serif" }}
       >
         <div 
           className="relative w-full max-h-[90vh] overflow-y-auto rounded-[32px] p-8 space-y-8 animate-in zoom-in-95 duration-300"
@@ -158,12 +158,12 @@ export function AddAccountDialog({ open, onOpenChange, onSuccess }: AddAccountDi
 
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-2xl font-black text-white tracking-tight">Add Payout Account</h2>
+              <h2 className="text-2xl font-black text-foreground tracking-tight">Add Payout Account</h2>
               <div className="w-10 h-10 rounded-2xl bg-[#388E3C]/20 flex items-center justify-center">
                 <Building2 className="w-5 h-5 text-[#388E3C]" />
               </div>
             </div>
-            <p className="text-sm text-[#899485] font-medium leading-relaxed">
+            <p className="text-sm text-muted-foreground font-medium leading-relaxed">
               Choose your preferred method to receive payments from your neighborhood sales.
             </p>
           </div>
@@ -171,7 +171,7 @@ export function AddAccountDialog({ open, onOpenChange, onSuccess }: AddAccountDi
           <form onSubmit={form.handleSubmit(onSubmit)} className="relative z-10 space-y-8">
             {/* Account Type Selection */}
             <div className="space-y-4">
-              <label className="text-[10px] uppercase tracking-[0.2em] font-black text-[#899485] ml-1">
+              <label className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground ml-1">
                 Preferred Method
               </label>
               <div className="grid grid-cols-1 gap-3">
@@ -186,16 +186,16 @@ export function AddAccountDialog({ open, onOpenChange, onSuccess }: AddAccountDi
                     className={`flex items-center gap-4 p-4 rounded-2xl border transition-all text-left group ${
                       watchedAccountType === type.id 
                         ? 'bg-[#388E3C]/10 border-[#388E3C]/50 ring-1 ring-[#388E3C]/50' 
-                        : 'bg-white/5 border-white/10 hover:bg-white/[0.08]'
+                        : 'bg-white/5 border-border hover:bg-white/[0.08]'
                     }`}
                   >
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                      watchedAccountType === type.id ? 'bg-[#388E3C] text-white' : 'bg-white/10 text-[#899485] group-hover:text-white'
+                      watchedAccountType === type.id ? 'bg-[#388E3C] text-white' : 'bg-white/10 text-muted-foreground group-hover:text-foreground'
                     }`}>
                       <type.icon className="w-6 h-6" />
                     </div>
                     <div>
-                      <p className={`font-black text-sm ${watchedAccountType === type.id ? 'text-white' : 'text-[#899485]'}`}>
+                      <p className={`font-black text-sm ${watchedAccountType === type.id ? 'text-foreground' : 'text-muted-foreground'}`}>
                         {type.label}
                       </p>
                       <p className="text-[10px] font-medium opacity-60">{type.desc}</p>
@@ -206,39 +206,39 @@ export function AddAccountDialog({ open, onOpenChange, onSuccess }: AddAccountDi
             </div>
 
             {/* Dynamic Fields Section */}
-            <div className="space-y-6 pt-4 border-t border-white/5">
+            <div className="space-y-6 pt-4 border-t border-border">
               {watchedAccountType === 'bank_account' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Bank</label>
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Bank</label>
                       <div className="relative">
                         <select 
-                          className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                          className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none appearance-none"
                           onChange={(e) => form.setValue('bankCode', e.target.value)}
                         >
-                          <option value="" className="bg-[#1e2025]">Select...</option>
+                          <option value="" className="bg-card">Select...</option>
                           {nigerianBanks.map((bank) => (
-                            <option key={bank.code} value={bank.code} className="bg-[#1e2025]">{bank.name}</option>
+                            <option key={bank.code} value={bank.code} className="bg-card">{bank.name}</option>
                           ))}
                         </select>
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Type</label>
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Type</label>
                       <select 
-                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none appearance-none"
                         onChange={(e) => form.setValue('accountTypeBank', e.target.value as any)}
                       >
-                        <option value="savings" className="bg-[#1e2025]">Savings</option>
-                        <option value="current" className="bg-[#1e2025]">Current</option>
+                        <option value="savings" className="bg-card">Savings</option>
+                        <option value="current" className="bg-card">Current</option>
                       </select>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Account Number</label>
+                    <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Account Number</label>
                     <input
-                      className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                      className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none placeholder:text-muted-foreground"
                       placeholder="0123456789"
                       {...form.register('accountNumber')}
                     />
@@ -250,21 +250,21 @@ export function AddAccountDialog({ open, onOpenChange, onSuccess }: AddAccountDi
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Provider</label>
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Provider</label>
                       <select 
-                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none appearance-none"
                         onChange={(e) => form.setValue('provider', e.target.value as any)}
                       >
-                        <option value="mtn" className="bg-[#1e2025]">MTN</option>
-                        <option value="airtel" className="bg-[#1e2025]">Airtel</option>
-                        <option value="opay" className="bg-[#1e2025]">Opay</option>
-                        <option value="palmpay" className="bg-[#1e2025]">PalmPay</option>
+                        <option value="mtn" className="bg-card">MTN</option>
+                        <option value="airtel" className="bg-card">Airtel</option>
+                        <option value="opay" className="bg-card">Opay</option>
+                        <option value="palmpay" className="bg-card">PalmPay</option>
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Phone</label>
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Phone</label>
                       <input
-                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                        className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none placeholder:text-muted-foreground"
                         placeholder="08012345678"
                         {...form.register('phoneNumber')}
                       />
@@ -274,9 +274,9 @@ export function AddAccountDialog({ open, onOpenChange, onSuccess }: AddAccountDi
               )}
 
               <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Account Holder Name</label>
+                <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Account Holder Name</label>
                 <input
-                  className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                  className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none placeholder:text-muted-foreground"
                   placeholder="e.g. John Doe"
                   {...form.register('accountName')}
                 />
@@ -290,12 +290,12 @@ export function AddAccountDialog({ open, onOpenChange, onSuccess }: AddAccountDi
                     className="sr-only peer"
                     {...form.register('isPrimary')}
                   />
-                  <div className="w-5 h-5 rounded border border-white/20 bg-white/5 peer-checked:bg-[#388E3C] peer-checked:border-[#388E3C] transition-all" />
+                  <div className="w-5 h-5 rounded border border-border bg-white/5 peer-checked:bg-[#388E3C] peer-checked:border-[#388E3C] transition-all" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity">
                     <div className="w-2 h-2 rounded-full bg-white" />
                   </div>
                 </div>
-                <span className="text-xs font-bold text-[#899485] group-hover:text-white transition-colors">Set as primary payout method</span>
+                <span className="text-xs font-bold text-muted-foreground group-hover:text-foreground transition-colors">Set as primary payout method</span>
               </label>
             </div>
 
@@ -312,7 +312,7 @@ export function AddAccountDialog({ open, onOpenChange, onSuccess }: AddAccountDi
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="w-full h-12 rounded-2xl bg-white/5 text-[#899485] font-black text-xs uppercase tracking-widest hover:text-white transition-all"
+                className="w-full h-12 rounded-2xl bg-white/5 text-muted-foreground font-black text-xs uppercase tracking-widest hover:text-foreground transition-all"
               >
                 Cancel
               </button>

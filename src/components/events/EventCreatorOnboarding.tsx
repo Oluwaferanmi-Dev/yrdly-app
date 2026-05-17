@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -7,8 +7,8 @@ import { useAuth } from "@/hooks/use-supabase-auth";
 import { X, Ticket, Banknote, Zap, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
 
 const GREEN = "#388E3C";
-const DARK = "#15181D";
-const CARD = "#1E2126";
+const DARK = "var(--c-bg)";
+const CARD = "var(--c-card)";
 const BORDER = "rgba(56,142,60,0.3)";
 
 type EventType = "free" | "paid" | null;
@@ -86,7 +86,7 @@ export function EventCreatorOnboarding({ isOpen, onClose }: EventCreatorOnboardi
         <div
           className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl flex flex-col"
           style={{
-            background: CARD,
+            background: 'var(--c-card)',
             border: `1px solid ${BORDER}`,
             maxHeight: "92dvh",
           }}
@@ -106,7 +106,7 @@ export function EventCreatorOnboarding({ isOpen, onClose }: EventCreatorOnboardi
             className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full z-10"
             style={{ background: "rgba(255,255,255,0.08)" }}
           >
-            <X className="w-4 h-4 text-white/70" />
+            <X className="w-4 h-4 text-muted-foreground" />
           </button>
 
           <div
@@ -117,11 +117,11 @@ export function EventCreatorOnboarding({ isOpen, onClose }: EventCreatorOnboardi
             {step === 1 && (
               <div className="space-y-6">
                 <div>
-                  <p className="text-xs font-raleway text-white/40 uppercase tracking-widest mb-1">Step 1 of 3</p>
-                  <h2 className="text-2xl font-black text-white font-raleway leading-tight">
+                  <p className="text-xs font-sans text-muted-foreground uppercase tracking-widest mb-1">Step 1 of 3</p>
+                  <h2 className="text-2xl font-black text-foreground font-sans leading-tight">
                     What kind of<br />event are you hosting?
                   </h2>
-                  <p className="text-sm text-white/50 font-raleway mt-2">
+                  <p className="text-sm text-muted-foreground font-sans mt-2">
                     Choose your event type to get started.
                   </p>
                 </div>
@@ -138,15 +138,15 @@ export function EventCreatorOnboarding({ isOpen, onClose }: EventCreatorOnboardi
                         <Ticket className="w-5 h-5" style={{ color: GREEN }} />
                       </div>
                       <div>
-                        <p className="font-bold text-white font-raleway text-[15px]">Free Event</p>
-                        <p className="text-xs text-white/50 font-raleway mt-0.5">Community meetups, block parties, open events. No payment setup needed.</p>
+                        <p className="font-bold text-foreground font-sans text-[15px]">Free Event</p>
+                        <p className="text-xs text-muted-foreground font-sans mt-0.5">Community meetups, block parties, open events. No payment setup needed.</p>
                         <div className="flex items-center gap-1 mt-2">
                           <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(56,142,60,0.2)", color: GREEN }}>
                             ✓ Start immediately
                           </span>
                         </div>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-white/60 ml-auto flex-shrink-0 mt-3 transition-colors" />
+                      <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-muted-foreground ml-auto flex-shrink-0 mt-3 transition-colors" />
                     </div>
                   </button>
 
@@ -161,16 +161,16 @@ export function EventCreatorOnboarding({ isOpen, onClose }: EventCreatorOnboardi
                         <Banknote className="w-5 h-5" style={{ color: GREEN }} />
                       </div>
                       <div>
-                        <p className="font-bold text-white font-raleway text-[15px]">Paid Event</p>
-                        <p className="text-xs text-white/50 font-raleway mt-0.5">Concerts, workshops, classes, VIP experiences. Sell tickets directly.</p>
+                        <p className="font-bold text-foreground font-sans text-[15px]">Paid Event</p>
+                        <p className="text-xs text-muted-foreground font-sans mt-0.5">Concerts, workshops, classes, VIP experiences. Sell tickets directly.</p>
                         <div className="flex items-center gap-2 mt-2 flex-wrap">
                           <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(56,142,60,0.2)", color: GREEN }}>
                             You keep 95%
                           </span>
-                          <span className="text-[11px] text-white/40 font-raleway">Yrdly takes 5%</span>
+                          <span className="text-[11px] text-muted-foreground font-sans">Yrdly takes 5%</span>
                         </div>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-white/60 ml-auto flex-shrink-0 mt-3 transition-colors" />
+                      <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-muted-foreground ml-auto flex-shrink-0 mt-3 transition-colors" />
                     </div>
                   </button>
                 </div>
@@ -181,11 +181,11 @@ export function EventCreatorOnboarding({ isOpen, onClose }: EventCreatorOnboardi
             {step === 2 && (
               <div className="space-y-6">
                 <div>
-                  <p className="text-xs font-raleway text-white/40 uppercase tracking-widest mb-1">Step 2 of 3</p>
-                  <h2 className="text-2xl font-black text-white font-raleway leading-tight">
+                  <p className="text-xs font-sans text-muted-foreground uppercase tracking-widest mb-1">Step 2 of 3</p>
+                  <h2 className="text-2xl font-black text-foreground font-sans leading-tight">
                     Set up your<br />payout account
                   </h2>
-                  <p className="text-sm text-white/50 font-raleway mt-2">
+                  <p className="text-sm text-muted-foreground font-sans mt-2">
                     To collect ticket payments, link your bank account. It only takes 2 minutes.
                   </p>
                 </div>
@@ -202,8 +202,8 @@ export function EventCreatorOnboarding({ isOpen, onClose }: EventCreatorOnboardi
                         <Icon className="w-4 h-4" style={{ color: GREEN }} />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-white font-raleway">{label}</p>
-                        <p className="text-xs text-white/40 font-raleway">{desc}</p>
+                        <p className="text-sm font-bold text-foreground font-sans">{label}</p>
+                        <p className="text-xs text-muted-foreground font-sans">{desc}</p>
                       </div>
                     </div>
                   ))}
@@ -212,14 +212,14 @@ export function EventCreatorOnboarding({ isOpen, onClose }: EventCreatorOnboardi
                 <div className="space-y-2">
                   <button
                     onClick={handleGoToPayout}
-                    className="w-full h-12 rounded-full font-raleway font-bold text-white text-sm transition-opacity hover:opacity-90"
+                    className="w-full h-12 rounded-full font-sans font-bold text-foreground text-sm transition-opacity hover:opacity-90"
                     style={{ background: GREEN }}
                   >
                     Set Up Payout Account →
                   </button>
                   <button
                     onClick={() => setStep(1)}
-                    className="w-full h-10 rounded-full font-raleway text-sm text-white/50 hover:text-white/80 transition-colors"
+                    className="w-full h-10 rounded-full font-sans text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     ← Go back
                   </button>
@@ -231,17 +231,17 @@ export function EventCreatorOnboarding({ isOpen, onClose }: EventCreatorOnboardi
             {step === 3 && (
               <div className="space-y-6 text-center">
                 <div>
-                  <p className="text-xs font-raleway text-white/40 uppercase tracking-widest mb-4">Step 3 of 3</p>
+                  <p className="text-xs font-sans text-muted-foreground uppercase tracking-widest mb-4">Step 3 of 3</p>
                   <div
                     className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
                     style={{ background: "rgba(56,142,60,0.15)" }}
                   >
                     <CheckCircle2 className="w-10 h-10" style={{ color: GREEN }} />
                   </div>
-                  <h2 className="text-2xl font-black text-white font-raleway">
+                  <h2 className="text-2xl font-black text-foreground font-sans">
                     You&apos;re all set!
                   </h2>
-                  <p className="text-sm text-white/50 font-raleway mt-2">
+                  <p className="text-sm text-muted-foreground font-sans mt-2">
                     {eventType === "free"
                       ? "Create your free event and invite your neighbors."
                       : "Your payout account is ready. Create your paid event and start selling tickets."}
@@ -259,14 +259,14 @@ export function EventCreatorOnboarding({ isOpen, onClose }: EventCreatorOnboardi
                       <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(56,142,60,0.2)" }}>
                         <span className="text-[10px] font-bold" style={{ color: GREEN }}>{i + 1}</span>
                       </div>
-                      <span className="text-sm text-white/70 font-raleway">{item}</span>
+                      <span className="text-sm text-muted-foreground font-sans">{item}</span>
                     </div>
                   ))}
                 </div>
 
                 <button
                   onClick={handleCreateEvent}
-                  className="w-full h-12 rounded-full font-raleway font-bold text-white text-sm transition-opacity hover:opacity-90"
+                  className="w-full h-12 rounded-full font-sans font-bold text-foreground text-sm transition-opacity hover:opacity-90"
                   style={{ background: GREEN }}
                 >
                   Build My Event →

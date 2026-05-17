@@ -1,17 +1,17 @@
-"use client";
+﻿"use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle, ArrowLeft, Clock } from "lucide-react";
 import { useState } from "react";
 
 /* ── Design tokens ─────────────────────────────────── */
-const BG    = "#101418";
-const CARD  = "#1d2025";
-const CARDH = "#272a2f";
+const BG    = "var(--c-bg)";
+const CARD  = "var(--c-card)";
+const CARDH = "var(--c-card2)";
 const GREEN  = "#388E3C";
 const GREEN_L = "#82DB7E";
-const MUTED  = "#bfcab9";
-const DIM    = "#899485";
+const MUTED  = "var(--c-text-muted)";
+const DIM    = "var(--c-text-muted)";
 
 const STARS = [1, 2, 3, 4, 5];
 
@@ -32,7 +32,7 @@ export default function PayoutSuccessPage() {
   return (
     <div
       className="min-h-dvh flex flex-col items-center"
-      style={{ background: BG, color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}
+      style={{ background: BG, color: "var(--c-text)", fontFamily: "Inter, sans-serif" }}
     >
       {/* Confetti dots */}
       <div
@@ -82,7 +82,7 @@ export default function PayoutSuccessPage() {
           <h2 style={{ fontFamily: "Pacifico, cursive", fontSize: 28, color: "#fff" }}>
             {amount !== "0" ? `${fmt(amount)} Sent!` : "Payout Sent!"}
           </h2>
-          <p className="text-[13px]" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+          <p className="text-[13px]" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
             Transferred to your account {account}
           </p>
           <div
@@ -92,7 +92,7 @@ export default function PayoutSuccessPage() {
             <Clock className="w-3.5 h-3.5" style={{ color: "#6edf51" }} />
             <span
               className="font-semibold text-[11px] uppercase tracking-wider"
-              style={{ color: "#6edf51", fontFamily: "Raleway, sans-serif" }}
+              style={{ color: "#6edf51", fontFamily: "Inter, sans-serif" }}
             >
               Arrives within 24 hours
             </span>
@@ -102,17 +102,17 @@ export default function PayoutSuccessPage() {
         {/* Transaction card */}
         <div
           className="w-full rounded-xl p-5 mb-10 border"
-          style={{ background: CARD, borderColor: "rgba(64,73,61,0.15)" }}
+          style={{ background: 'var(--c-card)', borderColor: "rgba(64,73,61,0.15)" }}
         >
           <div className="flex justify-between text-[11px] mb-2">
-            <span style={{ color: DIM, fontFamily: "Raleway, sans-serif" }}>Ref Number</span>
-            <span style={{ color: "#e1e2e9" }}>
+            <span style={{ color: DIM, fontFamily: "Inter, sans-serif" }}>Ref Number</span>
+            <span style={{ color: "var(--c-text)" }}>
               #{transactionId ? transactionId.slice(0, 10).toUpperCase() : "TXN-XXXXX"}
             </span>
           </div>
           <div className="flex justify-between text-[11px]">
-            <span style={{ color: DIM, fontFamily: "Raleway, sans-serif" }}>Date</span>
-            <span style={{ color: "#e1e2e9" }}>
+            <span style={{ color: DIM, fontFamily: "Inter, sans-serif" }}>Date</span>
+            <span style={{ color: "var(--c-text)" }}>
               {new Date().toLocaleDateString("en-NG", { day: "2-digit", month: "short", year: "numeric" })}
             </span>
           </div>
@@ -122,8 +122,8 @@ export default function PayoutSuccessPage() {
         {!submitted ? (
           <section className="w-full flex flex-col items-center">
             <h3
-              className="font-bold text-sm text-white mb-6"
-              style={{ fontFamily: "Raleway, sans-serif" }}
+              className="font-bold text-sm text-foreground mb-6"
+              style={{ fontFamily: "Inter, sans-serif" }}
             >
               How was your experience?
             </h3>
@@ -153,8 +153,8 @@ export default function PayoutSuccessPage() {
                 className="w-full rounded-xl p-4 text-sm resize-none focus:outline-none"
                 style={{
                   background: CARDH,
-                  color: "#e1e2e9",
-                  fontFamily: "Raleway, sans-serif",
+                  color: "var(--c-text)",
+                  fontFamily: "Inter, sans-serif",
                   border: "1px solid rgba(130,219,126,0.15)",
                 }}
               />
@@ -167,7 +167,7 @@ export default function PayoutSuccessPage() {
                 style={{
                   background: `linear-gradient(135deg, ${GREEN_L}, #4da24e)`,
                   color: "#003207",
-                  fontFamily: "Raleway, sans-serif",
+                  fontFamily: "Inter, sans-serif",
                   boxShadow: "0 8px 24px rgba(130,219,126,0.15)",
                 }}
               >
@@ -175,8 +175,8 @@ export default function PayoutSuccessPage() {
               </button>
               <button
                 onClick={() => router.push("/profile")}
-                className="text-sm py-2 px-6 hover:text-white transition-colors"
-                style={{ color: DIM, fontFamily: "Raleway, sans-serif" }}
+                className="text-sm py-2 px-6 hover:text-foreground transition-colors"
+                style={{ color: DIM, fontFamily: "Inter, sans-serif" }}
               >
                 Skip
               </button>
@@ -185,13 +185,13 @@ export default function PayoutSuccessPage() {
         ) : (
           <div className="w-full text-center space-y-4">
             <CheckCircle className="w-10 h-10 mx-auto" style={{ color: GREEN_L }} />
-            <p className="font-bold text-white" style={{ fontFamily: "Raleway, sans-serif" }}>
+            <p className="font-bold text-foreground" style={{ fontFamily: "Inter, sans-serif" }}>
               Thanks for your review!
             </p>
             <button
               onClick={() => router.push("/marketplace")}
               className="w-full py-4 rounded-full font-bold"
-              style={{ background: GREEN, color: "#fff", fontFamily: "Raleway, sans-serif" }}
+              style={{ background: GREEN, color: "#fff", fontFamily: "Inter, sans-serif" }}
             >
               Back to Marketplace
             </button>

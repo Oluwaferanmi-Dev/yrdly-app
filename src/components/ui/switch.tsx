@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import * as React from "react"
 import * as SwitchPrimitives from "@radix-ui/react-switch"
@@ -13,7 +13,7 @@ const Switch = React.forwardRef<
       ref={ref}
       className={cn(
         "peer relative inline-flex h-[28px] w-[50px] shrink-0 cursor-pointer items-center rounded-full",
-        "bg-[#393939] transition-colors duration-300 ease-in-out",
+        "bg-muted transition-colors duration-300 ease-in-out",
         "data-[state=checked]:bg-[#34C759]", // iOS green
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
         "disabled:cursor-not-allowed disabled:opacity-60",

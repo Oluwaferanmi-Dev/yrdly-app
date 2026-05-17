@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Premium Email Templates for Yrdly
  * Modern, responsive, and brand-aligned designs.
  */
@@ -6,7 +6,7 @@
 const APP_NAME = 'Yrdly';
 const BRAND_GREEN = '#388E3C';
 const BRAND_GREEN_LIGHT = '#82DB7E';
-const BRAND_DARK = '#101418';
+const BRAND_DARK = 'var(--c-bg)';
 const BRAND_WHITE = '#FFFFFF';
 const BG_COLOR = '#F9FAFB';
 

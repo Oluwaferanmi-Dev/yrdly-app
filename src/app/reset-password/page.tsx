@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -10,7 +10,7 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 // Design tokens
 const colors = {
-  background: '#15181D',
+  background: 'var(--c-bg)',
   blob: '#A154F2',
   overlay: 'rgba(255, 255, 255, 0.05)',
   border: '#388E3C',
@@ -62,7 +62,7 @@ export default function ResetPasswordPage() {
   };
 
   const inputClass =
-    'w-full h-12 sm:h-14 pl-4 pr-11 sm:pl-5 sm:pr-12 rounded-full font-raleway font-light text-sm text-white placeholder:text-[#BBBBBB] bg-transparent border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition';
+    'w-full h-12 sm:h-14 pl-4 pr-11 sm:pl-5 sm:pr-12 rounded-full font-sans font-light text-sm text-white placeholder:text-[#BBBBBB] bg-transparent border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition';
   const borderStyle = { border: '0.5px solid #388E3C' };
   const pillRound = 'rounded-full';
 
@@ -99,7 +99,7 @@ export default function ResetPasswordPage() {
           >
             Set New Password
           </h1>
-          <p className="font-raleway font-light text-sm text-[#BBBBBB] mt-2">
+          <p className="font-sans font-light text-sm text-[#BBBBBB] mt-2">
             Please enter your new password
           </p>
         </div>
@@ -134,7 +134,7 @@ export default function ResetPasswordPage() {
 
           <Button
             type="submit"
-            className={`w-full h-11 ${pillRound} font-raleway font-medium text-white hover:opacity-90`}
+            className={`w-full h-11 ${pillRound} font-sans font-medium text-white hover:opacity-90`}
             style={{ background: colors.primary }}
             disabled={loading}
           >

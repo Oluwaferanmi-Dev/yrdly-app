@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-supabase-auth';
@@ -153,14 +153,14 @@ export function SellerAccountSettings() {
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-700" style={{ fontFamily: "Raleway, sans-serif" }}>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-8 rounded-[40px] bg-[#1d2025]/60 border border-white/10 backdrop-blur-3xl shadow-2xl relative overflow-hidden">
+    <div className="space-y-10 animate-in fade-in duration-700" style={{ fontFamily: "Inter, sans-serif" }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-8 rounded-[40px] bg-card/60 border border-border backdrop-blur-3xl shadow-2xl relative overflow-hidden">
         {/* Decorative background glow */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#388E3C]/10 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
         
         <div className="relative z-10">
-          <h2 className="text-3xl font-black text-white tracking-tight">Payout Settings</h2>
-          <p className="text-[#899485] font-medium mt-1">
+          <h2 className="text-3xl font-black text-foreground tracking-tight">Payout Settings</h2>
+          <p className="text-muted-foreground font-medium mt-1">
             Configure how you receive your neighborhood earnings.
           </p>
         </div>
@@ -199,19 +199,19 @@ export function SellerAccountSettings() {
               {accounts.map((account) => (
                 <div 
                   key={account.id}
-                  className="rounded-[32px] bg-[#1d2025]/40 border border-white/5 overflow-hidden transition-all hover:border-[#388E3C]/30 hover:bg-[#1d2025]/60 group"
+                  className="rounded-[32px] bg-card/40 border border-border overflow-hidden transition-all hover:border-[#388E3C]/30 hover:bg-card/60 group"
                 >
                   <div className="p-8 space-y-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#388E3C]/20 transition-colors">
+                        <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-border group-hover:border-[#388E3C]/20 transition-colors">
                           <div className="text-[#388E3C]">
                             {getAccountIcon(account.accountType)}
                           </div>
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <h4 className="font-black text-white text-lg tracking-tight">
+                            <h4 className="font-black text-foreground text-lg tracking-tight">
                               {getAccountDisplayName(account)}
                             </h4>
                             {account.isPrimary && (
@@ -220,7 +220,7 @@ export function SellerAccountSettings() {
                               </div>
                             )}
                           </div>
-                          <p className="text-[10px] font-black text-[#899485] uppercase tracking-[0.2em] mt-0.5">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mt-0.5">
                             {account.accountType.replace('_', ' ')}
                           </p>
                         </div>
@@ -228,35 +228,35 @@ export function SellerAccountSettings() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleEditAccount(account)}
-                          className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-[#899485] hover:bg-white/10 hover:text-white transition-all border border-white/10"
+                          className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-muted-foreground hover:bg-accent hover:text-foreground transition-all border border-border"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteAccount(account.id)}
-                          className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                          className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-foreground transition-all border border-red-500/20"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
 
-                    <div className="space-y-4 pt-6 border-t border-white/5">
+                    <div className="space-y-4 pt-6 border-t border-border">
                       <div className="flex items-center justify-between">
                         <div className="space-y-1">
-                          <p className="text-[10px] font-black text-[#899485] uppercase tracking-widest opacity-60">Status</p>
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Status</p>
                           {getVerificationBadge(account.verificationStatus)}
                         </div>
                         <div className="text-right space-y-1">
-                          <p className="text-[10px] font-black text-[#899485] uppercase tracking-widest opacity-60">Added</p>
-                          <p className="text-sm font-bold text-white">{account.createdAt.toLocaleDateString()}</p>
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Added</p>
+                          <p className="text-sm font-bold text-foreground">{account.createdAt.toLocaleDateString()}</p>
                         </div>
                       </div>
 
                       {account.verificationStatus === VerificationStatus.PENDING && (
                         <button
                           onClick={() => handleVerifyAccount(account)}
-                          className="w-full h-12 rounded-xl bg-[#388E3C]/10 border border-[#388E3C]/30 text-[#388E3C] font-black text-xs uppercase tracking-widest hover:bg-[#388E3C] hover:text-white transition-all mt-2"
+                          className="w-full h-12 rounded-xl bg-[#388E3C]/10 border border-[#388E3C]/30 text-[#388E3C] font-black text-xs uppercase tracking-widest hover:bg-[#388E3C] hover:text-foreground transition-all mt-2"
                         >
                           Verify Account
                         </button>

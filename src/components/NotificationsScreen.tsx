@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,10 +35,10 @@ import {
 
 const GREEN = "#388E3C";
 const GREEN_LIGHT = "#82DB7E";
-const CARD = "#1E2126";
-const SURFACE = "#1d2025";
-const BG = "#15181D";
-const FONT = "Raleway, sans-serif";
+const CARD = "var(--c-card)";
+const SURFACE = "var(--c-card)";
+const BG = "var(--c-bg)";
+const FONT = "Inter, sans-serif";
 const PACIFICO = "Pacifico, cursive";
 
 interface NotificationsScreenProps {
@@ -79,7 +79,7 @@ function NotificationIcon({ type }: { type: string }) {
     case "marketplace_item_interest":
       return <ShoppingCart className={iconClass} style={{ color: GREEN_LIGHT }} />;
     default:
-      return <Bell className={iconClass} style={{ color: "#899485" }} />;
+      return <Bell className={iconClass} style={{ color: "var(--c-text-muted)" }} />;
   }
 }
 
@@ -220,7 +220,7 @@ function NotificationCard({
     <div
       className="relative rounded-[11px] overflow-hidden cursor-pointer transition-all active:scale-[0.99]"
       style={{
-        background: isUnread ? "#1a2820" : CARD,
+        background: isUnread ? "var(--c-card)" : CARD,
         border: isUnread
           ? "0.5px solid rgba(130,219,126,0.3)"
           : "0.5px solid rgba(255,255,255,0.06)",
@@ -259,7 +259,7 @@ function NotificationCard({
           {(notification.from_user_avatar || notification.from_user_name) && (
             <div
               className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center"
-              style={{ background: "#1E2126", border: "1px solid #15181D" }}
+              style={{ background: "var(--c-card)", border: "1px solid #15181D" }}
             >
               <NotificationIcon type={notification.type} />
             </div>
@@ -269,7 +269,7 @@ function NotificationCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <p
-            className="text-[13px] text-white leading-snug"
+            className="text-[13px] text-foreground leading-snug"
             style={{ fontFamily: FONT, fontWeight: isUnread ? 600 : 400 }}
           >
             <span style={{ fontWeight: 700 }}>
@@ -278,7 +278,7 @@ function NotificationCard({
             {notification.from_user_name ? notification.message : ""}
           </p>
           {!notification.from_user_name && (
-            <p className="text-[12px] mt-0.5" style={{ color: "#899485", fontFamily: FONT }}>
+            <p className="text-[12px] mt-0.5" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
               {notification.message}
             </p>
           )}
@@ -291,7 +291,7 @@ function NotificationCard({
             <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={handleAcceptFriend}
-                className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold text-white transition-all active:scale-95"
+                className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold text-foreground transition-all active:scale-95"
                 style={{ background: GREEN, fontFamily: FONT }}
               >
                 <Check className="w-3.5 h-3.5" />
@@ -323,18 +323,18 @@ function NotificationCard({
             <AlertDialogTrigger asChild>
               <button
                 onClick={(e) => e.stopPropagation()}
-                className="p-1 rounded-full transition-colors hover:bg-white/10"
+                className="p-1 rounded-full transition-colors hover:bg-accent"
                 style={{ color: "#566052" }}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </AlertDialogTrigger>
             <AlertDialogContent
-              style={{ background: CARD, border: "0.5px solid rgba(255,255,255,0.1)" }}
+              style={{ background: 'var(--c-card)', border: "0.5px solid rgba(255,255,255,0.1)" }}
             >
               <AlertDialogHeader>
-                <AlertDialogTitle className="text-white">Delete notification?</AlertDialogTitle>
-                <AlertDialogDescription style={{ color: "#899485" }}>
+                <AlertDialogTitle className="text-foreground">Delete notification?</AlertDialogTitle>
+                <AlertDialogDescription style={{ color: "var(--c-text-muted)" }}>
                   This will permanently remove this notification.
                 </AlertDialogDescription>
               </AlertDialogHeader>
@@ -487,12 +487,12 @@ export function NotificationsScreen({ className }: NotificationsScreenProps) {
         {/* Header */}
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-[20px] text-white" style={{ fontFamily: PACIFICO }}>
+            <h1 className="text-[20px] text-foreground" style={{ fontFamily: PACIFICO }}>
               Notifications
             </h1>
             <p
               className="text-[12px] mt-0.5"
-              style={{ color: "#899485", fontFamily: FONT, fontStyle: "italic", fontWeight: 300 }}
+              style={{ color: "var(--c-text-muted)", fontFamily: FONT, fontStyle: "italic", fontWeight: 300 }}
             >
               {unreadCount > 0 ? `${unreadCount} unread` : "All caught up!"}
             </p>
@@ -527,8 +527,8 @@ export function NotificationsScreen({ className }: NotificationsScreenProps) {
                   isActive
                     ? { background: GREEN, color: "#fff", fontFamily: FONT }
                     : {
-                        background: CARD,
-                        color: "#899485",
+                        background: 'var(--c-card)',
+                        color: "var(--c-text-muted)",
                         border: "0.5px solid rgba(255,255,255,0.08)",
                         fontFamily: FONT,
                       }
@@ -553,10 +553,10 @@ export function NotificationsScreen({ className }: NotificationsScreenProps) {
           <div className="space-y-3">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="flex items-start gap-3 p-4 rounded-[11px]" style={{ background: CARD }}>
-                <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" style={{ background: "#272a2f" }} />
+                <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" style={{ background: "var(--c-card2)" }} />
                 <div className="flex-1 space-y-2">
-                  <Skeleton className="h-3 w-3/4" style={{ background: "#272a2f" }} />
-                  <Skeleton className="h-3 w-1/2" style={{ background: "#272a2f" }} />
+                  <Skeleton className="h-3 w-3/4" style={{ background: "var(--c-card2)" }} />
+                  <Skeleton className="h-3 w-1/2" style={{ background: "var(--c-card2)" }} />
                 </div>
               </div>
             ))}
@@ -569,10 +569,10 @@ export function NotificationsScreen({ className }: NotificationsScreenProps) {
             >
               <Bell className="w-9 h-9" style={{ color: GREEN_LIGHT, opacity: 0.5 }} />
             </div>
-            <h2 className="text-white text-lg mb-2" style={{ fontFamily: PACIFICO }}>
+            <h2 className="text-foreground text-lg mb-2" style={{ fontFamily: PACIFICO }}>
               {activeFilter === "All" ? "No notifications yet" : `No ${activeFilter.toLowerCase()}`}
             </h2>
-            <p className="text-[13px] text-center max-w-xs" style={{ color: "#899485", fontFamily: FONT }}>
+            <p className="text-[13px] text-center max-w-xs" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
               {activeFilter === "All"
                 ? "You'll see your notifications here."
                 : `You have no ${activeFilter.toLowerCase()} notifications.`}

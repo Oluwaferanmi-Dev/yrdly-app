@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { CheckCircle, RefreshCw, Mail, User, MapPin, Sparkles } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@ export function LoadingState({ type, message, progress }: LoadingStateProps) {
   const Icon = config.icon;
 
   return (
-    <div className="flex flex-col items-center justify-center p-8 space-y-12 animate-in fade-in zoom-in duration-1000 min-h-[500px] relative overflow-hidden" style={{ fontFamily: "Raleway, sans-serif" }}>
+    <div className="flex flex-col items-center justify-center p-8 space-y-12 animate-in fade-in zoom-in duration-1000 min-h-[500px] relative overflow-hidden" style={{ fontFamily: "Inter, sans-serif" }}>
       
       {/* Dynamic Background Glows */}
       <div 
@@ -70,7 +70,7 @@ export function LoadingState({ type, message, progress }: LoadingStateProps) {
             
             <div className="relative z-10 flex flex-col items-center gap-3">
               <Icon 
-                className={cn("w-16 h-16 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]", type === 'general' ? 'animate-spin' : 'animate-bounce')} 
+                className={cn("w-16 h-16 text-foreground drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]", type === 'general' ? 'animate-spin' : 'animate-bounce')} 
                 style={{ animationDuration: type === 'general' ? '2.5s' : '3s' }}
               />
               <div className="flex gap-1.5">
@@ -89,10 +89,10 @@ export function LoadingState({ type, message, progress }: LoadingStateProps) {
       
       <div className="text-center space-y-8 max-w-sm relative z-10">
         <div className="space-y-3">
-          <h3 className="text-4xl font-black tracking-tight text-white leading-tight">
+          <h3 className="text-4xl font-black tracking-tight text-foreground leading-tight">
             {message || config.defaultMessage}
           </h3>
-          <p className="text-[#899485] text-lg font-medium leading-relaxed opacity-80">
+          <p className="text-muted-foreground text-lg font-medium leading-relaxed opacity-80">
             {type === 'email' && "Verifying your digital signature and securing your neighborhood presence..."}
             {type === 'profile' && "Syncing your identity with the neighborhood network..."}
             {type === 'location' && "Calibrating local sector data for your experience..."}
@@ -102,7 +102,7 @@ export function LoadingState({ type, message, progress }: LoadingStateProps) {
 
         {progress !== undefined && (
           <div className="w-full max-w-[280px] mx-auto space-y-5">
-            <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/10 shadow-inner">
+            <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden p-0.5 border border-border shadow-inner">
               <div 
                 className="h-full transition-all duration-1000 ease-out rounded-full relative overflow-hidden"
                 style={{ 
@@ -120,16 +120,16 @@ export function LoadingState({ type, message, progress }: LoadingStateProps) {
                 <div className="w-2 h-2 rounded-full bg-[#388E3C] animate-pulse" />
                 <span className="text-[11px] uppercase tracking-[0.25em] font-black text-[#388E3C]">Optimizing</span>
               </div>
-              <span className="text-[11px] uppercase tracking-[0.25em] font-black text-white">{Math.round(progress)}%</span>
+              <span className="text-[11px] uppercase tracking-[0.25em] font-black text-foreground">{Math.round(progress)}%</span>
             </div>
           </div>
         )}
       </div>
 
       {/* Security/Encouragement Badge */}
-      <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/[0.03] border border-white/10 backdrop-blur-xl shadow-xl animate-in slide-in-from-bottom-4 duration-1000 delay-500">
+      <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/[0.03] border border-border backdrop-blur-xl shadow-xl animate-in slide-in-from-bottom-4 duration-1000 delay-500">
         <CheckCircle className="w-5 h-5 text-[#388E3C]" />
-        <span className="text-[11px] uppercase tracking-[0.3em] font-black text-white/70">Secure Handshake Active</span>
+        <span className="text-[11px] uppercase tracking-[0.3em] font-black text-muted-foreground">Secure Handshake Active</span>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-
+﻿
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -103,7 +103,7 @@ export function EmailVerificationBanner() {
                         disabled={isSending || cooldownTime > 0}
                         variant="default" 
                         size="sm" 
-                        className="bg-yellow-600 text-white hover:bg-yellow-700 dark:bg-yellow-500 dark:hover:bg-yellow-600"
+                        className="bg-yellow-600 text-foreground hover:bg-yellow-700 dark:bg-yellow-500 dark:hover:bg-yellow-600"
                     >
                         {isSending ? (
                             <>

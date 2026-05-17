@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -184,7 +184,7 @@ export default function TransactionDetailsPage() {
     const config = statusConfig[status] || statusConfig[EscrowStatus.PENDING];
     
     return (
-      <Badge className={`${config.color} text-white`}>
+      <Badge className={`${config.color} text-foreground`}>
         {config.text}
       </Badge>
     );

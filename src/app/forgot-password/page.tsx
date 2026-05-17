@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -11,7 +11,7 @@ import Link from 'next/link';
 
 // Design tokens
 const colors = {
-  background: '#15181D',
+  background: 'var(--c-bg)',
   blob: '#A154F2',
   overlay: 'rgba(255, 255, 255, 0.05)',
   border: '#388E3C',
@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
   };
 
   const inputClass =
-    'w-full h-12 sm:h-14 pl-4 pr-11 sm:pl-5 sm:pr-12 rounded-full font-raleway font-light text-sm text-white placeholder:text-[#BBBBBB] bg-transparent border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition';
+    'w-full h-12 sm:h-14 pl-4 pr-11 sm:pl-5 sm:pr-12 rounded-full font-sans font-light text-sm text-white placeholder:text-[#BBBBBB] bg-transparent border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition';
   const borderStyle = { border: '0.5px solid #388E3C' };
   const pillRound = 'rounded-full';
 
@@ -89,7 +89,7 @@ export default function ForgotPasswordPage() {
           >
             Reset Password
           </h1>
-          <p className="font-raleway font-light text-sm text-[#BBBBBB] mt-2">
+          <p className="font-sans font-light text-sm text-[#BBBBBB] mt-2">
             Enter your email to receive a password reset link
           </p>
         </div>
@@ -108,7 +108,7 @@ export default function ForgotPasswordPage() {
             <Button
               onClick={() => router.push('/login')}
               variant="outline"
-              className="w-full h-11 rounded-full font-raleway text-white border-[#388E3C] hover:bg-white/5"
+              className="w-full h-11 rounded-full font-sans text-white border-[#388E3C] hover:bg-accent"
             >
               Back to Sign in
             </Button>
@@ -131,7 +131,7 @@ export default function ForgotPasswordPage() {
 
             <Button
               type="submit"
-              className={`w-full h-11 ${pillRound} font-raleway font-medium text-white hover:opacity-90`}
+              className={`w-full h-11 ${pillRound} font-sans font-medium text-white hover:opacity-90`}
               style={{ background: colors.primary }}
               disabled={loading}
             >
@@ -142,7 +142,7 @@ export default function ForgotPasswordPage() {
             <div className="text-center mt-6">
               <Link
                 href="/login"
-                className="font-raleway text-sm hover:underline"
+                className="font-sans text-sm hover:underline"
                 style={{ color: colors.link }}
               >
                 Back to Sign in

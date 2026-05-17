@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -299,7 +299,7 @@ export default function OnboardingProfilePage() {
   }
 
   return (
-    <div className="min-h-screen pb-20 overflow-x-hidden" style={{ background: "#0d0f11", color: "#e1e2e9", fontFamily: "Raleway, sans-serif" }}>
+    <div className="min-h-screen pb-20 overflow-x-hidden" style={{ background: "var(--c-bg)", color: "var(--c-text)", fontFamily: "Inter, sans-serif" }}>
       <OnboardingProgress />
       
       {/* Animated Background Elements */}
@@ -320,7 +320,7 @@ export default function OnboardingProfilePage() {
               <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
                 Refine Your <span style={{ color: "#388E3C" }}>Presence</span>
               </h2>
-              <p className="text-[#899485] text-lg font-medium">
+              <p className="text-muted-foreground text-lg font-medium">
                 Your neighborhood identity starts here
               </p>
             </div>
@@ -330,7 +330,7 @@ export default function OnboardingProfilePage() {
           <div className="relative group perspective mx-auto w-full max-w-md px-4">
             <div className="absolute inset-0 bg-gradient-to-br from-[#388E3C]/30 to-transparent rounded-[32px] blur-3xl opacity-40 group-hover:opacity-60 transition-opacity duration-1000" />
             <div 
-              className="relative w-full min-h-[240px] rounded-[32px] p-6 sm:p-8 border border-white/10 overflow-hidden transition-all duration-700 shadow-2xl backdrop-blur-2xl"
+              className="relative w-full min-h-[240px] rounded-[32px] p-6 sm:p-8 border border-border overflow-hidden transition-all duration-700 shadow-2xl backdrop-blur-2xl"
               style={{ 
                 background: "linear-gradient(135deg, rgba(30, 33, 38, 0.8) 0%, rgba(13, 15, 17, 0.8) 100%)",
                 boxShadow: "inset 0 0 60px rgba(255,255,255,0.03)"
@@ -342,7 +342,7 @@ export default function OnboardingProfilePage() {
               <div className="h-full flex flex-col justify-between relative z-10 gap-6">
                 <div className="flex items-start gap-4 sm:gap-6">
                   <div className="relative shrink-0">
-                    <div className="w-24 h-24 rounded-3xl bg-[#0d0f11] border border-white/10 flex items-center justify-center overflow-hidden shadow-2xl relative group/avatar">
+                    <div className="w-24 h-24 rounded-3xl bg-background border border-border flex items-center justify-center overflow-hidden shadow-2xl relative group/avatar">
                       <div className="absolute inset-0 bg-[#388E3C] opacity-0 group-hover/avatar:opacity-10 transition-opacity" />
                       <User className="w-12 h-12 text-[#388E3C]/40 group-hover/avatar:scale-110 transition-transform duration-500" />
                     </div>
@@ -359,15 +359,15 @@ export default function OnboardingProfilePage() {
                     <div className="text-3xl font-black text-white leading-none tracking-tight truncate">
                       {form.watch('fullName') || 'Identity Name'}
                     </div>
-                    <div className="text-base font-bold text-[#899485] truncate">
+                    <div className="text-base font-bold text-muted-foreground truncate">
                       @{form.watch('username') || 'handle'}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-end justify-between border-t border-white/5 pt-4 sm:pt-6 mt-auto">
+                <div className="flex items-end justify-between border-t border-border pt-4 sm:pt-6 mt-auto">
                   <div className="space-y-2">
-                    <div className="text-[10px] uppercase tracking-widest font-black text-[#899485] opacity-60 ml-0.5">Primary Sector</div>
+                    <div className="text-[10px] uppercase tracking-widest font-black text-muted-foreground opacity-60 ml-0.5">Primary Sector</div>
                     <div className="flex items-center gap-2.5 text-white font-black">
                       <div className="w-8 h-8 rounded-lg bg-[#388E3C]/10 flex items-center justify-center">
                         <MapPin className="w-4 h-4 text-[#388E3C]" />
@@ -376,7 +376,7 @@ export default function OnboardingProfilePage() {
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end gap-1">
-                    <div className="text-[10px] uppercase tracking-widest font-black text-[#899485] opacity-60">Verification</div>
+                    <div className="text-[10px] uppercase tracking-widest font-black text-muted-foreground opacity-60">Verification</div>
                     <div className="px-3 py-1 rounded-lg bg-[#388E3C]/10 text-[#388E3C] text-[11px] font-black border border-[#388E3C]/20">
                       ACTIVE RESIDENT
                     </div>
@@ -401,13 +401,13 @@ export default function OnboardingProfilePage() {
                   {/* Name Input */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between px-1">
-                      <Label className="text-[11px] uppercase tracking-[0.25em] font-black text-[#899485]">Full Legal Name</Label>
+                      <Label className="text-[11px] uppercase tracking-[0.25em] font-black text-muted-foreground">Full Legal Name</Label>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <HelpCircle className="w-4 h-4 text-[#899485]/40 cursor-help" />
+                            <HelpCircle className="w-4 h-4 text-muted-foreground/40 cursor-help" />
                           </TooltipTrigger>
-                          <TooltipContent className="bg-[#1d2025] border-white/10 text-white font-bold p-4 rounded-2xl max-w-[200px] shadow-2xl backdrop-blur-xl">
+                          <TooltipContent className="bg-card border-border text-white font-bold p-4 rounded-2xl max-w-[200px] shadow-2xl backdrop-blur-xl">
                             Used for identity verification and official neighborhood transactions.
                           </TooltipContent>
                         </Tooltip>
@@ -417,7 +417,7 @@ export default function OnboardingProfilePage() {
                       <div className="absolute inset-0 bg-[#388E3C] rounded-[24px] opacity-0 group-focus-within:opacity-5 blur-xl transition-opacity" />
                       <Input
                         placeholder="e.g. Tolu Oyelowo"
-                        className="h-16 rounded-[24px] bg-[#0d0f11]/60 border-white/10 focus:border-[#388E3C]/50 transition-all text-xl font-bold px-8"
+                        className="h-16 rounded-[24px] bg-background/60 border-border focus:border-[#388E3C]/50 transition-all text-xl font-bold px-8"
                         autoComplete="name"
                         {...form.register('fullName')}
                       />
@@ -432,7 +432,7 @@ export default function OnboardingProfilePage() {
                   {/* Username Input */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between px-1">
-                      <Label className="text-[11px] uppercase tracking-[0.25em] font-black text-[#899485]">Neighborhood Handle</Label>
+                      <Label className="text-[11px] uppercase tracking-[0.25em] font-black text-muted-foreground">Neighborhood Handle</Label>
                     </div>
                     
                     <div className="relative group">
@@ -440,7 +440,7 @@ export default function OnboardingProfilePage() {
                       <div className="absolute left-8 top-1/2 -translate-y-1/2 text-[#388E3C] font-black text-2xl pointer-events-none">@</div>
                       <Input
                         placeholder="username"
-                        className="h-16 pl-16 pr-16 rounded-[24px] bg-[#0d0f11]/60 border-white/10 focus:border-[#388E3C]/50 transition-all text-xl font-bold"
+                        className="h-16 pl-16 pr-16 rounded-[24px] bg-background/60 border-border focus:border-[#388E3C]/50 transition-all text-xl font-bold"
                         {...form.register('username')}
                         onFocus={() => setShowSuggestions(usernameSuggestions.length > 0)}
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
@@ -466,7 +466,7 @@ export default function OnboardingProfilePage() {
                     )}
 
                     {showSuggestions && usernameSuggestions.length > 0 && (
-                      <div className="bg-[#0d0f11]/80 rounded-[32px] p-6 space-y-5 border border-white/10 animate-in fade-in zoom-in-95 duration-500 backdrop-blur-3xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.8)]">
+                      <div className="bg-background/80 rounded-[32px] p-6 space-y-5 border border-border animate-in fade-in zoom-in-95 duration-500 backdrop-blur-3xl shadow-[0_30px_60px_-12px_rgba(0,0,0,0.8)]">
                         <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.25em] font-black text-[#388E3C]">
                           <div className="w-10 h-10 rounded-xl bg-[#388E3C]/10 flex items-center justify-center border border-[#388E3C]/20">
                             <Lightbulb className="w-5 h-5" />
@@ -479,7 +479,7 @@ export default function OnboardingProfilePage() {
                               key={index}
                               type="button"
                               onClick={() => handleUseSuggestion(suggestion)}
-                              className="px-6 py-3 text-sm bg-white/5 text-white font-bold rounded-2xl border border-white/10 hover:border-[#388E3C]/40 hover:bg-[#388E3C]/10 transition-all hover:scale-105 active:scale-95"
+                              className="px-6 py-3 text-sm bg-white/5 text-white font-bold rounded-2xl border border-border hover:border-[#388E3C]/40 hover:bg-[#388E3C]/10 transition-all hover:scale-105 active:scale-95"
                             >
                               @{suggestion}
                             </button>
@@ -490,7 +490,7 @@ export default function OnboardingProfilePage() {
                   </div>
 
                   {/* Location Grid */}
-                  <div className="space-y-8 pt-8 border-t border-white/5">
+                  <div className="space-y-8 pt-8 border-t border-border">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-[18px] flex items-center justify-center bg-[#388E3C]/10 border border-[#388E3C]/20">
@@ -501,11 +501,11 @@ export default function OnboardingProfilePage() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-black text-[#899485] cursor-default">
+                            <div className="px-3 py-1 rounded-full bg-white/5 border border-border text-[10px] font-black text-muted-foreground cursor-default">
                               REQUIRED
                             </div>
                           </TooltipTrigger>
-                          <TooltipContent className="bg-[#1d2025] border-white/10 text-white font-bold p-3 rounded-xl shadow-2xl backdrop-blur-xl">
+                          <TooltipContent className="bg-card border-border text-white font-bold p-3 rounded-xl shadow-2xl backdrop-blur-xl">
                             Used to connect you with relevant local neighborhood content.
                           </TooltipContent>
                         </Tooltip>
@@ -514,12 +514,12 @@ export default function OnboardingProfilePage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-3">
-                        <Label className="text-[11px] uppercase tracking-widest font-black text-[#899485] ml-1">State / Region</Label>
+                        <Label className="text-[11px] uppercase tracking-widest font-black text-muted-foreground ml-1">State / Region</Label>
                         <Select value={form.watch('location.state')} onValueChange={handleStateChange}>
-                          <SelectTrigger className="h-16 rounded-[22px] bg-[#0d0f11]/60 border-white/10 text-lg font-bold px-6 focus:ring-[#388E3C]/30">
+                          <SelectTrigger className="h-16 rounded-[22px] bg-background/60 border-border text-lg font-bold px-6 focus:ring-[#388E3C]/30">
                             <SelectValue placeholder="Select State" />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#1d2025] border-white/10 max-h-[300px] rounded-2xl shadow-2xl backdrop-blur-3xl">
+                          <SelectContent className="bg-card border-border max-h-[300px] rounded-2xl shadow-2xl backdrop-blur-3xl">
                             {states.filter(s => s).map(state => (
                               <SelectItem key={state} value={state} className="focus:bg-[#388E3C] focus:text-white font-bold py-3 px-6 rounded-xl cursor-pointer transition-colors">{state}</SelectItem>
                             ))}
@@ -528,16 +528,16 @@ export default function OnboardingProfilePage() {
                       </div>
 
                       <div className="space-y-3">
-                        <Label className="text-[11px] uppercase tracking-widest font-black text-[#899485] ml-1">Local Gov Area</Label>
+                        <Label className="text-[11px] uppercase tracking-widest font-black text-muted-foreground ml-1">Local Gov Area</Label>
                         <Select 
                           value={form.watch('location.lga')} 
                           onValueChange={handleLgaChange}
                           disabled={!form.watch('location.state')}
                         >
-                          <SelectTrigger className="h-16 rounded-[22px] bg-[#0d0f11]/60 border-white/10 text-lg font-bold px-6 focus:ring-[#388E3C]/30 disabled:opacity-30">
+                          <SelectTrigger className="h-16 rounded-[22px] bg-background/60 border-border text-lg font-bold px-6 focus:ring-[#388E3C]/30 disabled:opacity-30">
                             <SelectValue placeholder="Select LGA" />
                           </SelectTrigger>
-                          <SelectContent className="bg-[#1d2025] border-white/10 max-h-[300px] rounded-2xl shadow-2xl backdrop-blur-3xl">
+                          <SelectContent className="bg-card border-border max-h-[300px] rounded-2xl shadow-2xl backdrop-blur-3xl">
                             {lgas.filter(l => l).map(lga => (
                               <SelectItem key={lga} value={lga} className="focus:bg-[#388E3C] focus:text-white font-bold py-3 px-6 rounded-xl cursor-pointer transition-colors">{lga}</SelectItem>
                             ))}
@@ -583,7 +583,7 @@ export default function OnboardingProfilePage() {
                <CheckCircle2 className="w-4 h-4" />
                Identity Encryption Active
              </div>
-             <p className="text-center text-[10px] text-[#899485]/40 font-black uppercase tracking-[0.4em] max-w-xs leading-loose">
+             <p className="text-center text-[10px] text-muted-foreground/40 font-black uppercase tracking-[0.4em] max-w-xs leading-loose">
                Securely connecting 10k+ verified neighbors across Nigeria
              </p>
           </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-supabase-auth';
@@ -67,7 +67,7 @@ export default function PurchaseHistoryPage() {
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
     
     return (
-      <Badge className={`${config.color} text-white`}>
+      <Badge className={`${config.color} text-foreground`}>
         {config.text}
       </Badge>
     );

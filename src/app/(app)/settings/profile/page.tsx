@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -87,7 +87,7 @@ export default function EditProfilePage() {
   };
 
   return (
-    <div className="min-h-screen pb-36" style={{ background: "#15181D", fontFamily: "Work Sans, sans-serif", color: "#e1e2e9" }}>
+    <div className="min-h-screen pb-36" style={{ background: "var(--c-bg)", fontFamily: "Inter, sans-serif", color: "var(--c-text)" }}>
 
       {/* Sticky Header */}
       <header
@@ -95,8 +95,8 @@ export default function EditProfilePage() {
         style={{ background: "rgba(30,33,38,0.85)", backdropFilter: "blur(20px)" }}
       >
         <div className="flex items-center gap-4">
-          <button onClick={() => router.back()} className="w-10 h-10 flex items-center justify-center rounded-full transition-colors hover:bg-white/10">
-            <ArrowLeft className="w-5 h-5 text-white" />
+          <button onClick={() => router.back()} className="w-10 h-10 flex items-center justify-center rounded-full transition-colors hover:bg-accent">
+            <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
           <h1 style={{ fontFamily: "Pacifico, cursive", fontSize: 18, color: "#fff" }}>Edit Profile</h1>
         </div>
@@ -109,7 +109,7 @@ export default function EditProfilePage() {
         <section className="flex flex-col items-center py-4">
           <div className="relative">
             <div className="absolute -inset-2 rounded-full border-2 border-dashed border-[#388E3C] opacity-60 animate-spin" style={{ animationDuration: "8s" }} />
-            <div className="relative w-24 h-24 rounded-full overflow-hidden border-4" style={{ borderColor: "#1d2025" }}>
+            <div className="relative w-24 h-24 rounded-full overflow-hidden border-4" style={{ borderColor: "var(--c-card)" }}>
               <Avatar className="w-full h-full">
                 <AvatarImage src={avatarPreview || avatarUrl} className="object-cover" />
                 <AvatarFallback style={{ background: "#388E3C", color: "#fff", fontSize: 32, fontWeight: 700 }}>
@@ -126,7 +126,7 @@ export default function EditProfilePage() {
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
           </div>
-          <p className="mt-6 text-sm" style={{ color: "#899485" }}>Change profile photo</p>
+          <p className="mt-6 text-sm" style={{ color: "var(--c-text-muted)" }}>Change profile photo</p>
         </section>
 
         {/* ── Block 1: Identity ── */}
@@ -137,7 +137,7 @@ export default function EditProfilePage() {
               <input
                 type="text" value={name} onChange={e => setName(e.target.value)}
                 className="w-full rounded-full px-6 py-4 text-sm outline-none transition-all"
-                style={{ background: "#272a2f", color: "#e1e2e9", border: "none" }}
+                style={{ background: "var(--c-card2)", color: "var(--c-text)", border: "none" }}
                 onFocus={e => e.target.style.boxShadow = `0 0 0 1px #82DB7E`}
                 onBlur={e => e.target.style.boxShadow = "none"}
               />
@@ -147,11 +147,11 @@ export default function EditProfilePage() {
                 <textarea
                   value={bio} onChange={e => setBio(e.target.value.slice(0, 150))} rows={3}
                   className="w-full px-6 py-4 text-sm outline-none resize-none transition-all"
-                  style={{ background: "#272a2f", color: "#e1e2e9", border: "none", borderRadius: 11 }}
+                  style={{ background: "var(--c-card2)", color: "var(--c-text)", border: "none", borderRadius: 11 }}
                   onFocus={e => e.target.style.boxShadow = `0 0 0 1px #82DB7E`}
                   onBlur={e => e.target.style.boxShadow = "none"}
                 />
-                <span className="absolute bottom-3 right-4 text-[10px]" style={{ color: "#899485" }}>{bio.length}/150</span>
+                <span className="absolute bottom-3 right-4 text-[10px]" style={{ color: "var(--c-text-muted)" }}>{bio.length}/150</span>
               </div>
             </Field>
           </div>
@@ -165,7 +165,7 @@ export default function EditProfilePage() {
               <select
                 value={state} onChange={e => setState(e.target.value)}
                 className="w-full rounded-full px-6 py-4 text-sm outline-none appearance-none"
-                style={{ background: "#272a2f", color: "#e1e2e9", border: "none" }}
+                style={{ background: "var(--c-card2)", color: "var(--c-text)", border: "none" }}
               >
                 <option value="">Select state</option>
                 {NIGERIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -175,14 +175,14 @@ export default function EditProfilePage() {
               <input
                 type="text" value={lga} onChange={e => setLga(e.target.value)} placeholder="Your LGA"
                 className="w-full rounded-full px-6 py-4 text-sm outline-none"
-                style={{ background: "#272a2f", color: "#e1e2e9", border: "none" }}
+                style={{ background: "var(--c-card2)", color: "var(--c-text)", border: "none" }}
               />
             </Field>
             <Field label="Ward">
               <input
                 type="text" value={ward} onChange={e => setWard(e.target.value)} placeholder="Ward"
                 className="w-full rounded-full px-6 py-4 text-sm outline-none"
-                style={{ background: "#272a2f", color: "#e1e2e9", border: "none" }}
+                style={{ background: "var(--c-card2)", color: "var(--c-text)", border: "none" }}
               />
             </Field>
           </div>
@@ -193,8 +193,8 @@ export default function EditProfilePage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="w-full py-4 rounded-full flex items-center justify-center gap-3 text-white font-extrabold uppercase tracking-[0.2em] transition-all active:scale-[0.98] shadow-[0_10px_30px_rgba(56,142,60,0.2)]"
-            style={{ background: "#388E3C", fontFamily: "Plus Jakarta Sans, sans-serif", opacity: saving ? 0.7 : 1 }}
+            className="w-full py-4 rounded-full flex items-center justify-center gap-3 text-foreground font-extrabold uppercase tracking-[0.2em] transition-all active:scale-[0.98] shadow-[0_10px_30px_rgba(56,142,60,0.2)]"
+            style={{ background: "#388E3C", fontFamily: "Inter, sans-serif", opacity: saving ? 0.7 : 1 }}
           >
             {saving ? "Saving…" : "Save Changes"}
             {!saving && (
@@ -212,7 +212,7 @@ function SectionHeader({ color, label }: { color: string; label: string }) {
   return (
     <div className="flex items-center gap-3">
       <span className="w-1 h-6 rounded-full flex-shrink-0" style={{ background: color }} />
-      <h2 className="font-bold uppercase tracking-widest text-lg" style={{ fontFamily: "Plus Jakarta Sans, sans-serif", color: color + "cc" }}>{label}</h2>
+      <h2 className="font-bold uppercase tracking-widest text-lg" style={{ fontFamily: "Inter, sans-serif", color: color + "cc" }}>{label}</h2>
     </div>
   );
 }
@@ -220,7 +220,7 @@ function SectionHeader({ color, label }: { color: string; label: string }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <label className="text-xs font-bold uppercase tracking-tighter ml-4" style={{ color: "#899485" }}>{label}</label>
+      <label className="text-xs font-bold uppercase tracking-tighter ml-4" style={{ color: "var(--c-text-muted)" }}>{label}</label>
       {children}
     </div>
   );

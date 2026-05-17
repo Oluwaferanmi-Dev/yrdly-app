@@ -1,4 +1,4 @@
-
+﻿
 "use client";
 
 import { useForm, UseFormReturn } from "react-hook-form";
@@ -44,8 +44,8 @@ import type { Post } from "@/types";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-const inputBase = "bg-[#15181D] border border-[#388E3C] text-white placeholder:text-white/70 placeholder:italic font-raleway text-xs focus-visible:ring-[#388E3C] focus-visible:ring-offset-0";
-const labelClass = "font-raleway font-semibold text-xs text-white";
+const inputBase = "bg-background border border-[#388E3C] text-foreground placeholder:text-muted-foreground placeholder:italic font-sans text-xs focus-visible:ring-[#388E3C] focus-visible:ring-offset-0";
+const labelClass = "font-sans font-semibold text-xs text-foreground";
 const pointerClass = "w-2 h-2 border-b border-l border-[#388E3C] rounded-bl-md flex-shrink-0 mt-1.5";
 
 const getFormSchema = (isEditMode: boolean, postToEdit?: Post) => z.object({
@@ -229,19 +229,19 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
   const headerBlock = (
     <div className="flex items-start justify-between gap-4 p-5 sm:p-6 pb-2 flex-shrink-0">
       <div>
-        <h2 className="text-lg font-normal text-white" style={{ fontFamily: '"Pacifico", cursive' }}>
+        <h2 className="text-lg font-normal text-muted-foreground" style={{ fontFamily: '"Pacifico", cursive' }}>
           {finalTitle}
         </h2>
-        <p className="font-raleway font-light italic text-xs text-white/90 mt-0.5">{finalDescription}</p>
+        <p className="font-sans font-light italic text-xs text-foreground mt-0.5">{finalDescription}</p>
       </div>
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "linear-gradient(118.99deg, #FF0048 17.37%, #7D00D0 85.3%)" }}>
-          <Ticket className="w-5 h-5 text-white" />
+          <Ticket className="w-5 h-5 text-foreground" />
         </div>
         <button
           type="button"
           onClick={() => handleOpenChange(false)}
-          className="text-white/60 hover:text-white transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -296,7 +296,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
                     <FormLabel className={labelClass}>Location</FormLabel>
                   </div>
                   <FormControl>
-                    <div className={cn("[&_input]:bg-[#15181D] [&_input]:border-[#388E3C] [&_input]:rounded-full [&_input]:text-white [&_input]:placeholder:text-white/70 [&_input]:h-10")}>
+                    <div className={cn("[&_input]:bg-background [&_input]:border-[#388E3C] [&_input]:rounded-full [&_input]:text-foreground [&_input]:placeholder:text-muted-foreground [&_input]:h-10")}>
                       <LocationInput name={field.name} control={form.control} defaultValue={field.value} />
                     </div>
                   </FormControl>
@@ -346,9 +346,9 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
                     <FormLabel className={labelClass}>Event Image</FormLabel>
                   </div>
                   <FormControl>
-                    <label className={cn("flex items-center gap-2 rounded-[5px] border border-[#388E3C] bg-[#15181D] px-4 py-3 cursor-pointer text-white font-raleway text-xs font-semibold italic")}>
+                    <label className={cn("flex items-center gap-2 rounded-[5px] border border-[#388E3C] bg-background px-4 py-3 cursor-pointer text-foreground font-sans text-xs font-semibold italic")}>
                       <span>Choose Files</span>
-                      <span className="font-normal text-white/70">
+                      <span className="font-normal text-muted-foreground">
                         {value && value.length > 0 ? `${value.length} file(s)` : "No file chosen"}
                       </span>
                       <input type="file" accept="image/*" multiple className="sr-only" onChange={(e) => onChange(e.target.files ?? undefined)} {...rest} />
@@ -359,20 +359,20 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
                       {postToEdit?.image_urls?.map((url, index) => {
                         if (removedImageIndexes.includes(index)) return null;
                         return (
-                          <div key={`url-${index}`} className="relative w-14 h-14 rounded overflow-hidden bg-[#15181D] flex-shrink-0">
+                          <div key={`url-${index}`} className="relative w-14 h-14 rounded overflow-hidden bg-background flex-shrink-0">
                             <Image src={url} alt="" width={56} height={56} className="w-full h-full object-cover" />
                             <button
                               type="button"
                               className="absolute top-0 right-0 w-5 h-5 rounded-full flex items-center justify-center bg-[#FF383C] border border-white"
                               onClick={() => setRemovedImageIndexes((prev) => [...prev, index])}
                             >
-                              <X className="w-3 h-3 text-white" />
+                              <X className="w-3 h-3 text-foreground" />
                             </button>
                           </div>
                         );
                       })}
                       {value && Array.from(value).map((file, index) => (
-                        <div key={`file-${index}`} className="relative w-14 h-14 rounded overflow-hidden bg-[#15181D] flex-shrink-0">
+                        <div key={`file-${index}`} className="relative w-14 h-14 rounded overflow-hidden bg-background flex-shrink-0">
                           {/* eslint-disable-next-line @next/next/no-img-element -- blob URL from file input */}
                           <img src={URL.createObjectURL(file as File)} alt="" className="w-full h-full object-cover" />
                           <button
@@ -384,7 +384,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
                               onChange(dt.files.length ? dt.files : undefined);
                             }}
                           >
-                            <X className="w-3 h-3 text-white" />
+                            <X className="w-3 h-3 text-foreground" />
                           </button>
                         </div>
                       ))}
@@ -399,7 +399,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
         <div className="p-5 sm:p-6 pt-0 flex-shrink-0">
           <Button
             type="submit"
-            className="w-full rounded-full h-12 font-raleway font-medium text-sm text-white"
+            className="w-full rounded-full h-12 font-sans font-medium text-sm text-foreground"
             style={{ background: "#388E3C" }}
             disabled={loading}
           >
@@ -414,7 +414,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
     return (
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetTrigger asChild>{children ? children : <Trigger />}</SheetTrigger>
-        <SheetContent side="bottom" className="p-0 flex flex-col max-h-[92dvh] rounded-t-[32px] border border-white/10 bg-[#1E2126] text-white overflow-hidden" style={{ zIndex: 100 }} hideClose>
+        <SheetContent side="bottom" className="p-0 flex flex-col max-h-[92dvh] rounded-t-[32px] border border-border bg-card text-foreground overflow-hidden" style={{ zIndex: 100 }} hideClose>
           {headerBlock}
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto" style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))" }}>
             {formContent}
@@ -429,7 +429,7 @@ const CreateEventDialogComponent = memo(function CreateEventDialog({ children, o
       {externalOpen === undefined && (
         <DialogTrigger asChild>{children ? children : <Trigger />}</DialogTrigger>
       )}
-      <DialogContent className={cn("sm:max-w-[626px] p-0 flex flex-col max-h-[90dvh] border border-white/10 rounded-[24px] bg-[#1E2126] text-white gap-0 overflow-hidden")} style={{ zIndex: 100 }} hideClose>
+      <DialogContent className={cn("sm:max-w-[626px] p-0 flex flex-col max-h-[90dvh] border border-border rounded-[24px] bg-card text-foreground gap-0 overflow-hidden")} style={{ zIndex: 100 }} hideClose>
         {headerBlock}
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
           {formContent}

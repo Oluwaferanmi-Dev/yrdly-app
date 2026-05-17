@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { Search, Plus, Edit, Trash2, MessageCircle, ShoppingBag } from "lucide-react";
@@ -120,7 +120,7 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
     price === 0 ? "FREE" : `₦${price.toLocaleString()}`;
 
   return (
-    <div className="min-h-screen" style={{ background: "#15181D" }}>
+    <div className="min-h-screen" style={{ background: "var(--c-bg)" }}>
       {/* Location filter */}
       <div className="px-4 pt-4 pb-1">
         <LocationChip />
@@ -130,17 +130,17 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
         <div className="relative">
           <Search
             className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5"
-            style={{ color: "#BBBBBB" }}
+            style={{ color: "var(--c-text-muted)" }}
           />
           <input
             type="text"
             placeholder="Search for events, items"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-2.5 bg-transparent text-white text-base italic font-light rounded-full outline-none placeholder:text-[#BBBBBB]"
+            className="w-full pl-12 pr-4 py-2.5 bg-transparent text-foreground text-base italic font-light rounded-full outline-none placeholder:text-[#BBBBBB]"
             style={{
               border: "0.5px solid #388E3C",
-              fontFamily: "Raleway, sans-serif",
+              fontFamily: "Inter, sans-serif",
               fontWeight: 300,
             }}
           />
@@ -164,7 +164,7 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
             <Skeleton
               key={i}
               className="h-64 w-full rounded-xl"
-              style={{ background: "#1E2126" }}
+              style={{ background: "var(--c-card)" }}
             />
           ))}
         </div>
@@ -188,7 +188,7 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
         <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
           <div
             className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-            style={{ background: "#1E2126" }}
+            style={{ background: "var(--c-card)" }}
           >
             <ShoppingBag className="w-8 h-8" style={{ color: "#388E3C" }} />
           </div>
@@ -198,7 +198,7 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
           >
             {searchTerm ? `No results for "${searchTerm}"` : "Marketplace is empty"}
           </h3>
-          <p className="text-sm" style={{ color: "#BBBBBB", fontFamily: "Raleway, sans-serif" }}>
+          <p className="text-sm" style={{ color: "var(--c-text-muted)", fontFamily: "Inter, sans-serif" }}>
             {searchTerm
               ? "Try a different search term."
               : "Be the first to list an item in your neighborhood!"}
@@ -213,7 +213,7 @@ export function MarketplaceScreen({ onItemClick, onMessageSeller }: MarketplaceS
           className="w-14 h-14 rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
           style={{ background: "#388E3C" }}
         >
-          <Plus className="w-6 h-6 text-white" />
+          <Plus className="w-6 h-6 text-foreground" />
         </button>
       </div>
 
@@ -273,7 +273,7 @@ function MarketplaceCard({
   return (
     <div
       className="rounded-xl overflow-hidden flex flex-col transition-transform hover:scale-[1.02] hover:shadow-2xl cursor-pointer"
-      style={{ background: "#1E2126" }}
+      style={{ background: "var(--c-card)" }}
     >
       {/* Image */}
       <div
@@ -292,7 +292,7 @@ function MarketplaceCard({
         ) : (
           <div
             className="w-full h-full flex items-center justify-center"
-            style={{ background: "#252B35" }}
+            style={{ background: "var(--c-card2)" }}
           >
             <ShoppingBag className="w-10 h-10" style={{ color: "#388E3C", opacity: 0.5 }} />
           </div>
@@ -303,8 +303,8 @@ function MarketplaceCard({
       <div className="p-2.5 flex flex-col gap-1 flex-1">
         {/* Item name */}
         <p
-          className="text-white text-[13px] leading-[15px] line-clamp-2"
-          style={{ fontFamily: "Raleway, sans-serif", fontWeight: 500 }}
+          className="text-foreground text-[13px] leading-[15px] line-clamp-2"
+          style={{ fontFamily: "Inter, sans-serif", fontWeight: 500 }}
           onClick={() => onItemClick?.(item)}
         >
           {item.title || item.text || "Untitled"}
@@ -313,7 +313,7 @@ function MarketplaceCard({
         {/* Price */}
         <p
           className="text-[22px] leading-[28px] font-bold"
-          style={{ fontFamily: "Raleway, sans-serif", color: "#388E3C" }}
+          style={{ fontFamily: "Inter, sans-serif", color: "#388E3C" }}
         >
           {formatPrice(item.price || 0)}
         </p>
@@ -328,7 +328,7 @@ function MarketplaceCard({
                 style={{
                   borderColor: "#388E3C",
                   color: "#388E3C",
-                  fontFamily: "Raleway, sans-serif",
+                  fontFamily: "Inter, sans-serif",
                   background: "transparent",
                 }}
               >
@@ -346,10 +346,10 @@ function MarketplaceCard({
             <>
               <button
                 onClick={() => onItemClick?.(item)}
-                className="flex-1 text-xs py-1.5 rounded-full font-medium transition-colors text-white"
+                className="flex-1 text-xs py-1.5 rounded-full font-medium transition-colors text-foreground"
                 style={{
                   background: "#388E3C",
-                  fontFamily: "Raleway, sans-serif",
+                  fontFamily: "Inter, sans-serif",
                 }}
               >
                 {item.price === 0 ? "Claim Free" : "Buy Now"}
@@ -373,7 +373,7 @@ function MarketplaceCard({
           }}
         >
           <div
-            className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-white overflow-hidden"
+            className="w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center text-[9px] font-bold text-foreground overflow-hidden"
             style={{ background: "#388E3C" }}
           >
             {item.user?.avatar_url ? (
@@ -390,13 +390,13 @@ function MarketplaceCard({
           </div>
           <span
             className="text-[11px] truncate"
-            style={{ color: "#BBBBBB", fontFamily: "Raleway, sans-serif" }}
+            style={{ color: "var(--c-text-muted)", fontFamily: "Inter, sans-serif" }}
           >
             {item.user?.name || "Unknown Seller"}
           </span>
           <span
             className="text-[10px] ml-auto flex-shrink-0"
-            style={{ color: "#555", fontFamily: "Raleway, sans-serif" }}
+            style={{ color: "#555", fontFamily: "Inter, sans-serif" }}
           >
             {new Date(item.timestamp).toLocaleDateString("en-NG", {
               day: "numeric",

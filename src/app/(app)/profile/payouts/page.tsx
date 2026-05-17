@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/use-supabase-auth';
@@ -66,7 +66,7 @@ export default function PayoutHistoryPage() {
     const Icon = config.icon;
     
     return (
-      <Badge className={`${config.color} text-white`}>
+      <Badge className={`${config.color} text-foreground`}>
         <Icon className="mr-1 h-3 w-3" />
         {config.text}
       </Badge>

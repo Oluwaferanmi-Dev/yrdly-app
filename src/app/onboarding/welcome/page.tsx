@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -240,7 +240,7 @@ export default function OnboardingWelcomePage() {
   }
 
   return (
-    <div className="min-h-screen pb-20 overflow-x-hidden relative" style={{ background: "var(--background)", color: "var(--foreground)", fontFamily: "Raleway, sans-serif" }}>
+    <div className="min-h-screen pb-20 overflow-x-hidden relative" style={{ background: "var(--background)", color: "var(--foreground)", fontFamily: "Inter, sans-serif" }}>
       <OnboardingProgress />
       
       {/* Background Glows */}
@@ -284,7 +284,7 @@ export default function OnboardingWelcomePage() {
               <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
                 Welcome home,<br/>{profile?.name?.split(' ')[0]}!
               </h2>
-              <p className="text-[#899485] text-lg max-w-[300px] mx-auto leading-relaxed">
+              <p className="text-muted-foreground text-lg max-w-[300px] mx-auto leading-relaxed">
                 Your journey in <span className="text-white font-bold">{profile?.location?.state || 'your neighborhood'}</span> starts now.
               </p>
             </div>
@@ -306,7 +306,7 @@ export default function OnboardingWelcomePage() {
 
               <div className="space-y-3 text-center relative z-10">
                 <h3 className="text-3xl font-black text-white tracking-tight">Ready to explore?</h3>
-                <p className="text-base text-[#899485] font-medium opacity-80">
+                <p className="text-base text-muted-foreground font-medium opacity-80">
                   Discover events, connect with locals, and build your neighborhood legacy.
                 </p>
               </div>
@@ -329,17 +329,17 @@ export default function OnboardingWelcomePage() {
                 
                 <button 
                   onClick={handleSkipTourClick}
-                  className="w-full h-16 rounded-[28px] flex items-center justify-center font-black text-[#899485] hover:text-white transition-all border border-white/10 hover:border-[#388E3C]/30 hover:bg-[#388E3C]/5 active:scale-[0.98] uppercase tracking-[0.2em] text-[11px]"
+                  className="w-full h-16 rounded-[28px] flex items-center justify-center font-black text-muted-foreground hover:text-white transition-all border border-border hover:border-[#388E3C]/30 hover:bg-[#388E3C]/5 active:scale-[0.98] uppercase tracking-[0.2em] text-[11px]"
                 >
                   Jump Right In
                 </button>
               </div>
               
-              <div className="flex items-center gap-3 justify-center px-6 py-3 rounded-2xl bg-white/[0.03] border border-white/10 relative z-10">
+              <div className="flex items-center gap-3 justify-center px-6 py-3 rounded-2xl bg-white/[0.03] border border-border relative z-10">
                 <div className="w-8 h-8 rounded-lg bg-[#388E3C]/10 flex items-center justify-center">
                   <CheckCircle className="w-5 h-5 text-[#388E3C]" />
                 </div>
-                <span className="text-[11px] font-black uppercase tracking-widest text-[#899485]">
+                <span className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">
                   Welcome guide sent to {profile?.email}
                 </span>
               </div>
@@ -347,7 +347,7 @@ export default function OnboardingWelcomePage() {
           </div>
 
           <div className="text-center">
-            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-[#899485]/20">
+            <p className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground/20">
               Yrdly Neighborhood Network • v2.0
             </p>
           </div>

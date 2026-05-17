@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,9 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useFriendshipGlobal } from "@/hooks/use-friendship-global";
 
 const GREEN = "#388E3C";
-const DARK_BG = "#15181D";
-const CARD = "#1E2126";
-const FONT = "Raleway, sans-serif";
+const DARK_BG = "var(--c-bg)";
+const CARD = "var(--c-card)";
+const FONT = "Inter, sans-serif";
 
 interface Neighbor extends User {
   isFriend?: boolean;
@@ -226,11 +226,11 @@ export function NeighboursListScreen() {
             variant="ghost"
             size="sm"
             onClick={() => router.back()}
-            className="text-white hover:bg-white/10"
+            className="text-foreground hover:bg-accent"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-2xl font-bold text-white">Neighbours</h1>
+          <h1 className="text-2xl font-bold text-foreground">Neighbours</h1>
           <span
             className="text-sm font-semibold ml-auto"
             style={{ color: GREEN }}
@@ -246,7 +246,7 @@ export function NeighboursListScreen() {
               <div
                 key={i}
                 className="p-4 flex items-center gap-3"
-                style={{ background: CARD, borderRadius: 11 }}
+                style={{ background: 'var(--c-card)', borderRadius: 11 }}
               >
                 <Skeleton className="w-12 h-12 rounded-full" />
                 <div className="flex-1 space-y-2">
@@ -265,7 +265,7 @@ export function NeighboursListScreen() {
             <div className="inline-block p-4 rounded-full mb-4" style={{ backgroundColor: "rgba(56,142,60,0.1)" }}>
               <UserIcon className="w-12 h-12" style={{ color: GREEN }} />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               No Neighbours Yet
             </h3>
             <p className="text-sm text-gray-400">
@@ -278,7 +278,7 @@ export function NeighboursListScreen() {
               <div
                 key={neighbor.id}
                 className="p-4 flex items-center gap-3 transition-all hover:opacity-80 cursor-pointer"
-                style={{ background: CARD, borderRadius: 11 }}
+                style={{ background: 'var(--c-card)', borderRadius: 11 }}
               >
                 <Avatar
                   className="w-12 h-12 cursor-pointer"
@@ -294,7 +294,7 @@ export function NeighboursListScreen() {
                   className="flex-1 min-w-0 cursor-pointer"
                   onClick={() => router.push(`/profile/${neighbor.id}`)}
                 >
-                  <h3 className="font-semibold text-white truncate">
+                  <h3 className="font-semibold text-foreground truncate">
                     {neighbor.name || "Unknown User"}
                   </h3>
                   <p className="text-sm text-gray-400 truncate">

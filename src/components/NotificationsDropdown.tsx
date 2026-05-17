@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -14,10 +14,10 @@ import * as Sentry from "@sentry/nextjs";
 
 const GREEN = "#388E3C";
 const GREEN_LIGHT = "#82DB7E";
-const CARD = "#1E2126";
-const SURFACE = "#101418";
-const FONT = "Work Sans, sans-serif";
-const RALEWAY = "Raleway, sans-serif";
+const CARD = "var(--c-card)";
+const SURFACE = "var(--c-bg)";
+const FONT = "Inter, sans-serif";
+const RALEWAY = "Inter, sans-serif";
 
 interface NotificationsDropdownProps {
   isOpen: boolean;
@@ -54,7 +54,7 @@ function getNotificationBadge(type: string) {
     case 'event_invite':
       return { icon: Calendar, bg: "#fbbc04", fg: "#3f2b00" }; // Yellow/Orange
     default:
-      return { icon: Bell, bg: "#32353a", fg: "#e1e2e9" }; // Gray
+      return { icon: Bell, bg: "var(--c-card2)", fg: "var(--c-text)" }; // Gray
   }
 }
 
@@ -272,7 +272,7 @@ function NotificationItem({ notification, onMarkAsRead, onDelete, onClose }: {
       <div className="relative flex-shrink-0">
         <Avatar className="w-10 h-10 ring-1 ring-white/10">
           <AvatarImage src={notification.from_user_avatar || "/placeholder.svg"} className="object-cover" />
-          <AvatarFallback style={{ background: "#272a2f", color: "#fff", fontSize: 14 }}>
+          <AvatarFallback style={{ background: "var(--c-card2)", color: "#fff", fontSize: 14 }}>
             {notification.from_user_name?.charAt(0) || "U"}
           </AvatarFallback>
         </Avatar>
@@ -287,15 +287,15 @@ function NotificationItem({ notification, onMarkAsRead, onDelete, onClose }: {
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-start mb-1">
-          <span className="text-[10px]" style={{ color: "#bfcab9", fontFamily: FONT }}>
+          <span className="text-[10px]" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
             from{" "}
-            <span className="font-semibold text-white">
+            <span className="font-semibold text-foreground">
               {notification.from_user_name || "Someone"}
             </span>
           </span>
           <div className="flex items-center gap-2">
             {!notification.is_read && (
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase" style={{ background: "#1B0F16", color: GREEN_LIGHT, fontFamily: FONT }}>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase" style={{ background: "var(--c-bg)", color: GREEN_LIGHT, fontFamily: FONT }}>
                 New
               </span>
             )}
@@ -303,7 +303,7 @@ function NotificationItem({ notification, onMarkAsRead, onDelete, onClose }: {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="text-[#899485] hover:text-white transition-colors"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
                   onClick={(e) => e.stopPropagation()} // don't trigger row navigation
                 >
                   <MoreHorizontal className="w-3 h-3" />
@@ -311,21 +311,21 @@ function NotificationItem({ notification, onMarkAsRead, onDelete, onClose }: {
               </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" style={{ background: SURFACE, border: "1px solid rgba(130,219,126,0.2)", fontFamily: FONT }}>
                 {!notification.is_read && (
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMarkAsRead(notification.id); }} className="text-white hover:bg-[#1E2126] cursor-pointer">
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onMarkAsRead(notification.id); }} className="text-foreground hover:bg-card cursor-pointer">
                     <Check className="w-4 h-4 mr-2" style={{ color: GREEN_LIGHT }} /> Mark as Read
                   </DropdownMenuItem>
                 )}
                 {notification.type === 'friend_request' && (
                   <>
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAction('accept_friend'); }} className="text-white hover:bg-[#1E2126] cursor-pointer">
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAction('accept_friend'); }} className="text-foreground hover:bg-card cursor-pointer">
                       <UserPlus className="w-4 h-4 mr-2" style={{ color: "#006ec9" }} /> Accept
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAction('decline_friend'); }} className="text-[#E53935] hover:bg-[#1E2126] cursor-pointer">
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleAction('decline_friend'); }} className="text-[#E53935] hover:bg-card cursor-pointer">
                       <X className="w-4 h-4 mr-2" /> Decline
                     </DropdownMenuItem>
                   </>
                 )}
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(notification.id); }} className="text-[#E53935] hover:bg-[#1E2126] cursor-pointer">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(notification.id); }} className="text-[#E53935] hover:bg-card cursor-pointer">
                   <X className="w-4 h-4 mr-2" /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -333,11 +333,11 @@ function NotificationItem({ notification, onMarkAsRead, onDelete, onClose }: {
           </div>
         </div>
 
-        <p className="text-sm text-white line-clamp-2 leading-tight" style={{ fontFamily: FONT }}>
+        <p className="text-sm text-foreground line-clamp-2 leading-tight" style={{ fontFamily: FONT }}>
           {notification.message}
         </p>
 
-        <span className="text-[9px] mt-2 block" style={{ color: "#899485", fontFamily: FONT }}>
+        <span className="text-[9px] mt-2 block" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
           {formatDistanceToNowStrict(new Date(notification.created_at), { addSuffix: true })}
         </span>
       </div>
@@ -431,13 +431,13 @@ export function NotificationsDropdown({ isOpen, onClose, onNotificationCountChan
       <div className="fixed inset-0 z-[55]" onClick={onClose} />
       <div 
         className="fixed top-20 right-4 w-[320px] shadow-[0_20px_40px_rgba(0,0,0,0.6)] z-[60] overflow-hidden rounded-[11px]"
-        style={{ background: CARD, border: "1px solid rgba(64,73,61,0.2)" }}
+        style={{ background: 'var(--c-card)', border: "1px solid rgba(64,73,61,0.2)" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex justify-between items-center px-4 py-4 border-b" style={{ borderColor: "rgba(64,73,61,0.1)" }}>
           <div className="flex items-center gap-2">
-            <h2 className="font-bold text-[15px] text-white" style={{ fontFamily: RALEWAY }}>Notifications</h2>
+            <h2 className="font-bold text-[15px] text-foreground" style={{ fontFamily: RALEWAY }}>Notifications</h2>
             {unreadCount > 0 && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#4da24e", color: "#003207", fontFamily: FONT }}>
                 {unreadCount}
@@ -479,15 +479,15 @@ export function NotificationsDropdown({ isOpen, onClose, onNotificationCountChan
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full mb-3" style={{ background: "rgba(56,142,60,0.1)" }}>
                 <Bell className="h-6 w-6" style={{ color: GREEN_LIGHT, opacity: 0.7 }} />
               </div>
-              <h3 className="text-sm font-semibold text-white" style={{ fontFamily: RALEWAY }}>No notifications</h3>
-              <p className="text-[11px] mt-1" style={{ color: "#899485", fontFamily: FONT }}>You&apos;re all caught up.</p>
+              <h3 className="text-sm font-semibold text-foreground" style={{ fontFamily: RALEWAY }}>No notifications</h3>
+              <p className="text-[11px] mt-1" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>You&apos;re all caught up.</p>
             </div>
           )}
         </div>
 
         {/* Footer */}
         {notifications.length > 0 && (
-          <div className="px-4 py-3 text-center" style={{ background: "#272a2f" }}>
+          <div className="px-4 py-3 text-center" style={{ background: "var(--c-card2)" }}>
             <button
               className="font-bold text-xs hover:underline"
               style={{ color: "#a5c8ff", fontFamily: FONT }}

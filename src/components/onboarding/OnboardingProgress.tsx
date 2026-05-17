@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { Progress } from '@/components/ui/progress';
@@ -26,10 +26,10 @@ export function OnboardingProgress({ className = '' }: OnboardingProgressProps) 
     <div 
       className={`sticky top-0 z-50 ${className}`}
       style={{ 
-        background: "#0d0f11", 
+        background: "var(--c-bg)", 
         borderBottom: "1px solid rgba(255,255,255,0.08)",
         backdropFilter: "blur(20px)",
-        fontFamily: "Raleway, sans-serif"
+        fontFamily: "Inter, sans-serif"
       }}
     >
       <div className="max-w-md mx-auto px-4 py-3">
@@ -43,7 +43,7 @@ export function OnboardingProgress({ className = '' }: OnboardingProgressProps) 
         </div>
         
         {/* Progress Bar Container */}
-        <div className="h-1.5 w-full rounded-full mb-3 bg-white/5 border border-white/5 overflow-hidden">
+        <div className="h-1.5 w-full rounded-full mb-3 bg-white/5 border border-border overflow-hidden">
           <div 
             className="h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden"
             style={{ 

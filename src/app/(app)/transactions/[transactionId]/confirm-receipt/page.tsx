@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -8,11 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, CheckCircle, AlertTriangle, Info } from "lucide-react";
 
 /* ── Design tokens ─────────────────────────────────── */
-const BG      = "#101418";
-const CARD    = "#1d2025";
+const BG      = "var(--c-bg)";
+const CARD    = "var(--c-card)";
 const GREEN   = "#388E3C";
 const GREEN_L = "#82DB7E";
-const MUTED   = "#bfcab9";
+const MUTED   = "var(--c-text-muted)";
 const RED     = "#E53935";
 
 export default function ConfirmReceiptPage() {
@@ -42,7 +42,7 @@ export default function ConfirmReceiptPage() {
   return (
     <div
       className="min-h-dvh"
-      style={{ background: BG, color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}
+      style={{ background: BG, color: "var(--c-text)", fontFamily: "Inter, sans-serif" }}
     >
       {/* Ambient glows */}
       <div className="fixed -bottom-24 -left-24 w-96 h-96 rounded-full pointer-events-none" style={{ background: "rgba(130,219,126,0.05)", filter: "blur(120px)" }} />
@@ -67,7 +67,7 @@ export default function ConfirmReceiptPage() {
         <div className="relative flex flex-col items-center mb-10">
           <div className="relative w-44 h-44 flex items-center justify-center">
             <svg className="w-full h-full" style={{ transform: "rotate(-90deg)" }}>
-              <circle cx="88" cy="88" r="82" fill="none" stroke="#1d2025" strokeWidth="6" />
+              <circle cx="88" cy="88" r="82" fill="none" stroke="var(--c-card)" strokeWidth="6" />
               <circle
                 cx="88" cy="88" r="82" fill="none"
                 stroke={GREEN_L} strokeWidth="6" strokeLinecap="round"
@@ -82,7 +82,7 @@ export default function ConfirmReceiptPage() {
           </div>
           <p
             className="text-[11px] mt-4 uppercase tracking-widest text-center"
-            style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}
+            style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}
           >
             Remaining to confirm or auto-release
           </p>
@@ -96,7 +96,7 @@ export default function ConfirmReceiptPage() {
             disabled={loading}
             className="flex flex-col items-center p-6 rounded-lg border-2 transition-all text-center active:scale-[0.98] group"
             style={{
-              background: CARD,
+              background: 'var(--c-card)',
               borderColor: "transparent",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#35a61a")}
@@ -108,10 +108,10 @@ export default function ConfirmReceiptPage() {
             >
               <CheckCircle className="w-7 h-7" style={{ color: "#6edf51", fill: "#6edf51", fillOpacity: 0.2 }} />
             </div>
-            <h4 className="font-bold text-sm text-white mb-1" style={{ fontFamily: "Raleway, sans-serif" }}>
+            <h4 className="font-bold text-sm text-foreground mb-1" style={{ fontFamily: "Inter, sans-serif" }}>
               All Good!
             </h4>
-            <p className="text-xs mb-6" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+            <p className="text-xs mb-6" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
               Item received in good condition
             </p>
             <div
@@ -119,7 +119,7 @@ export default function ConfirmReceiptPage() {
               style={{
                 background: "#35a61a",
                 color: "#fff",
-                fontFamily: "Raleway, sans-serif",
+                fontFamily: "Inter, sans-serif",
                 boxShadow: "0 8px 20px rgba(53,166,26,0.2)",
               }}
             >
@@ -131,7 +131,7 @@ export default function ConfirmReceiptPage() {
           <button
             onClick={() => router.push(`/transactions/${transactionId}/dispute`)}
             className="flex flex-col items-center p-6 rounded-lg border-2 transition-all text-center active:scale-[0.98]"
-            style={{ background: CARD, borderColor: "transparent" }}
+            style={{ background: 'var(--c-card)', borderColor: "transparent" }}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = RED)}
             onMouseLeave={(e) => (e.currentTarget.style.borderColor = "transparent")}
           >
@@ -141,10 +141,10 @@ export default function ConfirmReceiptPage() {
             >
               <AlertTriangle className="w-7 h-7" style={{ color: "#ffb4ab" }} />
             </div>
-            <h4 className="font-bold text-sm text-white mb-1" style={{ fontFamily: "Raleway, sans-serif" }}>
+            <h4 className="font-bold text-sm text-foreground mb-1" style={{ fontFamily: "Inter, sans-serif" }}>
               There&apos;s an issue
             </h4>
-            <p className="text-xs mb-6" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+            <p className="text-xs mb-6" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
               Not as described / missing items
             </p>
             <div
@@ -152,7 +152,7 @@ export default function ConfirmReceiptPage() {
               style={{
                 border: `1px solid ${RED}`,
                 color: RED,
-                fontFamily: "Raleway, sans-serif",
+                fontFamily: "Inter, sans-serif",
               }}
             >
               Raise Dispute
@@ -166,7 +166,7 @@ export default function ConfirmReceiptPage() {
           style={{ background: "rgba(39,42,47,0.3)", borderColor: "rgba(64,73,61,0.15)" }}
         >
           <Info className="w-3.5 h-3.5 flex-shrink-0" style={{ color: MUTED }} />
-          <p className="text-[10px] uppercase tracking-wider" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+          <p className="text-[10px] uppercase tracking-wider" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
             If you take no action in 48h, funds will be auto-released to the seller.
           </p>
         </div>

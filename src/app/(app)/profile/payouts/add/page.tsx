@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -7,12 +7,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-supabase-auth";
 
 /* ── Design tokens ─────────────────────────────────── */
-const BG    = "#101418";
-const CARD  = "#1d2025";
-const CARDH = "#272a2f";
+const BG    = "var(--c-bg)";
+const CARD  = "var(--c-card)";
+const CARDH = "var(--c-card2)";
 const Green  = "#388E3C";
 const GreenL = "#82DB7E";
-const MUTED  = "#bfcab9";
+const MUTED  = "var(--c-text-muted)";
 
 const NIGERIAN_BANKS = [
   "Access Bank", "GTBank", "First Bank", "Zenith Bank",
@@ -59,7 +59,7 @@ export default function AddPayoutAccountPage() {
   return (
     <div
       className="min-h-dvh flex flex-col items-center"
-      style={{ background: BG, color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}
+      style={{ background: BG, color: "var(--c-text)", fontFamily: "Inter, sans-serif" }}
     >
       {/* Aura glows */}
       <div className="fixed -z-10 top-0 right-0 w-[500px] h-[500px] rounded-full pointer-events-none" style={{ background: "rgba(77,162,78,0.04)", filter: "blur(120px)" }} />
@@ -82,7 +82,7 @@ export default function AddPayoutAccountPage() {
 
         {/* Intro */}
         <section className="mb-8">
-          <p className="text-[12px] mb-4" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+          <p className="text-[12px] mb-4" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
             Required to receive your marketplace earnings
           </p>
           <div
@@ -90,7 +90,7 @@ export default function AddPayoutAccountPage() {
             style={{ background: "rgba(130,219,126,0.08)" }}
           >
             <Lock className="w-4 h-4 flex-shrink-0" style={{ color: GreenL }} />
-            <p className="text-[11px]" style={{ color: GreenL, fontFamily: "Raleway, sans-serif" }}>
+            <p className="text-[11px]" style={{ color: GreenL, fontFamily: "Inter, sans-serif" }}>
               Your account details are encrypted at rest
             </p>
           </div>
@@ -100,7 +100,7 @@ export default function AddPayoutAccountPage() {
 
           {/* Bank selector */}
           <div className="space-y-2 relative">
-            <label className="text-[13px] font-medium ml-4" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+            <label className="text-[13px] font-medium ml-4" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
               Select Bank
             </label>
             <div className="relative">
@@ -113,9 +113,9 @@ export default function AddPayoutAccountPage() {
                 className="w-full h-14 rounded-full px-6 pr-12 focus:outline-none transition-all"
                 style={{
                   background: CARDH,
-                  color: "#e1e2e9",
+                  color: "var(--c-text)",
                   border: bankOpen ? `1px solid ${Green}` : "1px solid rgba(64,73,61,0.2)",
-                  fontFamily: "Work Sans, sans-serif",
+                  fontFamily: "Inter, sans-serif",
                 }}
               />
               <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: MUTED }} />
@@ -123,13 +123,13 @@ export default function AddPayoutAccountPage() {
             {bankOpen && filtered.length > 0 && (
               <ul
                 className="absolute z-20 w-full rounded-xl overflow-hidden shadow-2xl border"
-                style={{ background: CARD, borderColor: "rgba(64,73,61,0.2)", top: "100%", marginTop: 4 }}
+                style={{ background: 'var(--c-card)', borderColor: "rgba(64,73,61,0.2)", top: "100%", marginTop: 4 }}
               >
                 {filtered.slice(0, 7).map((b) => (
                   <li key={b}>
                     <button
                       className="w-full text-left px-5 py-3 text-sm hover:opacity-80 flex items-center justify-between transition-colors"
-                      style={{ color: "#e1e2e9", fontFamily: "Raleway, sans-serif" }}
+                      style={{ color: "var(--c-text)", fontFamily: "Inter, sans-serif" }}
                       onClick={() => { setSelectedBank(b); setBankQuery(b); setBankOpen(false); setVerifiedName(null); }}
                     >
                       {b}
@@ -143,7 +143,7 @@ export default function AddPayoutAccountPage() {
 
           {/* Account number */}
           <div className="space-y-2">
-            <label className="text-[13px] font-medium ml-4" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+            <label className="text-[13px] font-medium ml-4" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
               Account Number
             </label>
             <input
@@ -156,9 +156,9 @@ export default function AddPayoutAccountPage() {
               className="w-full h-14 rounded-full px-6 focus:outline-none transition-all"
               style={{
                 background: CARDH,
-                color: "#e1e2e9",
+                color: "var(--c-text)",
                 border: "1px solid rgba(64,73,61,0.2)",
-                fontFamily: "Work Sans, sans-serif",
+                fontFamily: "Inter, sans-serif",
                 letterSpacing: "0.1em",
               }}
             />
@@ -174,7 +174,7 @@ export default function AddPayoutAccountPage() {
                 background: "transparent",
                 borderColor: "rgba(77,162,78,0.4)",
                 color: GreenL,
-                fontFamily: "Plus Jakarta Sans, sans-serif",
+                fontFamily: "Inter, sans-serif",
                 opacity: (!selectedBank || accNumber.length < 10) ? 0.4 : 1,
               }}
             >
@@ -190,7 +190,7 @@ export default function AddPayoutAccountPage() {
             {verifiedName && (
               <div className="flex items-center gap-3 px-4 py-2 rounded-xl" style={{ background: "rgba(130,219,126,0.07)" }}>
                 <Check className="w-5 h-5 flex-shrink-0" style={{ color: GreenL }} />
-                <p className="text-[13px]" style={{ color: GreenL, fontFamily: "Raleway, sans-serif" }}>
+                <p className="text-[13px]" style={{ color: GreenL, fontFamily: "Inter, sans-serif" }}>
                   Account Name: <span className="font-bold">{verifiedName}</span>
                 </p>
               </div>
@@ -199,7 +199,7 @@ export default function AddPayoutAccountPage() {
 
           {/* Verified name (read-only) */}
           <div className="space-y-2" style={{ opacity: verifiedName ? 1 : 0.4 }}>
-            <label className="text-[13px] font-medium ml-4" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+            <label className="text-[13px] font-medium ml-4" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
               Verified Account Name
             </label>
             <input
@@ -208,14 +208,14 @@ export default function AddPayoutAccountPage() {
               value={verifiedName ?? ""}
               placeholder="Will auto-fill after verification"
               className="w-full h-14 rounded-full px-6"
-              style={{ background: "#0b0e13", color: MUTED, fontFamily: "Work Sans, sans-serif", cursor: "default", border: "1px solid rgba(64,73,61,0.1)" }}
+              style={{ background: "var(--c-bg)", color: MUTED, fontFamily: "Inter, sans-serif", cursor: "default", border: "1px solid rgba(64,73,61,0.1)" }}
             />
           </div>
 
           {/* Info note */}
           <div className="flex items-start gap-3 px-4 py-2">
             <Info className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: MUTED }} />
-            <p className="text-[11px] leading-relaxed" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+            <p className="text-[11px] leading-relaxed" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
               We verify your account via Flutterwave to ensure accurate payouts. Your data is protected by industry-standard protocols.
             </p>
           </div>
@@ -230,7 +230,7 @@ export default function AddPayoutAccountPage() {
             style={{
               background: verifiedName ? "#4da24e" : CARDH,
               color: verifiedName ? "#003207" : MUTED,
-              fontFamily: "Plus Jakarta Sans, sans-serif",
+              fontFamily: "Inter, sans-serif",
               boxShadow: verifiedName ? "0 8px 24px rgba(77,162,78,0.2)" : "none",
               cursor: verifiedName ? "pointer" : "not-allowed",
             }}
@@ -239,8 +239,8 @@ export default function AddPayoutAccountPage() {
           </button>
           <button
             onClick={() => router.back()}
-            className="w-full py-2 text-sm hover:text-white transition-colors"
-            style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}
+            className="w-full py-2 text-sm hover:text-foreground transition-colors"
+            style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}
           >
             Cancel
           </button>

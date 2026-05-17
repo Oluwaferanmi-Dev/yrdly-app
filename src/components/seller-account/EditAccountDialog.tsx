@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
@@ -145,7 +145,7 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         className="max-w-lg w-[95vw] p-0 border-none bg-transparent shadow-2xl overflow-hidden"
-        style={{ fontFamily: "Raleway, sans-serif" }}
+        style={{ fontFamily: "Inter, sans-serif" }}
       >
         <div 
           className="relative w-full max-h-[90vh] overflow-y-auto rounded-[32px] p-8 space-y-8 animate-in zoom-in-95 duration-300"
@@ -163,48 +163,48 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
                 <div className="w-10 h-10 rounded-2xl bg-[#388E3C]/20 flex items-center justify-center">
                   {getAccountTypeIcon(account.accountType)}
                 </div>
-                <h2 className="text-2xl font-black text-white tracking-tight">Edit Account</h2>
+                <h2 className="text-2xl font-black text-foreground tracking-tight">Edit Account</h2>
               </div>
             </div>
-            <p className="text-sm text-[#899485] font-medium leading-relaxed">
+            <p className="text-sm text-muted-foreground font-medium leading-relaxed">
               Update your payout details to ensure smooth transactions.
             </p>
           </div>
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="relative z-10 space-y-8">
-            <div className="space-y-6 pt-4 border-t border-white/5">
+            <div className="space-y-6 pt-4 border-t border-border">
               {account.accountType === AccountType.BANK_ACCOUNT && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Bank</label>
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Bank</label>
                       <select 
-                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none appearance-none"
                         value={form.watch('bankCode')}
                         onChange={(e) => form.setValue('bankCode', e.target.value)}
                       >
-                        <option value="" className="bg-[#1e2025]">Select...</option>
+                        <option value="" className="bg-card">Select...</option>
                         {nigerianBanks.map((bank) => (
-                          <option key={bank.code} value={bank.code} className="bg-[#1e2025]">{bank.name}</option>
+                          <option key={bank.code} value={bank.code} className="bg-card">{bank.name}</option>
                         ))}
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Type</label>
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Type</label>
                       <select 
-                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none appearance-none"
                         value={form.watch('accountTypeBank')}
                         onChange={(e) => form.setValue('accountTypeBank', e.target.value as any)}
                       >
-                        <option value="savings" className="bg-[#1e2025]">Savings</option>
-                        <option value="current" className="bg-[#1e2025]">Current</option>
+                        <option value="savings" className="bg-card">Savings</option>
+                        <option value="current" className="bg-card">Current</option>
                       </select>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Account Number</label>
+                    <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Account Number</label>
                     <input
-                      className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                      className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none placeholder:text-muted-foreground"
                       placeholder="0123456789"
                       {...form.register('accountNumber')}
                     />
@@ -216,22 +216,22 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Provider</label>
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Provider</label>
                       <select 
-                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none appearance-none"
+                        className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none appearance-none"
                         value={form.watch('provider')}
                         onChange={(e) => form.setValue('provider', e.target.value as any)}
                       >
-                        <option value="mtn" className="bg-[#1e2025]">MTN</option>
-                        <option value="airtel" className="bg-[#1e2025]">Airtel</option>
-                        <option value="opay" className="bg-[#1e2025]">Opay</option>
-                        <option value="palmpay" className="bg-[#1e2025]">PalmPay</option>
+                        <option value="mtn" className="bg-card">MTN</option>
+                        <option value="airtel" className="bg-card">Airtel</option>
+                        <option value="opay" className="bg-card">Opay</option>
+                        <option value="palmpay" className="bg-card">PalmPay</option>
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Phone</label>
+                      <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Phone</label>
                       <input
-                        className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                        className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none placeholder:text-muted-foreground"
                         placeholder="08012345678"
                         {...form.register('phoneNumber')}
                       />
@@ -241,9 +241,9 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
               )}
 
               <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-[0.15em] font-black text-[#899485] ml-1">Account Holder Name</label>
+                <label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground ml-1">Account Holder Name</label>
                 <input
-                  className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-base text-white focus:border-[#388E3C]/50 focus:outline-none placeholder:text-white/10"
+                  className="w-full h-12 rounded-xl bg-white/5 border border-border px-4 text-base text-foreground focus:border-[#388E3C]/50 focus:outline-none placeholder:text-muted-foreground"
                   placeholder="e.g. John Doe"
                   {...form.register('accountName')}
                 />
@@ -257,12 +257,12 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
                     className="sr-only peer"
                     {...form.register('isPrimary')}
                   />
-                  <div className="w-5 h-5 rounded border border-white/20 bg-white/5 peer-checked:bg-[#388E3C] peer-checked:border-[#388E3C] transition-all" />
+                  <div className="w-5 h-5 rounded border border-border bg-white/5 peer-checked:bg-[#388E3C] peer-checked:border-[#388E3C] transition-all" />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 peer-checked:opacity-100 transition-opacity">
                     <div className="w-2 h-2 rounded-full bg-white" />
                   </div>
                 </div>
-                <span className="text-xs font-bold text-[#899485] group-hover:text-white transition-colors">Set as primary payout method</span>
+                <span className="text-xs font-bold text-muted-foreground group-hover:text-foreground transition-colors">Set as primary payout method</span>
               </label>
             </div>
 
@@ -279,7 +279,7 @@ export function EditAccountDialog({ open, onOpenChange, account, onSuccess }: Ed
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="w-full h-12 rounded-2xl bg-white/5 text-[#899485] font-black text-xs uppercase tracking-widest hover:text-white transition-all"
+                className="w-full h-12 rounded-2xl bg-white/5 text-muted-foreground font-black text-xs uppercase tracking-widest hover:text-foreground transition-all"
               >
                 Cancel
               </button>

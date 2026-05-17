@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from 'react';
 import Image from 'next/image';
@@ -158,7 +158,7 @@ export function MarketplaceItemDetail({
                 {/* Counter + expand button */}
                 <div className="absolute top-2 right-2 flex items-center gap-1.5">
                   {images!.length > 1 && (
-                    <span className="bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
+                    <span className="bg-black/50 text-foreground text-xs px-2 py-0.5 rounded-full">
                       {currentImageIndex + 1} / {images!.length}
                     </span>
                   )}
@@ -166,7 +166,7 @@ export function MarketplaceItemDetail({
                     onClick={() => setLightboxOpen(true)}
                     className="w-7 h-7 rounded-full bg-black/50 flex items-center justify-center hover:bg-black/70 transition"
                   >
-                    <Maximize2 className="w-3.5 h-3.5 text-white" />
+                    <Maximize2 className="w-3.5 h-3.5 text-foreground" />
                   </button>
                 </div>
               </div>

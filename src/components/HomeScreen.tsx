@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -42,15 +42,15 @@ function TicketGradient() {
         </linearGradient>
       </defs>
       <rect x="4" y="14" width="34" height="14" rx="3" fill="url(#tg1)" />
-      <circle cx="4" cy="21" r="4" fill="#15181D" />
-      <circle cx="38" cy="21" r="4" fill="#15181D" />
-      <line x1="18" y1="14" x2="18" y2="28" stroke="#15181D" strokeWidth="1.5" strokeDasharray="3 2" />
+      <circle cx="4" cy="21" r="4" fill="var(--c-bg)" />
+      <circle cx="38" cy="21" r="4" fill="var(--c-bg)" />
+      <line x1="18" y1="14" x2="18" y2="28" stroke="var(--c-bg)" strokeWidth="1.5" strokeDasharray="3 2" />
     </svg>
   );
 }
 
 
-const FONT_RALEWAY = "Raleway, sans-serif";
+const FONT_RALEWAY = "Inter, sans-serif";
 const GREEN = "#388E3C";
 
 interface HomeScreenProps {
@@ -73,20 +73,20 @@ export function HomeScreen({ onViewProfile }: HomeScreenProps) {
         <LocationChip />
       </div>
       {/* ── Post Bar ── */}
-      <div className="rounded-[11px] overflow-hidden" style={{ background: "#1E2126" }}>
+      <div className="rounded-[11px] overflow-hidden" style={{ background: "var(--c-card)" }}>
         <div className="p-4">
           {/* Input row */}
           <div className="flex items-center gap-3">
             <Avatar className="w-9 h-9 flex-shrink-0">
               <AvatarImage src={profile?.avatar_url || "/diverse-user-avatars.png"} />
-              <AvatarFallback className="text-sm text-white" style={{ background: GREEN }}>
+              <AvatarFallback className="text-sm text-foreground" style={{ background: GREEN }}>
                 {profile?.name?.charAt(0) || "U"}
               </AvatarFallback>
             </Avatar>
             <CreatePostDialog createPost={createPost}>
               <button
-                className="flex-1 h-10 rounded-full text-left px-4 font-raleway font-light text-[12px] text-white/70 hover:text-white transition-colors"
-                style={{ background: "#15181D", border: `0.5px solid ${GREEN}`, fontFamily: FONT_RALEWAY }}
+                className="flex-1 h-10 rounded-full text-left px-4 font-sans font-light text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+                style={{ background: "var(--c-bg)", border: `0.5px solid ${GREEN}`, fontFamily: FONT_RALEWAY }}
               >
                 What&apos;s going on?
               </button>
@@ -100,7 +100,7 @@ export function HomeScreen({ onViewProfile }: HomeScreenProps) {
           <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
             <button
               onClick={() => setMarketplaceOnboardingOpen(true)}
-              className="flex items-center gap-1.5 rounded-[20.5px] px-3 py-1.5 text-white text-[12px] font-semibold hover:bg-white/10 transition-colors"
+              className="flex items-center gap-1.5 rounded-[20.5px] px-3 py-1.5 text-foreground text-[12px] font-semibold hover:bg-accent transition-colors"
               style={{ fontFamily: FONT_RALEWAY }}
             >
               <HandshakeGradient />
@@ -110,7 +110,7 @@ export function HomeScreen({ onViewProfile }: HomeScreenProps) {
 
             <button
               onClick={() => setOnboardingOpen(true)}
-              className="flex items-center gap-1.5 rounded-[20.5px] px-3 py-1.5 text-white text-[12px] font-semibold hover:bg-white/10 transition-colors"
+              className="flex items-center gap-1.5 rounded-[20.5px] px-3 py-1.5 text-foreground text-[12px] font-semibold hover:bg-accent transition-colors"
               style={{ fontFamily: FONT_RALEWAY }}
             >
               <TicketGradient />
@@ -145,7 +145,7 @@ export function HomeScreen({ onViewProfile }: HomeScreenProps) {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-64 w-full rounded-[11px]" style={{ background: "#1E2126" }} />
+            <Skeleton key={i} className="h-64 w-full rounded-[11px]" style={{ background: "var(--c-card)" }} />
           ))}
         </div>
       ) : posts.length > 0 ? (

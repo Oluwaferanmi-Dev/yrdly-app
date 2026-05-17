@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useOffline } from '@/hooks/use-offline';
@@ -78,7 +78,7 @@ export function ServiceWorkerRegistration() {
 
   return (
     <div className="fixed top-4 right-4 z-50">
-      <div className="bg-blue-500 text-white rounded-lg shadow-lg p-4 max-w-sm">
+      <div className="bg-blue-500 text-foreground rounded-lg shadow-lg p-4 max-w-sm">
         <div className="flex items-center space-x-3">
           <div className="flex-shrink-0">
             <div className="w-6 h-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
@@ -107,7 +107,7 @@ export function ServiceWorkerRegistration() {
           
           <button
             onClick={() => setIsUpdateAvailable(false)}
-            className="px-3 py-2 text-sm text-blue-100 hover:text-white transition-colors"
+            className="px-3 py-2 text-sm text-blue-100 hover:text-foreground transition-colors"
           >
             Later
           </button>

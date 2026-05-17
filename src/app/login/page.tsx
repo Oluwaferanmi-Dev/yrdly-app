@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -14,14 +14,14 @@ import { ErrorMessageFormatter } from '@/lib/error-messages';
 
 // Design tokens from Figma
 const colors = {
-  background: '#15181D',
+  background: 'var(--c-bg)',
   blob: '#A154F2',
   overlay: 'rgba(255, 255, 255, 0.05)',
   border: '#388E3C',
-  inputBg: '#1B2B3A',
+  inputBg: 'var(--c-card)',
   primary: '#388E3C',
-  text: '#FFFFFF',
-  textFaded: '#BBBBBB',
+  text: 'var(--c-text)',
+  textFaded: 'var(--c-text-muted)',
   link: '#1976D2',
   logoGreen: '#259907',
 };
@@ -67,9 +67,9 @@ export default function LoginPage() {
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: colors.background }}>
-        <div className="text-center font-raleway text-white">
+        <div className="text-center font-sans text-white">
           <div className="w-10 h-10 rounded-md mb-4 mx-auto animate-pulse" style={{ background: colors.logoGreen }} />
-          <p className="text-sm text-[#BBBBBB]">Loading...</p>
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -131,7 +131,7 @@ export default function LoginPage() {
   };
 
   const inputClass =
-    'w-full h-12 sm:h-14 pl-4 pr-11 sm:pl-5 sm:pr-12 rounded-full font-raleway font-light text-sm text-white placeholder:text-[#BBBBBB] bg-transparent border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition';
+    'w-full h-12 sm:h-14 pl-4 pr-11 sm:pl-5 sm:pr-12 rounded-full font-sans font-light text-sm text-white placeholder:text-muted-foreground bg-transparent border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 transition';
   const borderStyle = { border: '0.5px solid #388E3C' };
   const pillRound = 'rounded-full';
 
@@ -180,7 +180,7 @@ export default function LoginPage() {
           >
             See what&apos;s happening
           </h1>
-          <p className="font-raleway font-light italic text-xs text-[#BBBBBB] mt-1">
+          <p className="font-sans font-light italic text-xs text-muted-foreground mt-1">
             Sign in to your Yrdly account
           </p>
         </div>
@@ -204,8 +204,8 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setIsSignUp(false)}
-            className={`flex-1 h-full rounded-full font-raleway text-sm transition ${
-              !isSignUp ? 'bg-[#1B2B3A] text-white shadow-sm' : 'text-white/80 hover:text-white'
+            className={`flex-1 h-full rounded-full font-sans text-sm transition ${
+              !isSignUp ? 'bg-card text-white shadow-sm' : 'text-white/80 hover:text-white'
             }`}
           >
             Sign in
@@ -213,8 +213,8 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setIsSignUp(true)}
-            className={`flex-1 h-full rounded-full font-raleway text-sm transition ${
-              isSignUp ? 'bg-[#1B2B3A] text-white shadow-sm' : 'text-white/80 hover:text-white'
+            className={`flex-1 h-full rounded-full font-sans text-sm transition ${
+              isSignUp ? 'bg-card text-white shadow-sm' : 'text-white/80 hover:text-white'
             }`}
           >
             Sign up
@@ -252,7 +252,7 @@ export default function LoginPage() {
 
           <div className={`relative ${pillRound}`} style={borderStyle}>
             <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 flex items-center justify-center h-6 w-6 pointer-events-none">
-              <Mail className="h-5 w-5 text-[#BBBBBB]" />
+              <Mail className="h-5 w-5 text-muted-foreground" />
             </div>
             <Input
               type="email"
@@ -269,7 +269,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="flex items-center justify-center w-full h-full text-[#BBBBBB] hover:text-white"
+                className="flex items-center justify-center w-full h-full text-muted-foreground hover:text-white"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -301,11 +301,11 @@ export default function LoginPage() {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="sr-only"
                 />
-                <span className="font-raleway font-light text-xs text-white">Remember me</span>
+                <span className="font-sans font-light text-xs text-white">Remember me</span>
               </label>
               <Link
                 href="/forgot-password"
-                className="font-raleway font-medium text-xs hover:underline"
+                className="font-sans font-medium text-xs hover:underline"
                 style={{ color: colors.link }}
               >
                 Forgot Password?
@@ -315,7 +315,7 @@ export default function LoginPage() {
 
           <Button
             type="submit"
-            className={`w-full h-10 sm:h-11 ${pillRound} font-raleway font-medium text-sm text-white hover:opacity-90 transition mt-1`}
+            className={`w-full h-10 sm:h-11 ${pillRound} font-sans font-medium text-sm text-white hover:opacity-90 transition mt-1`}
             style={{ background: colors.primary }}
             disabled={loading || (!!lockoutUntil && Date.now() < lockoutUntil)}
           >
@@ -331,7 +331,7 @@ export default function LoginPage() {
         {/* Divider - generous spacing, slightly reduced on small screens */}
         <div className="relative w-full flex items-center gap-2 sm:gap-3 mt-10 mb-10 sm:mt-16 sm:mb-14 min-w-0">
           <span className="flex-1 min-w-0 h-px bg-white/50" />
-          <span className="font-raleway font-light text-xs text-[#BBBBBB] uppercase tracking-wide whitespace-nowrap flex-shrink-0">
+          <span className="font-sans font-light text-xs text-muted-foreground uppercase tracking-wide whitespace-nowrap flex-shrink-0">
             Or continue with
           </span>
           <span className="flex-1 min-w-0 h-px bg-white/50" />
@@ -343,7 +343,7 @@ export default function LoginPage() {
           variant="outline"
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className={`w-full h-10 sm:h-11 ${pillRound} font-raleway font-medium text-sm text-white border-[#388E3C] hover:bg-white/5`}
+          className={`w-full h-10 sm:h-11 ${pillRound} font-sans font-medium text-sm text-white border-[#388E3C] hover:bg-accent`}
         >
           <svg className="mr-2 h-4 w-4 sm:h-[18px] sm:w-[18px] flex-shrink-0" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -354,7 +354,7 @@ export default function LoginPage() {
           Continue with Google
         </Button>
 
-        <p className="font-raleway text-xs sm:text-sm text-[#BBBBBB] mt-4 sm:mt-6 text-center px-2 break-words">
+        <p className="font-sans text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6 text-center px-2 break-words">
           {isSignUp ? (
             <>
               Already have an account?{' '}

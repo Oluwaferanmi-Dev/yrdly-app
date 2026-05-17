@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -36,7 +36,6 @@ function VerifyEmailContent() {
   const [lastCheckTime, setLastCheckTime] = useState<number | null>(null);
 
   const email = searchParams.get('email') || user?.email || '';
-  const token = searchParams.get('token');
 
   const tips = [
     "Check your spam folder if you don't see the email",
@@ -92,43 +91,6 @@ function VerifyEmailContent() {
       return () => clearTimeout(timer);
     }
   }, [isEmailVerified, updateOnboardingStatus, router, user?.id]);
-
-  const handleTokenVerification = useCallback(async () => {
-    if (!user || !token) return;
-    
-    setIsChecking(true);
-    try {
-      // Verify the token matches the user ID
-      if (token === user.id) {
-        // Update user's email verification status
-        await updateOnboardingStatus('profile_setup');
-        toast({
-          title: "Email Verified!",
-          description: "Your email has been successfully verified.",
-        });
-        router.push('/onboarding/profile');
-      } else {
-        throw new Error('Invalid verification token');
-      }
-    } catch (error: unknown) {
-      console.error('Token verification error:', error);
-      toast({
-        variant: "destructive",
-        title: "Verification Failed",
-        description: "Invalid or expired verification link.",
-      });
-    } finally {
-      setIsChecking(false);
-    }
-  }, [user, token, updateOnboardingStatus, toast, router]);
-
-  // Handle email verification from link
-  useEffect(() => {
-    if (token && user) {
-      // Token-based verification (from email link)
-      handleTokenVerification();
-    }
-  }, [token, user, handleTokenVerification]);
 
   // Cooldown timer and time since sent
   useEffect(() => {
@@ -362,7 +324,7 @@ function VerifyEmailContent() {
   }
 
   return (
-    <div className="min-h-screen pb-20 overflow-x-hidden" style={{ background: "#0d0f11", color: "#e1e2e9", fontFamily: "Raleway, sans-serif" }}>
+    <div className="min-h-screen pb-20 overflow-x-hidden" style={{ background: "var(--c-bg)", color: "var(--c-text)", fontFamily: "Inter, sans-serif" }}>
       <OnboardingProgress />
       
       {/* Animated Background Elements */}
@@ -383,7 +345,7 @@ function VerifyEmailContent() {
               <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
                 Secure Your <span style={{ color: "#388E3C" }}>Account</span>
               </h2>
-              <p className="text-[#899485] text-lg font-medium">
+              <p className="text-muted-foreground text-lg font-medium">
                 We&apos;ve sent a portal link to your inbox
               </p>
             </div>
@@ -412,11 +374,11 @@ function VerifyEmailContent() {
                     Verification Link Sent
                   </div>
                   <div className="flex flex-col items-center gap-1">
-                    <span className="px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm font-bold text-[#388E3C]">
+                    <span className="px-4 py-1.5 rounded-full bg-white/5 border border-border text-sm font-bold text-[#388E3C]">
                       {email}
                     </span>
                     {lastSentTime && timeSinceSent > 0 && (
-                      <span className="text-[10px] uppercase tracking-widest font-black text-[#899485]/60 mt-1">
+                      <span className="text-[10px] uppercase tracking-widest font-black text-muted-foreground/60 mt-1">
                         Dispatched {formatTimeSinceSent(timeSinceSent)}
                       </span>
                     )}
@@ -433,14 +395,14 @@ function VerifyEmailContent() {
                 ) : (
                   <div className="p-4 rounded-2xl bg-[#388E3C]/10 border border-[#388E3C]/20 flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-[#388E3C] shrink-0 mt-0.5" />
-                    <p className="text-sm text-[#e1e2e9] font-medium leading-relaxed">
+                    <p className="text-sm text-foreground font-medium leading-relaxed">
                       Tap the magic link in your email to instantly verify your residency.
                     </p>
                   </div>
                 )}
 
                 {/* Interactive Tips */}
-                <div className="relative overflow-hidden rounded-[24px] bg-[#0d0f11]/40 border border-white/5 p-5">
+                <div className="relative overflow-hidden rounded-[24px] bg-background/40 border border-border p-5">
                    <div className="absolute top-0 left-0 w-1 h-full bg-[#388E3C]" />
                    <div className="space-y-2">
                       <div className="text-[10px] uppercase tracking-[0.2em] font-black text-[#388E3C]">Pro Tip</div>
@@ -479,7 +441,7 @@ function VerifyEmailContent() {
                   <div className="grid grid-cols-2 gap-4">
                     <button 
                       onClick={handleOpenEmailApp}
-                      className="h-14 rounded-[20px] flex items-center justify-center font-bold text-white bg-white/5 border border-white/10 hover:bg-white/10 transition-all active:scale-95 text-sm gap-2"
+                      className="h-14 rounded-[20px] flex items-center justify-center font-bold text-white bg-white/5 border border-border hover:bg-accent transition-all active:scale-95 text-sm gap-2"
                     >
                       <Mail className="w-4 h-4" />
                       Open Inbox
@@ -488,7 +450,7 @@ function VerifyEmailContent() {
                     <button 
                       onClick={handleResendVerification}
                       disabled={isResending || cooldownTime > 0}
-                      className="h-14 rounded-[20px] flex items-center justify-center font-bold text-[#899485] bg-transparent border border-white/5 hover:border-white/10 transition-all active:scale-95 text-sm gap-2 disabled:opacity-50"
+                      className="h-14 rounded-[20px] flex items-center justify-center font-bold text-muted-foreground bg-transparent border border-border hover:border-border transition-all active:scale-95 text-sm gap-2 disabled:opacity-50"
                     >
                       {isResending ? (
                         <RefreshCw className="w-4 h-4 animate-spin" />
@@ -503,7 +465,7 @@ function VerifyEmailContent() {
 
                   <button 
                     onClick={handleBackToSignup}
-                    className="w-full h-12 flex items-center justify-center font-bold text-[#899485]/60 hover:text-[#899485] transition-all text-sm gap-2 mt-4"
+                    className="w-full h-12 flex items-center justify-center font-bold text-muted-foreground/60 hover:text-muted-foreground transition-all text-sm gap-2 mt-4"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     Return to Login
@@ -515,7 +477,7 @@ function VerifyEmailContent() {
 
           {/* Support Section */}
           <div className="flex flex-col items-center gap-4 py-4">
-            <p className="text-[10px] text-[#899485]/40 font-black uppercase tracking-[0.3em]">
+            <p className="text-[10px] text-muted-foreground/40 font-black uppercase tracking-[0.3em]">
               Encrypted • Community Verified
             </p>
             <button 

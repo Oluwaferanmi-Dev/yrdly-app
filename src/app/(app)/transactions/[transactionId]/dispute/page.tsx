@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -8,12 +8,12 @@ import { ArrowLeft, Camera, X, AlertTriangle } from "lucide-react";
 import { EscrowService } from "@/lib/escrow-service";
 
 /* ── Design tokens ─────────────────────────────────── */
-const BG    = "#101418";
-const CARD  = "#1d2025";
-const CARDLO = "#191c21";
+const BG    = "var(--c-bg)";
+const CARD  = "var(--c-card)";
+const CARDLO = "var(--c-bg)";
 const GREEN = "#388E3C";
 const RED   = "#E53935";
-const MUTED = "#bfcab9";
+const MUTED = "var(--c-text-muted)";
 
 const REASONS = [
   "Item not as described",
@@ -62,7 +62,7 @@ export default function DisputePage() {
   return (
     <div
       className="min-h-dvh"
-      style={{ background: BG, color: "#e1e2e9", fontFamily: "Work Sans, sans-serif" }}
+      style={{ background: BG, color: "var(--c-text)", fontFamily: "Inter, sans-serif" }}
     >
       {/* Header */}
       <header
@@ -95,7 +95,7 @@ export default function DisputePage() {
           style={{ background: "rgba(229,57,53,0.1)", borderColor: RED }}
         >
           <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: RED }} />
-          <p className="text-sm leading-snug" style={{ fontFamily: "Raleway, sans-serif" }}>
+          <p className="text-sm leading-snug" style={{ fontFamily: "Inter, sans-serif" }}>
             Your funds will remain on hold while our team reviews this.
           </p>
         </section>
@@ -104,7 +104,7 @@ export default function DisputePage() {
         <section className="space-y-4">
           <h2
             className="text-[12px] uppercase tracking-widest font-bold px-1"
-            style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}
+            style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}
           >
             Select a Reason
           </h2>
@@ -125,7 +125,7 @@ export default function DisputePage() {
                 >
                   <span
                     className="text-sm"
-                    style={{ color: active ? "#fff" : MUTED, fontFamily: "Raleway, sans-serif" }}
+                    style={{ color: active ? "#fff" : MUTED, fontFamily: "Inter, sans-serif" }}
                   >
                     {r}
                   </span>
@@ -148,11 +148,11 @@ export default function DisputePage() {
           <div className="flex justify-between items-center px-1">
             <label
               className="text-[12px] uppercase tracking-widest font-bold"
-              style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}
+              style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}
             >
               Details
             </label>
-            <span className="text-[10px]" style={{ color: "#899485" }}>
+            <span className="text-[10px]" style={{ color: "var(--c-text-muted)" }}>
               {detail.length} / 150
             </span>
           </div>
@@ -163,9 +163,9 @@ export default function DisputePage() {
             rows={5}
             className="w-full rounded-[11px] p-4 text-sm resize-none focus:outline-none transition-all"
             style={{
-              background: "#1B2B3A",
-              color: "#e1e2e9",
-              fontFamily: "Raleway, sans-serif",
+              background: "var(--c-card2)",
+              color: "var(--c-text)",
+              fontFamily: "Inter, sans-serif",
               border: "1px solid transparent",
             }}
             onFocus={(e) => (e.target.style.borderColor = GREEN)}
@@ -177,17 +177,17 @@ export default function DisputePage() {
         <section className="space-y-4">
           <label
             className="text-[12px] uppercase tracking-widest font-bold px-1"
-            style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}
+            style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}
           >
             Evidence
           </label>
           <button
             onClick={() => fileRef.current?.click()}
             className="w-full rounded-[11px] flex flex-col items-center justify-center gap-2 border-2 border-dashed transition-colors"
-            style={{ background: CARD, borderColor: "rgba(56,142,60,0.5)", aspectRatio: "4/1" }}
+            style={{ background: 'var(--c-card)', borderColor: "rgba(56,142,60,0.5)", aspectRatio: "4/1" }}
           >
             <Camera className="w-5 h-5" style={{ color: GREEN }} />
-            <p className="text-[12px]" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+            <p className="text-[12px]" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
               Upload photos or screenshots
             </p>
           </button>
@@ -204,7 +204,7 @@ export default function DisputePage() {
                     className="absolute top-1 right-1 w-6 h-6 rounded-full flex items-center justify-center"
                     style={{ background: "rgba(0,0,0,0.6)" }}
                   >
-                    <X className="w-3 h-3 text-white" />
+                    <X className="w-3 h-3 text-foreground" />
                   </button>
                 </div>
               ))}
@@ -217,10 +217,10 @@ export default function DisputePage() {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="w-full py-4 rounded-full font-bold text-white transition-all active:scale-95"
+            className="w-full py-4 rounded-full font-bold text-foreground transition-all active:scale-95"
             style={{
               background: RED,
-              fontFamily: "Raleway, sans-serif",
+              fontFamily: "Inter, sans-serif",
               boxShadow: "0 8px 24px rgba(229,57,53,0.2)",
             }}
           >
@@ -231,7 +231,7 @@ export default function DisputePage() {
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={1.5} />
               <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" />
             </svg>
-            <p className="text-[11px] text-center" style={{ color: MUTED, fontFamily: "Raleway, sans-serif" }}>
+            <p className="text-[11px] text-center" style={{ color: MUTED, fontFamily: "Inter, sans-serif" }}>
               Our team reviews disputes within 24–48 hours
             </p>
           </div>

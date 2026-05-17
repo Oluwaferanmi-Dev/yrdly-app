@@ -1,4 +1,4 @@
-
+﻿
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -33,10 +33,10 @@ import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 const GREEN = "#388E3C";
-const CARD = "#15181D";
-const INPUT_BG = "#272a2f";
-const FONT = "Raleway, sans-serif";
-const JAKARTA = "Plus Jakarta Sans, sans-serif";
+const CARD = "var(--c-bg)";
+const INPUT_BG = "var(--c-card2)";
+const FONT = "Inter, sans-serif";
+const JAKARTA = "Inter, sans-serif";
 const JERSEY = "Jersey 25, cursive";
 
 const BUSINESS_CATEGORIES = [
@@ -96,12 +96,12 @@ type CreateBusinessDialogProps = {
 function StyledInput({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
   return (
     <div className="space-y-2">
-      <label className="block text-[13px] font-medium ml-4" style={{ fontFamily: FONT, color: "#BBBBBB" }}>
+      <label className="block text-[13px] font-medium ml-4" style={{ fontFamily: FONT, color: "var(--c-text-muted)" }}>
         {label}
       </label>
       <input
         {...props}
-        className="w-full h-12 rounded-full px-6 text-white text-sm outline-none focus:ring-1 transition-all"
+        className="w-full h-12 rounded-full px-6 text-foreground text-sm outline-none focus:ring-1 transition-all"
         style={{
           background: INPUT_BG,
           border: `0.5px solid rgba(130,219,126,0.4)`,
@@ -117,12 +117,12 @@ function StyledInput({ label, ...props }: React.InputHTMLAttributes<HTMLInputEle
 function StyledTextarea({ label, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string }) {
   return (
     <div className="space-y-2">
-      <label className="block text-[13px] font-medium ml-4" style={{ fontFamily: FONT, color: "#BBBBBB" }}>
+      <label className="block text-[13px] font-medium ml-4" style={{ fontFamily: FONT, color: "var(--c-text-muted)" }}>
         {label}
       </label>
       <textarea
         {...props}
-        className="w-full rounded-[11px] px-6 py-4 text-white text-sm outline-none focus:ring-1 transition-all resize-none"
+        className="w-full rounded-[11px] px-6 py-4 text-foreground text-sm outline-none focus:ring-1 transition-all resize-none"
         style={{
           background: INPUT_BG,
           border: `0.5px solid rgba(130,219,126,0.4)`,
@@ -182,13 +182,13 @@ function BusinessFormBody({
             type="button"
             onClick={onClose}
             className="p-2 rounded-full transition-colors"
-            style={{ color: "#bfcab9" }}
+            style={{ color: "var(--c-text-muted)" }}
             onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)")}
             onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "transparent")}
           >
             <X className="w-5 h-5" />
           </button>
-          <h1 className="text-[18px] font-bold text-white" style={{ fontFamily: FONT }}>
+          <h1 className="text-[18px] font-bold text-foreground" style={{ fontFamily: FONT }}>
             {isEditMode ? "Edit Business" : "Add a Business"}
           </h1>
         </div>
@@ -221,14 +221,14 @@ function BusinessFormBody({
               render={({ field }) => (
                 <FormItem>
                   <div className="space-y-2">
-                    <label className="block text-[13px] font-medium ml-4" style={{ fontFamily: FONT, color: "#BBBBBB" }}>
+                    <label className="block text-[13px] font-medium ml-4" style={{ fontFamily: FONT, color: "var(--c-text-muted)" }}>
                       Category
                     </label>
                     <div className="relative">
                       <select
                         value={field.value}
                         onChange={field.onChange}
-                        className="w-full h-12 rounded-full px-6 appearance-none text-white text-sm outline-none focus:ring-1 transition-all"
+                        className="w-full h-12 rounded-full px-6 appearance-none text-foreground text-sm outline-none focus:ring-1 transition-all"
                         style={{ background: INPUT_BG, border: `0.5px solid rgba(130,219,126,0.4)`, fontFamily: FONT }}
                       >
                         <option value="">Select a category</option>
@@ -284,7 +284,7 @@ function BusinessFormBody({
           render={({ field: { onChange } }) => (
             <FormItem>
               <div className="space-y-2">
-                <label className="block text-[13px] font-medium ml-4" style={{ fontFamily: FONT, color: "#BBBBBB" }}>
+                <label className="block text-[13px] font-medium ml-4" style={{ fontFamily: FONT, color: "var(--c-text-muted)" }}>
                   Business Photos
                 </label>
                 <div
@@ -300,8 +300,8 @@ function BusinessFormBody({
                   onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileChange(e.dataTransfer.files); onChange(e.dataTransfer.files); }}
                 >
                   <Upload className="w-10 h-10 mb-3 transition-transform" style={{ color: GREEN, transform: dragOver ? "scale(1.1)" : "scale(1)" }} />
-                  <p className="text-white font-medium text-sm" style={{ fontFamily: FONT }}>Upload business photos</p>
-                  <p className="text-sm mt-1" style={{ color: "#899485", fontFamily: FONT }}>Drag and drop or click to browse (Max 5MB)</p>
+                  <p className="text-foreground font-medium text-sm" style={{ fontFamily: FONT }}>Upload business photos</p>
+                  <p className="text-sm mt-1" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>Drag and drop or click to browse (Max 5MB)</p>
                 </div>
                 <input
                   ref={fileInputRef}
@@ -333,7 +333,7 @@ function BusinessFormBody({
                             <button
                               type="button"
                               onClick={() => setRemovedImageIndexes((p) => [...p, idx])}
-                              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100"
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-foreground text-xs flex items-center justify-center opacity-0 group-hover:opacity-100"
                               style={{ background: "#E53935" }}
                             >×</button>
                           )}
@@ -360,7 +360,7 @@ function BusinessFormBody({
           render={({ field }) => (
             <FormItem>
               <div className="space-y-2">
-                <label className="block text-[13px] font-medium ml-4" style={{ fontFamily: FONT, color: "#BBBBBB" }}>
+                <label className="block text-[13px] font-medium ml-4" style={{ fontFamily: FONT, color: "var(--c-text-muted)" }}>
                   Location
                 </label>
                 <FormControl>
@@ -385,19 +385,19 @@ function BusinessFormBody({
               render={({ field }) => (
                 <FormItem>
                   <div className="space-y-2">
-                    <label className="block text-[13px] font-medium ml-4" style={{ fontFamily: FONT, color: "#BBBBBB" }}>
+                    <label className="block text-[13px] font-medium ml-4" style={{ fontFamily: FONT, color: "var(--c-text-muted)" }}>
                       Phone (+234)
                     </label>
                     <div
                       className="flex items-center h-12 rounded-full px-4"
                       style={{ background: INPUT_BG, border: `0.5px solid rgba(130,219,126,0.4)` }}
                     >
-                      <span className="font-medium mr-2 text-sm" style={{ color: "#899485", fontFamily: FONT }}>+234</span>
+                      <span className="font-medium mr-2 text-sm" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>+234</span>
                       <input
                         type="tel"
                         placeholder="801 234 5678"
                         {...field}
-                        className="bg-transparent border-none p-0 w-full text-white text-sm outline-none"
+                        className="bg-transparent border-none p-0 w-full text-foreground text-sm outline-none"
                         style={{ fontFamily: FONT }}
                       />
                     </div>
@@ -442,12 +442,12 @@ function BusinessFormBody({
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-14 rounded-full text-white font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-60"
+          className="w-full h-14 rounded-full text-foreground font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-60"
           style={{ background: GREEN, fontFamily: FONT, boxShadow: "0 8px 24px rgba(56,142,60,0.2)" }}
         >
           {loading ? (isEditMode ? "Saving..." : "Adding Business...") : (isEditMode ? "Save Changes" : "Add Business")}
         </button>
-        <p className="text-center text-[11px] mt-3" style={{ color: "#899485", fontFamily: FONT }}>
+        <p className="text-center text-[11px] mt-3" style={{ color: "var(--c-text-muted)", fontFamily: FONT }}>
           By listing your business, you agree to Yrdly&apos;s{" "}
           <span className="underline cursor-pointer" style={{ color: GREEN }}>Terms of Service</span>.
         </p>
@@ -549,7 +549,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
           <AvatarImage src={profile?.avatar_url || ""} />
           <AvatarFallback>{profile?.name?.charAt(0) || "U"}</AvatarFallback>
         </Avatar>
-        <div className="flex-1 text-left text-sm rounded-full px-4 py-2" style={{ background: INPUT_BG, color: "#899485", fontFamily: "Raleway, sans-serif" }}>
+        <div className="flex-1 text-left text-sm rounded-full px-4 py-2" style={{ background: INPUT_BG, color: "var(--c-text-muted)", fontFamily: "Inter, sans-serif" }}>
           Add a business...
         </div>
         <PlusCircle className="w-6 h-6 flex-shrink-0" style={{ color: GREEN }} />
@@ -559,7 +559,7 @@ const CreateBusinessDialogComponent = ({ children, postToEdit, onOpenChange }: C
   DefaultTrigger.displayName = "DefaultTrigger";
 
   const contentStyle: React.CSSProperties = {
-    background: CARD,
+    background: 'var(--c-card)',
     display: "flex",
     flexDirection: "column",
     padding: 0,

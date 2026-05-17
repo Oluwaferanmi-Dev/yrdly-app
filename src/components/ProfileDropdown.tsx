@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Settings, LogOut } from "lucide-react";
@@ -10,7 +10,7 @@ interface ProfileDropdownProps {
   onClose: () => void;
 }
 
-const FONT = "Raleway, sans-serif";
+const FONT = "Inter, sans-serif";
 const GREEN = "#388E3C";
 
 export function ProfileDropdown({ onClose }: ProfileDropdownProps) {
@@ -54,7 +54,7 @@ export function ProfileDropdown({ onClose }: ProfileDropdownProps) {
       <div
         className="absolute top-[68px] right-3 w-[220px] overflow-hidden"
         style={{
-          background: "#1E2126",
+          background: "var(--c-card)",
           borderRadius: 11,
           border: "0.5px solid rgba(255,255,255,0.08)",
           boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
@@ -76,14 +76,14 @@ export function ProfileDropdown({ onClose }: ProfileDropdownProps) {
           </Avatar>
           <div className="min-w-0">
             <p
-              className="truncate text-white text-[14px] leading-[18px]"
+              className="truncate text-foreground text-[14px] leading-[18px]"
               style={{ fontFamily: FONT, fontWeight: 700 }}
             >
               {displayName}
             </p>
             <p
               className="truncate text-[12px] leading-[16px]"
-              style={{ fontFamily: FONT, fontWeight: 300, color: "#BBBBBB" }}
+              style={{ fontFamily: FONT, fontWeight: 300, color: "var(--c-text-muted)" }}
             >
               {email}
             </p>
@@ -109,10 +109,10 @@ export function ProfileDropdown({ onClose }: ProfileDropdownProps) {
             >
               <Icon
                 className="w-[18px] h-[18px] flex-shrink-0"
-                style={{ color: "#BBBBBB" }}
+                style={{ color: "var(--c-text-muted)" }}
               />
               <span
-                className="text-[14px] text-white"
+                className="text-[14px] text-foreground"
                 style={{ fontFamily: FONT, fontWeight: 400 }}
               >
                 {label}

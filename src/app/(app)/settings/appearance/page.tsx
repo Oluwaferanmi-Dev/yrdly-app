@@ -1,50 +1,106 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
-import { ArrowLeft, Moon } from "lucide-react";
+import { ArrowLeft, Sun, Moon, Monitor } from "lucide-react";
+import { useTheme } from "@/components/ThemeProvider";
+import { cn } from "@/lib/utils";
+
+const options = [
+  {
+    value: "light" as const,
+    label: "Light",
+    description: "Clean white interface, great for daytime use.",
+    icon: Sun,
+  },
+  {
+    value: "dark" as const,
+    label: "Dark",
+    description: "Easy on the eyes in low-light environments.",
+    icon: Moon,
+  },
+  {
+    value: "system" as const,
+    label: "System",
+    description: "Follows your device's display settings automatically.",
+    icon: Monitor,
+  },
+];
 
 export default function AppearancePage() {
+  const { theme, setTheme } = useTheme();
+
   return (
     <div className="pt-4 pb-20 px-4 max-w-2xl mx-auto space-y-6">
       <Link
         href="/settings"
-        className="flex items-center gap-2 text-sm font-bold"
-        style={{ color: "#82DB7E", fontFamily: "Raleway, sans-serif" }}
+        className="flex items-center gap-2 text-sm font-bold text-[#388E3C]"
+        style={{ fontFamily: "Inter, sans-serif" }}
       >
         <ArrowLeft className="h-4 w-4" /> Back to Settings
       </Link>
 
       <h1
-        className="text-2xl font-extrabold text-white"
-        style={{ fontFamily: "Raleway, sans-serif" }}
+        className="text-2xl font-extrabold text-foreground"
+        style={{ fontFamily: "Inter, sans-serif" }}
       >
         Appearance
       </h1>
 
-      <div
-        className="flex items-center gap-4 p-5 rounded-[11px]"
-        style={{ background: "#1E2126" }}
-      >
-        <div
-          className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{ background: "rgba(56,142,60,0.15)" }}
-        >
-          <Moon className="w-5 h-5" style={{ color: "#82DB7E" }} />
-        </div>
-        <div>
-          <p className="text-white font-semibold text-sm" style={{ fontFamily: "Raleway, sans-serif" }}>
-            Dark Mode
-          </p>
-          <p className="text-[11px] mt-0.5" style={{ color: "#899485", fontFamily: "Work Sans, sans-serif" }}>
-            Yrdly runs in dark mode only to deliver the best visual experience.
-          </p>
-        </div>
-        <span
-          className="ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0"
-          style={{ background: "rgba(56,142,60,0.15)", color: "#82DB7E", fontFamily: "Work Sans, sans-serif" }}
-        >
-          Always On
-        </span>
+      <p className="text-sm text-muted-foreground" style={{ fontFamily: "Inter, sans-serif" }}>
+        Choose how Yrdly looks for you.
+      </p>
+
+      <div className="flex flex-col gap-3">
+        {options.map(({ value, label, description, icon: Icon }) => {
+          const isActive = theme === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTheme(value)}
+              className={cn(
+                "flex items-center gap-4 p-5 rounded-[11px] border-2 text-left transition-all w-full",
+                isActive
+                  ? "border-[#388E3C] bg-[#EBF5EB]"
+                  : "border-border bg-card hover:border-[#388E3C]/40"
+              )}
+            >
+              <div
+                className={cn(
+                  "w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0",
+                  isActive ? "bg-[#388E3C]" : "bg-muted"
+                )}
+              >
+                <Icon
+                  className="w-5 h-5"
+                  style={{ color: isActive ? "#fff" : "#767676" }}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p
+                  className={cn("font-semibold text-sm", isActive ? "text-[#388E3C]" : "text-foreground")}
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  {label}
+                </p>
+                <p
+                  className="text-[11px] mt-0.5 text-muted-foreground"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  {description}
+                </p>
+              </div>
+              {isActive && (
+                <span
+                  className="ml-auto text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0"
+                  style={{ background: "#388E3C", color: "#fff", fontFamily: "Inter, sans-serif" }}
+                >
+                  Active
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

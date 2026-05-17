@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -6,8 +6,8 @@ import { ArrowLeft, Clock, Briefcase, Bell } from "lucide-react";
 
 const GREEN = "#388E3C";
 const GREEN_LIGHT = "#82DB7E";
-const CARD = "#1E2126";
-const FONT = "Raleway, sans-serif";
+const CARD = "var(--c-card)";
+const FONT = "Inter, sans-serif";
 const PACIFICO = "Pacifico, cursive";
 
 export default function BusinessesPage() {
@@ -16,7 +16,7 @@ export default function BusinessesPage() {
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center px-6 py-16 text-center relative overflow-hidden"
-      style={{ background: "#15181D" }}
+      style={{ background: "var(--c-bg)" }}
     >
       {/* Ambient glow */}
       <div
@@ -46,13 +46,13 @@ export default function BusinessesPage() {
           className="absolute -top-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center"
           style={{ background: GREEN }}
         >
-          <Clock className="w-3 h-3 text-white" />
+          <Clock className="w-3 h-3 text-foreground" />
         </div>
       </div>
 
       {/* Heading */}
       <h1
-        className="text-4xl mb-3 text-white"
+        className="text-4xl mb-3 text-foreground"
         style={{ fontFamily: PACIFICO }}
       >
         Business Hub
@@ -60,7 +60,7 @@ export default function BusinessesPage() {
 
       <p
         className="text-sm font-light italic max-w-xs leading-relaxed mb-8"
-        style={{ color: "#BBBBBB", fontFamily: FONT }}
+        style={{ color: "var(--c-text-muted)", fontFamily: FONT }}
       >
         We&apos;re building something amazing for local businesses in your
         neighborhood. Stay tuned — it&apos;s coming soon!
@@ -79,7 +79,7 @@ export default function BusinessesPage() {
             key={feature}
             className="px-4 py-1.5 rounded-full text-xs font-semibold"
             style={{
-              background: "#06171B",
+              background: "var(--c-bg)",
               border: "1px solid rgba(130,219,126,0.25)",
               color: GREEN_LIGHT,
               fontFamily: FONT,
@@ -92,7 +92,7 @@ export default function BusinessesPage() {
 
       {/* Notify CTA */}
       <button
-        className="flex items-center gap-2 h-12 px-8 rounded-full text-white font-semibold text-sm transition-all active:scale-95"
+        className="flex items-center gap-2 h-12 px-8 rounded-full text-foreground font-semibold text-sm transition-all active:scale-95"
         style={{
           background: GREEN,
           fontFamily: FONT,

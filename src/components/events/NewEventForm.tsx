@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -121,49 +121,49 @@ export function NewEventForm() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-4 sm:p-6 text-white pb-24">
+    <div className="max-w-2xl mx-auto p-4 sm:p-6 text-foreground pb-24">
       <div className="flex items-center gap-4 mb-8">
         <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-2xl font-black font-raleway">Create Ticketing Event</h1>
+        <h1 className="text-2xl font-black font-sans">Create Ticketing Event</h1>
       </div>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           
-          <div className="space-y-4 p-6 rounded-3xl bg-[#1E2126] border border-white/5">
-            <h2 className="text-lg font-bold font-raleway text-[#388E3C]">Event Details</h2>
+          <div className="space-y-4 p-6 rounded-3xl bg-card border border-border">
+            <h2 className="text-lg font-bold font-sans text-[#388E3C]">Event Details</h2>
             
             <FormField control={form.control} name="title" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white/70">Event Title</FormLabel>
-                <FormControl><Input className="bg-[#15181D] border-white/10 h-12 rounded-xl" {...field} /></FormControl>
+                <FormLabel className="text-muted-foreground">Event Title</FormLabel>
+                <FormControl><Input className="bg-background border-border h-12 rounded-xl" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
 
             <FormField control={form.control} name="description" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white/70">Description</FormLabel>
-                <FormControl><Textarea className="bg-[#15181D] border-white/10 rounded-xl resize-none h-24" {...field} /></FormControl>
+                <FormLabel className="text-muted-foreground">Description</FormLabel>
+                <FormControl><Textarea className="bg-background border-border rounded-xl resize-none h-24" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
 
             <FormField control={form.control} name="eventDateTime" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white/70">Date & Time</FormLabel>
-                <FormControl><Input type="datetime-local" className="bg-[#15181D] border-white/10 h-12 rounded-xl" {...field} /></FormControl>
+                <FormLabel className="text-muted-foreground">Date & Time</FormLabel>
+                <FormControl><Input type="datetime-local" className="bg-background border-border h-12 rounded-xl" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
 
             <FormField control={form.control} name="location" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-white/70">Location</FormLabel>
+                <FormLabel className="text-muted-foreground">Location</FormLabel>
                 <FormControl>
-                  <div className="[&_input]:bg-[#15181D] [&_input]:border-white/10 [&_input]:h-12 [&_input]:rounded-xl">
+                  <div className="[&_input]:bg-background [&_input]:border-border [&_input]:h-12 [&_input]:rounded-xl">
                     <LocationInput name={field.name} control={form.control} defaultValue={field.value} />
                   </div>
                 </FormControl>
@@ -172,10 +172,10 @@ export function NewEventForm() {
             )} />
 
             <FormItem>
-              <FormLabel className="text-white/70">Event Images</FormLabel>
-              <label className="flex items-center gap-3 w-full bg-[#15181D] border border-white/10 h-12 rounded-xl px-4 cursor-pointer hover:bg-white/5 transition">
-                <ImageIcon className="w-5 h-5 text-white/50" />
-                <span className="text-sm text-white/70">
+              <FormLabel className="text-muted-foreground">Event Images</FormLabel>
+              <label className="flex items-center gap-3 w-full bg-background border border-border h-12 rounded-xl px-4 cursor-pointer hover:bg-accent transition">
+                <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
                   {imageFiles.length > 0 ? `${imageFiles.length} image${imageFiles.length > 1 ? "s" : ""} selected` : "Choose images..."}
                 </span>
                 <input
@@ -206,10 +206,10 @@ export function NewEventForm() {
               {/* Image previews */}
               {imageFiles.length > 0 && (
                 <div className="mt-3 space-y-2">
-                  <p className="text-xs text-white/40">First image is the cover.</p>
+                  <p className="text-xs text-muted-foreground">First image is the cover.</p>
                   <div className="flex gap-2 overflow-x-auto pb-1">
                     {imageFiles.map((file, i) => (
-                      <div key={`${file.name}-${i}`} className="relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-white/10 group">
+                      <div key={`${file.name}-${i}`} className="relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border border-border group">
                         <Image
                           src={URL.createObjectURL(file)}
                           alt={`Preview ${i + 1}`}
@@ -218,7 +218,7 @@ export function NewEventForm() {
                           sizes="80px"
                         />
                         {i === 0 && (
-                          <div className="absolute bottom-0 inset-x-0 bg-[#388E3C]/80 text-white text-[9px] font-raleway font-bold text-center py-0.5">
+                          <div className="absolute bottom-0 inset-x-0 bg-[#388E3C]/80 text-foreground text-[9px] font-sans font-bold text-center py-0.5">
                             Cover
                           </div>
                         )}
@@ -227,7 +227,7 @@ export function NewEventForm() {
                           onClick={() => setImageFiles((prev) => prev.filter((_, idx) => idx !== i))}
                           className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <X className="w-3 h-3 text-white" />
+                          <X className="w-3 h-3 text-foreground" />
                         </button>
                       </div>
                     ))}
@@ -237,9 +237,9 @@ export function NewEventForm() {
             </FormItem>
           </div>
 
-          <div className="space-y-4 p-6 rounded-3xl bg-[#1E2126] border border-white/5">
+          <div className="space-y-4 p-6 rounded-3xl bg-card border border-border">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold font-raleway text-[#388E3C]">Ticket Tiers</h2>
+              <h2 className="text-lg font-bold font-sans text-[#388E3C]">Ticket Tiers</h2>
               <Button type="button" variant="outline" size="sm" onClick={() => append({ name: "", price: 0 })} className="rounded-full border-[#388E3C] text-[#388E3C] hover:bg-[#388E3C]/10">
                 <Plus className="w-4 h-4 mr-1" /> Add Tier
               </Button>
@@ -247,26 +247,26 @@ export function NewEventForm() {
             
             <div className="space-y-3">
               {fields.map((field, index) => (
-                <div key={field.id} className="flex flex-col sm:flex-row gap-3 p-4 rounded-xl bg-[#15181D] border border-white/5 relative group">
+                <div key={field.id} className="flex flex-col sm:flex-row gap-3 p-4 rounded-xl bg-background border border-border relative group">
                   <FormField control={form.control} name={`ticketTiers.${index}.name`} render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel className="text-xs text-white/50">Tier Name (e.g. VIP)</FormLabel>
-                      <FormControl><Input className="bg-[#1E2126] border-none" {...field} /></FormControl>
+                      <FormLabel className="text-xs text-muted-foreground">Tier Name (e.g. VIP)</FormLabel>
+                      <FormControl><Input className="bg-card border-none" {...field} /></FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name={`ticketTiers.${index}.price`} render={({ field }) => (
                     <FormItem className="w-full sm:w-24">
-                      <FormLabel className="text-xs text-white/50">Price (₦)</FormLabel>
+                      <FormLabel className="text-xs text-muted-foreground">Price (₦)</FormLabel>
                       <FormControl>
-                        <Input type="number" min="0" className="bg-[#1E2126] border-none" {...field} onChange={e => field.onChange(Number(e.target.value))} />
+                        <Input type="number" min="0" className="bg-card border-none" {...field} onChange={e => field.onChange(Number(e.target.value))} />
                       </FormControl>
                     </FormItem>
                   )} />
                   <FormField control={form.control} name={`ticketTiers.${index}.capacity`} render={({ field }) => (
                     <FormItem className="w-full sm:w-24">
-                      <FormLabel className="text-xs text-white/50">Qty Limit</FormLabel>
+                      <FormLabel className="text-xs text-muted-foreground">Qty Limit</FormLabel>
                       <FormControl>
-                        <Input type="number" min="1" placeholder="∞" className="bg-[#1E2126] border-none" {...field} onChange={e => field.onChange(e.target.value ? Number(e.target.value) : undefined)} />
+                        <Input type="number" min="1" placeholder="∞" className="bg-card border-none" {...field} onChange={e => field.onChange(e.target.value ? Number(e.target.value) : undefined)} />
                       </FormControl>
                     </FormItem>
                   )} />
@@ -278,10 +278,10 @@ export function NewEventForm() {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-white/40 italic">Set price to 0 for Free tickets. Leave Qty Limit blank for unlimited tickets.</p>
+            <p className="text-xs text-muted-foreground italic">Set price to 0 for Free tickets. Leave Qty Limit blank for unlimited tickets.</p>
           </div>
 
-          <Button type="submit" className="w-full h-14 rounded-full font-raleway font-bold text-lg bg-[#388E3C] hover:bg-[#2E7D32] transition-colors" disabled={loading}>
+          <Button type="submit" className="w-full h-14 rounded-full font-sans font-bold text-lg bg-[#388E3C] hover:bg-[#2E7D32] transition-colors" disabled={loading}>
             {loading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Creating Event...</> : "Publish Event"}
           </Button>
         </form>
