@@ -6,7 +6,7 @@ let flw: any = null;
 // Initialize Flutterwave only on server side
 if (typeof window === 'undefined') {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line
     const Flutterwave = require('flutterwave-node-v3');
     flw = new Flutterwave(
       process.env.FLUTTERWAVE_PUBLIC_KEY!,
