@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { FlutterwaveService } from '@/lib/flutterwave-service';
 import { EVENT_CONSTANTS } from '@/lib/constants';
+import { ResendEmailService } from '@/lib/resend-service';
+import QRCode from 'qrcode';
 
 /**
  * POST /api/events/tickets/purchase
@@ -60,10 +61,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'SOLD_OUT', message: 'This ticket tier is sold out' }, { status: 409 });
     }
 
+    // ── Check if user already has a ticket for this event ────────────────────
+    const { data: existingTicket } = await supabaseAdmin
+      .from('tickets')
+      .select('id')
+      .eq('buyer_id', user.id)
+      .eq('event_id', event_id)
+      .eq('status', 'PAID')
+      .maybeSingle();
+
+    if (existingTicket) {
+      return NextResponse.json({ 
+        error: 'ALREADY_PURCHASED',
+        message: 'You have already purchased a ticket for this event' 
+      }, { status: 400 });
+    }
+
     // ── Free ticket — create directly, no payment needed ────────────────────
     if (tier.price === 0) {
       const ticketCode = `${EVENT_CONSTANTS.TICKET_CODE_PREFIX}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       const qrData = JSON.stringify({ ticket_code: ticketCode, event_id, tier_id });
+      const qrDataUrl = await QRCode.toDataURL(qrData, { width: 300, margin: 2 });
 
       const { data: ticket, error: ticketError } = await supabaseAdmin
         .from('tickets')
@@ -90,6 +108,100 @@ export async function POST(request: NextRequest) {
         .update({ sold: tier.sold + 1 })
         .eq('id', tier_id);
 
+      // ── Send confirmation email to buyer ────────────────────────────────
+      try {
+        const resendStatus = ResendEmailService.getConfigurationStatus();
+        console.log('[v0] Resend config status for free ticket:', resendStatus);
+        
+        if (!ResendEmailService.isConfigured()) {
+          console.warn('[v0] Resend is not configured. Skipping free ticket emails.');
+        } else {
+          const { data: fullEvent } = await supabaseAdmin
+            .from('events')
+            .select('id, title, start_time, location_address, state, organizer_id')
+            .eq('id', event_id)
+            .single();
+
+          if (fullEvent) {
+            const startDate = new Date(fullEvent.start_time);
+            console.log('[v0] Sending free ticket confirmation to:', attendee_email);
+            await ResendEmailService.sendTicketConfirmationEmail(
+              attendee_name,
+              attendee_email,
+              event.title,
+              tier.name,
+              ticket.id,
+              qrDataUrl,
+              startDate.toLocaleDateString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
+              startDate.toLocaleTimeString('en-NG', { hour: '2-digit', minute: '2-digit' }),
+              fullEvent.location_address || fullEvent.state || 'See event details',
+              `FREE-${ticketCode}`
+            );
+            console.log('[v0] Free ticket confirmation email sent successfully');
+
+            // ── Send organizer notification ─────────────────────────────────
+            try {
+              const { data: organizer } = await supabaseAdmin
+                .from('users')
+                .select('email, username')
+                .eq('id', fullEvent.organizer_id)
+                .single();
+
+              if (organizer?.email) {
+                // Calculate event stats for email
+                try {
+                  const { data: paidTickets } = await supabaseAdmin
+                    .from('tickets')
+                    .select('amount_paid')
+                    .eq('event_id', event_id)
+                    .eq('status', 'PAID');
+
+                  const totalSold = (paidTickets?.length || 0) + 1; // +1 for current free ticket
+                  const grossRevenue = (paidTickets || []).reduce((sum, t) => sum + (t.amount_paid || 0), 0);
+                  const netPayout = Math.round(grossRevenue * (1 - 0.02) * 100) / 100; // 2% commission
+
+                  console.log('[v0] Sending free ticket organizer notification to:', organizer.email);
+                  await ResendEmailService.sendTicketSaleNotificationEmail(
+                    organizer.email,
+                    organizer.username || 'Event Organizer',
+                    fullEvent.title,
+                    attendee_name,
+                    attendee_email,
+                    tier.name,
+                    0,
+                    ticket.id,
+                    event_id,
+                    totalSold,
+                    grossRevenue,
+                    netPayout
+                  );
+                  console.log('[v0] Free ticket organizer notification sent successfully');
+                } catch (statsErr) {
+                  console.error('[v0] Error calculating free ticket event stats:', statsErr);
+                  // Fall back to sending without stats
+                  await ResendEmailService.sendTicketSaleNotificationEmail(
+                    organizer.email,
+                    organizer.username || 'Event Organizer',
+                    fullEvent.title,
+                    attendee_name,
+                    attendee_email,
+                    tier.name,
+                    0,
+                    ticket.id
+                  );
+                }
+              } else {
+                console.log('[v0] No organizer email found');
+              }
+            } catch (orgErr) {
+              console.error('[v0] Organizer notification failed (non-critical):', orgErr);
+            }
+          }
+        }
+      } catch (emailErr) {
+        console.error('[v0] Free ticket email failed (non-critical):', emailErr);
+      }
+
       return NextResponse.json({ success: true, free: true, ticket_id: ticket.id });
     }
 
@@ -103,8 +215,12 @@ export async function POST(request: NextRequest) {
       amount: tier.price,
       currency: 'NGN',
       redirect_url: `${appUrl}/api/events/tickets/verify?tx_ref=${txRef}`,
-      payment_options: 'card,banktransfer,mobilemoney',
-      customer: { email: attendee_email, name: attendee_name, phonenumber: attendee_phone || '' },
+      payment_options: 'card,banktransfer,ussd,mobilemoney',
+      customer: { 
+        email: attendee_email, 
+        name: attendee_name, 
+        phonenumber: attendee_phone || '' 
+      },
       customizations: {
         title: event.title,
         description: `${tier.name} ticket`,
@@ -130,18 +246,36 @@ export async function POST(request: NextRequest) {
       }];
     }
 
-    const paymentLink = await FlutterwaveService.initializePayment({
-      transactionId: txRef,
-      amount: tier.price,
-      buyerEmail: attendee_email,
-      buyerName: attendee_name,
-      itemTitle: `${tier.name} — ${event.title}`,
-      sellerName: 'Yrdly Events',
+    // Call Flutterwave API directly
+    const flwRes = await fetch('https://api.flutterwave.com/v3/payments', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.FLUTTERWAVE_SECRET_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(flwPayload),
     });
 
-    return NextResponse.json({ success: true, payment_link: paymentLink, tx_ref: txRef });
+    const flwData = await flwRes.json();
+
+    if (flwData.status !== 'success') {
+      console.error('[v0] Flutterwave init error:', flwData);
+      return NextResponse.json({ 
+        error: 'Payment initialization failed',
+        details: flwData.message || 'Flutterwave API error'
+      }, { status: 502 });
+    }
+
+    return NextResponse.json({ success: true, payment_link: flwData.data.link, tx_ref: txRef });
   } catch (error) {
-    console.error('Ticket purchase error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('[v0] Ticket purchase error:', error);
+    if (error instanceof Error) {
+      console.error('[v0] Error message:', error.message);
+      console.error('[v0] Error stack:', error.stack);
+    }
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }

@@ -20,6 +20,33 @@ export class ResendEmailService {
   }
 
   /**
+   * Generic email sending method
+   */
+  static async sendEmail(
+    to: string,
+    subject: string,
+    html: string,
+    category?: string
+  ) {
+    if (!this.isConfigured()) {
+      throw new Error('RESEND_NOT_CONFIGURED');
+    }
+
+    const { error } = await resend.emails.send({
+      from: `Yrdly <${FROM_EMAIL}>`,
+      to: [to],
+      replyTo: REPLY_TO,
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error(`[ResendEmailService] Error sending ${category || 'email'} to ${to}:`, error);
+      throw new Error(`Failed to send ${category || 'email'}`);
+    }
+  }
+
+  /**
    * Get configuration status for debugging
    */
   static getConfigurationStatus() {
@@ -188,6 +215,45 @@ export class ResendEmailService {
     if (error) {
       console.error('Error sending ticket confirmation email via Resend:', error);
       throw new Error('Failed to send ticket confirmation.');
+    }
+  }
+
+  /**
+   * Send ticket sale notification email to organizer with event stats
+   */
+  static async sendTicketSaleNotificationEmail(
+    organizerEmail: string,
+    organizerName:  string,
+    eventName:      string,
+    attendeeName:   string,
+    attendeeEmail:  string,
+    tierName:       string,
+    amount:         number,
+    ticketId:       string,
+    eventId?:       string,
+    totalSold?:     number,
+    grossRevenue?:  number,
+    netPayout?:     number
+  ) {
+    if (!this.isConfigured()) {
+      throw new Error('RESEND_NOT_CONFIGURED');
+    }
+
+    const { subject, html } = emailTemplates.ticketSaleNotification(
+      organizerName, eventName, attendeeName, attendeeEmail, tierName, amount, ticketId,
+      eventId, totalSold, grossRevenue, netPayout
+    );
+
+    const { error } = await resend.emails.send({
+      from:    `Yrdly Events <${FROM_EMAIL}>`,
+      to:      [organizerEmail],
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error('Error sending organizer ticket sale notification via Resend:', error);
+      throw new Error('Failed to send organizer notification.');
     }
   }
 }

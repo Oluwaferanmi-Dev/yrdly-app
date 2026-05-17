@@ -176,15 +176,23 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Deactivate any existing accounts ──────────────────
+    // If this is an account update (not initial setup), mark the change time
+    const { data: existingAccounts } = await supabaseAdmin
+      .from('seller_accounts')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+
+    const isUpdate = existingAccounts && existingAccounts.length > 0;
+
     await supabaseAdmin
       .from('seller_accounts')
       .update({ is_primary: false, is_active: false, updated_at: new Date().toISOString() })
       .eq('user_id', user.id);
 
     // ── Store in seller_accounts ───────────────────────────
-    // verification_status is 'pending' — name match passed but cooling-off
-    // applies before the first payout. Set to 'verified' after 48 hrs or
-    // after manual micro-deposit confirmation.
+    // For initial setup: no account_updated_at (allows immediate selling)
+    // For updates: set account_updated_at to trigger 48-hour cooling-off
     const now = new Date().toISOString();
     const { error: insertError } = await supabaseAdmin
       .from('seller_accounts')
@@ -197,12 +205,11 @@ export async function POST(request: NextRequest) {
           account_name: accountName,
         },
         flutterwave_subaccount_id: subaccountId,
-        is_primary: true,
-        is_active: true,
-        // ✅ Task 2: keep as 'verified' since Paystack name check passed above
         verification_status: 'verified',
-        // ✅ Task 3: cooling-off anchor — payouts blocked for 48 hrs after this
-        account_updated_at: now,
+        is_active: true,
+        is_primary: true,
+        // ✅ Only set account_updated_at for account updates, not initial setup
+        account_updated_at: isUpdate ? now : null,
         created_at: now,
         updated_at: now,
       });

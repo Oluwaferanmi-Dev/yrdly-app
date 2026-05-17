@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { DeliveryOption, PaymentMethod, EscrowStatus } from "@/types/escrow";
 import { MARKETPLACE_CONSTANTS } from "@/lib/constants";
-import { createClient } from "@/lib/supabase-server";
 
 
 /**
@@ -16,9 +15,18 @@ import { createClient } from "@/lib/supabase-server";
  */
 export async function POST(request: NextRequest) {
   try {
-    // ── Authenticate the caller ────────────────────────
-    const supabase = await createClient();
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    // ── Authenticate the caller ───────────────────────────────────────────────
+    // BuyButton sends the session JWT as "Authorization: Bearer <token>".
+    // We verify it with the admin client (which accepts any valid JWT) rather
+    // than the SSR cookie-based client, which would return null for API calls.
+    const authHeader = request.headers.get("authorization") ?? "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (!authUser || authError) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -133,9 +141,11 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Task 3: 48-hour cooling-off after account change ──
-    const accountUpdatedAt = sellerAccount.account_updated_at || sellerAccount.updated_at;
-    if (accountUpdatedAt) {
-      const updatedTime = new Date(accountUpdatedAt).getTime();
+    // Only apply the 48-hour hold if account_updated_at is explicitly set
+    // (i.e., for existing accounts that changed their payout details).
+    // New accounts have account_updated_at = null and can sell immediately.
+    if (sellerAccount.account_updated_at) {
+      const updatedTime = new Date(sellerAccount.account_updated_at).getTime();
       const hoursSinceUpdate = (Date.now() - updatedTime) / (1000 * 60 * 60);
       if (hoursSinceUpdate < 48) {
         const hoursLeft = Math.ceil(48 - hoursSinceUpdate);
@@ -179,8 +189,15 @@ export async function POST(request: NextRequest) {
     const transactionId = txData.id;
 
     // ── Build Flutterwave Standard payment payload ────────
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:9002";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+    if (!appUrl) {
+      console.error("[PaymentInit] CRITICAL: NEXT_PUBLIC_APP_URL is not set in environment variables");
+      return NextResponse.json(
+        { error: "Server configuration error - payment redirect URL not configured" },
+        { status: 500 }
+      );
+    }
 
     const flwPayload: Record<string, any> = {
       tx_ref: transactionId,

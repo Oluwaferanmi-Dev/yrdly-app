@@ -78,11 +78,14 @@ export default function TransactionDetailsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [userReview, setUserReview] = useState<any | null>(null);
   const [businessId, setBusinessId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const transactionId = params.transactionId as string;
 
   const fetchTransactionDetails = useCallback(async () => {
     try {
+      setError(null);
       const data = await TransactionStatusService.getTransactionDetails(transactionId);
       setTransaction(data);
 
@@ -97,10 +100,12 @@ export default function TransactionDetailsPage() {
         }
       }
     } catch (error) {
-      console.error('Error fetching transaction details:', error);
+      console.error('[v0] Error fetching transaction details:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load transaction details.';
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: "Failed to load transaction details.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -265,17 +270,50 @@ export default function TransactionDetailsPage() {
 
   if (!transaction) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
-          <CardContent className="text-center p-6">
-            <AlertTriangle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Transaction Not Found</h3>
-            <p className="text-muted-foreground mb-4">
-              The transaction you&apos;re looking for doesn&apos;t exist or you don&apos;t have access to it.
-            </p>
-            <Button onClick={() => router.push('/marketplace')}>
-              Back to Marketplace
-            </Button>
+          <CardContent className="text-center p-6 space-y-4">
+            <AlertTriangle className="h-12 w-12 text-orange-500 mx-auto" />
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Transaction Not Found</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {error || "The transaction you're looking for doesn't exist or you don't have access to it."}
+              </p>
+            </div>
+            
+            {error && error.includes('logged in') && (
+              <Alert className="bg-blue-50 border-blue-200">
+                <AlertDescription className="text-sm text-blue-800">
+                  Please sign in to view your transaction details.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {error && error.includes('access') && (
+              <Alert className="bg-yellow-50 border-yellow-200">
+                <AlertDescription className="text-sm text-yellow-800">
+                  This transaction may have been cancelled or deleted. Contact support if you believe this is an error.
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="flex flex-col gap-2">
+              {retryCount < 3 && (
+                <Button 
+                  onClick={() => {
+                    setRetryCount(prev => prev + 1);
+                    setLoading(true);
+                    fetchTransactionDetails();
+                  }}
+                  variant="outline"
+                >
+                  Try Again
+                </Button>
+              )}
+              <Button onClick={() => router.push('/marketplace')} variant="default">
+                Back to Marketplace
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
