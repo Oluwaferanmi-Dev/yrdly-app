@@ -180,9 +180,6 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
   const handleDarkModeToggle = (checked: boolean) => {
     setIsDark(checked);
     setTheme(checked ? "dark" : "light");
-    const root = document.documentElement;
-    root.classList.remove("light", "dark");
-    root.classList.add(checked ? "dark" : "light");
   };
 
   const displayName = profile?.name || user?.user_metadata?.name || "User";
