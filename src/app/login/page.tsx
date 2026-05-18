@@ -14,15 +14,15 @@ import { ErrorMessageFormatter } from '@/lib/error-messages';
 
 // Design tokens from Figma
 const colors = {
-  background: 'var(--c-bg)',
+  background: '#0F1419',
   blob: '#A154F2',
   overlay: 'rgba(255, 255, 255, 0.05)',
   border: '#388E3C',
-  inputBg: 'var(--c-card)',
+  inputBg: '#1E2126',
   primary: '#388E3C',
-  text: 'var(--c-text)',
-  textFaded: 'var(--c-text-muted)',
-  link: '#1976D2',
+  text: '#E1E2E9',
+  textFaded: '#899485',
+  link: '#60A5FA',
   logoGreen: '#259907',
 };
 
@@ -66,10 +66,10 @@ export default function LoginPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: colors.background }}>
-        <div className="text-center font-sans text-white">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0F1419' }}>
+        <div className="text-center font-sans">
           <div className="w-10 h-10 rounded-md mb-4 mx-auto animate-pulse" style={{ background: colors.logoGreen }} />
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm" style={{ color: colors.textFaded }}>Loading...</p>
         </div>
       </div>
     );
